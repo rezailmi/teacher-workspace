@@ -9,10 +9,11 @@ import (
 )
 
 func TestIndex(t *testing.T) {
+	h := &Handler{}
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	rec := httptest.NewRecorder()
 
-	Index(rec, req)
+	h.Index(rec, req)
 
 	res := rec.Result()
 	require.Equal(t, http.StatusOK, res.StatusCode)
