@@ -81,3 +81,17 @@
     outline-color: color-mix(in oklab, var(--color-ring) 50%, transparent);
   }
 }
+
+/* Flow DS → TW radius overrides (pill buttons, badges, tabs, menus) */
+button.rounded-lg,
+[role='tab'].rounded-lg {
+  border-radius: 9999px !important;
+  font-weight: 500 !important;
+}
+[role='tablist'].rounded-xl {
+  border-radius: 32px !important;
+}
+[role='menuitem'].rounded-md,
+[role='option'].rounded-md {
+  border-radius: 12px !important;
+}
