@@ -8,7 +8,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
   Input,
-  Progress,
   Table,
   TableBody,
   TableCell,
@@ -31,30 +30,16 @@ import {
 } from '@flow/icons';
 import React, { useMemo, useState } from 'react';
 
+import { ReadRate } from '~/components/comms/ReadRate';
+import { StatusBadge } from '~/components/comms/StatusBadge';
 import {
   mockPGAnnouncements,
   type PGAnnouncement,
-  type PGStatus,
   type ResponseTypeWithResponse,
   requiresResponse,
 } from '~/data/mock-pg-announcements';
 
 type PostTab = 'view-only' | 'with-responses';
-
-const STATUS_CONFIG: Record<PGStatus, { label: string; className: string }> = {
-  posted: {
-    label: 'Posted',
-    className: 'bg-green-50 text-green-700 border-green-200',
-  },
-  scheduled: {
-    label: 'Scheduled',
-    className: 'bg-blue-50 text-blue-700 border-blue-200',
-  },
-  draft: {
-    label: 'Draft',
-    className: 'bg-slate-3 text-slate-11 border-slate-6',
-  },
-};
 
 const RESPONSE_TYPE_CONFIG: Record<
   ResponseTypeWithResponse,
@@ -99,26 +84,6 @@ function getRelevantDate(announcement: PGAnnouncement): string | undefined {
   if (announcement.status === 'posted') return announcement.postedAt;
   if (announcement.status === 'scheduled') return announcement.scheduledAt;
   return announcement.createdAt;
-}
-
-function CountWithProgress({
-  count,
-  total,
-}: {
-  count: number;
-  total: number;
-}) {
-  return (
-    <div className="flex items-center gap-2">
-      <span className="text-sm text-muted-foreground">
-        {count}/{total}
-      </span>
-      <Progress
-        value={total > 0 ? (count / total) * 100 : 0}
-        className="h-1.5 w-16"
-      />
-    </div>
-  );
 }
 
 
@@ -204,17 +169,43 @@ const PostsView: React.FC = () => {
         </div>
 
         {/* Table */}
-        <div className="max-w-full overflow-x-auto bg-card">
+        <div className="max-w-full overflow-x-auto bg-white">
           {filtered.length === 0 ? (
-            <div className="py-12 text-center">
-              <Typography variant="body-md" className="text-muted-foreground">
-                No posts match your search.
-              </Typography>
+            <div className="py-16 text-center">
+              {searchQuery ? (
+                <>
+                  <Typography variant="body-md" className="text-foreground">
+                    No posts match your search.
+                  </Typography>
+                  <Typography
+                    variant="body-sm"
+                    className="mt-1 text-muted-foreground"
+                  >
+                    Try adjusting your search terms.
+                  </Typography>
+                </>
+              ) : (
+                <>
+                  <Typography variant="body-md" className="text-foreground">
+                    No posts yet.
+                  </Typography>
+                  <Typography
+                    variant="body-sm"
+                    className="mt-1 text-muted-foreground"
+                  >
+                    Create your first post to get started.
+                  </Typography>
+                  <Button variant="default" size="sm" className="mt-4" disabled>
+                    <Plus className="h-4 w-4" />
+                    Create
+                  </Button>
+                </>
+              )}
             </div>
           ) : (
             <Table>
-              <TableHeader>
-                <TableRow className="border-0 hover:bg-transparent">
+              <TableHeader className="border-b bg-white">
+                <TableRow>
                   <TableHead className="w-[500px] pl-6">Title</TableHead>
                   <TableHead className="w-[110px]">Date</TableHead>
                   <TableHead className="w-[100px]">Status</TableHead>
@@ -246,7 +237,6 @@ const PostsView: React.FC = () => {
                   );
                   const relevantDate = getRelevantDate(announcement);
                   const isShared = announcement.ownership === 'shared';
-                  const statusConfig = STATUS_CONFIG[announcement.status];
                   const responseTypeConfig = requiresResponse(
                     announcement.responseType,
                   )
@@ -298,12 +288,7 @@ const PostsView: React.FC = () => {
 
                       {/* Status */}
                       <TableCell>
-                        <Badge
-                          variant="outline"
-                          className={statusConfig.className}
-                        >
-                          {statusConfig.label}
-                        </Badge>
+                        <StatusBadge status={announcement.status} />
                       </TableCell>
 
                       {/* Owner */}
@@ -328,9 +313,9 @@ const PostsView: React.FC = () => {
                           </span>
                         ) : hasResponseType ? (
                           <div className="space-y-0.5">
-                            <CountWithProgress
-                              count={responseCount}
-                              total={totalCount}
+                            <ReadRate
+                              readCount={responseCount}
+                              totalCount={totalCount}
                             />
                             {announcement.responseType === 'yes-no' &&
                               totalCount > 0 && (
@@ -356,9 +341,9 @@ const PostsView: React.FC = () => {
                               )}
                           </div>
                         ) : (
-                          <CountWithProgress
-                            count={readCount}
-                            total={totalCount}
+                          <ReadRate
+                            readCount={readCount}
+                            totalCount={totalCount}
                           />
                         )}
                       </TableCell>
@@ -370,6 +355,7 @@ const PostsView: React.FC = () => {
                             <Button
                               variant="ghost"
                               size="icon"
+                              className="h-8 w-8 text-muted-foreground hover:text-foreground"
                               aria-label="More actions"
                               onClick={(e) => e.stopPropagation()}
                             >
