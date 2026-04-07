@@ -1,0 +1,25 @@
+{
+  "consentFormDraftId": 301,
+  "title": "Consent Form for Field Trip (Draft)",
+  "richTextContent": "{\"type\":\"doc\",\"content\":[{\"type\":\"paragraph\",\"attrs\":{\"textAlign\":\"left\"},\"content\":[{\"type\":\"text\",\"text\":\"Dear Parents,\"}]},{\"type\":\"paragraph\",\"attrs\":{\"textAlign\":\"left\"},\"content\":[{\"type\":\"text\",\"text\":\"We are organising a field trip and require your consent.\"}]}]}",
+  "responseType": "YES_NO",
+  "eventStartDate": "2026-05-15T01:00:00.000Z",
+  "eventEndDate": "2026-05-15T09:00:00.000Z",
+  "consentByDate": "2026-05-12T15:59:59.000Z",
+  "addReminderType": "ONE_TIME",
+  "reminderDate": "2026-05-11T15:59:59.000Z",
+  "enquiryEmailAddress": "greenridge_sec@moe.edu.sg",
+  "attachments": [],
+  "images": [],
+  "websiteLinks": [],
+  "customQuestions": [],
+  "staffOwners": [{ "staffID": 1013, "staffName": "TAN GUANG SHIN" }],
+  "recipients": {
+    "classIds": [101],
+    "customGroupIds": [],
+    "ccaIds": [],
+    "levelIds": []
+  },
+  "createdAt": "2026-04-02T10:00:00.000Z",
+  "updatedAt": "2026-04-02T10:00:00.000Z"
+}
