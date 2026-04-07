@@ -1,0 +1,15 @@
+{
+  "classId": 101,
+  "className": "4A",
+  "level": "SECONDARY 4",
+  "year": 2026,
+  "students": [
+    { "studentId": 1, "studentName": "TAN XIAO MING", "admissionNumber": "S2310001A" },
+    { "studentId": 2, "studentName": "LEE WEI LIANG", "admissionNumber": "S2310002B" },
+    { "studentId": 3, "studentName": "CAROL CHEN HUI", "admissionNumber": "S2310003C" },
+    { "studentId": 4, "studentName": "DAVID NG JUN WEI", "admissionNumber": "S2310004D" }
+  ],
+  "formTeachers": [
+    { "staffID": 1013, "staffName": "TAN GUANG SHIN" }
+  ]
+}
