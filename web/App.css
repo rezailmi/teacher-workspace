@@ -1,51 +1,7 @@
 @import 'tailwindcss';
 @import '@flow/core/tailwind.no-reset.css';
+@import './flow-teacher-ds.css';
 @import 'tw-animate-css';
-
-:root {
-  --color-foreground-default: var(--color-slate-12);
-  --background-color-page: var(--color-slate-1);
-
-  --color-blue-1: #fcfdff;
-  --color-blue-2: #f5f9ff;
-  --color-blue-3: #eaf3ff;
-  --color-blue-4: #daebff;
-  --color-blue-5: #c7e1ff;
-  --color-blue-6: #b2d3ff;
-  --color-blue-7: #98c1ff;
-  --color-blue-8: #73a7ff;
-  --color-blue-9: #0064ff;
-  --color-blue-10: #0058e6;
-  --color-blue-11: #015ceb;
-  --color-blue-12: #0b2d6b;
-
-  --btn-color-fill-brand-enabled: var(--color-blue-9);
-  --btn-color-fill-brand-hover: var(--color-blue-10);
-
-  --ease-tw-default: cubic-bezier(0.22, 0.61, 0.36, 1);
-
-  /* shadcn/ui semantic tokens mapped to @flow/core color scale */
-  --background: var(--color-slate-1);
-  --foreground: var(--color-slate-12);
-  --card: var(--color-white-default, #fff);
-  --card-foreground: var(--color-olive-12);
-  --popover: var(--color-white-default, #fff);
-  --popover-foreground: var(--color-slate-12);
-  --primary: var(--color-blue-9);
-  --primary-foreground: #ffffff;
-  --secondary: var(--color-slate-4);
-  --secondary-foreground: var(--color-slate-12);
-  --muted: var(--color-slate-2);
-  --muted-foreground: var(--color-olive-11);
-  --accent: var(--color-slate-4);
-  --accent-foreground: var(--color-slate-12);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: #ffffff;
-  --border: var(--color-slate-6);
-  --input: var(--color-slate-6);
-  --ring: var(--color-blue-9);
-  --radius: 0.5rem;
-}
 
 @theme inline {
   --color-background: var(--background);
@@ -67,10 +23,6 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
 }
 
 @layer base {
@@ -80,18 +32,4 @@
     border-color: var(--color-border);
     outline-color: color-mix(in oklab, var(--color-ring) 50%, transparent);
   }
-}
-
-/* Flow DS → TW radius overrides (pill buttons, badges, tabs, menus) */
-button.rounded-lg,
-[role='tab'].rounded-lg {
-  border-radius: 9999px !important;
-  font-weight: 500 !important;
-}
-[role='tablist'].rounded-xl {
-  border-radius: 32px !important;
-}
-[role='menuitem'].rounded-md,
-[role='option'].rounded-md {
-  border-radius: 12px !important;
 }

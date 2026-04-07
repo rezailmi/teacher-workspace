@@ -1,4 +1,6 @@
-import { Badge, cn } from '@flow/core';
+import { cn } from '@flow/core';
+
+import { Badge } from '~/components/ui';
 
 import type { PGStatus } from '~/data/mock-pg-announcements';
 
