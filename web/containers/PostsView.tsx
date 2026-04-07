@@ -1,7 +1,7 @@
+import { cn, Typography } from '@flow/core';
 import {
   Badge,
   Button,
-  cn,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -17,8 +17,7 @@ import {
   Tabs,
   TabsList,
   TabsTrigger,
-  Typography,
-} from '@flow/core';
+} from '~/components/ui';
 import {
   AlertTriangle,
   Copy,
