@@ -42,21 +42,13 @@ async function fetchApi<T>(path: string): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-async function postApi<T>(path: string, body: unknown): Promise<T> {
+async function mutateApi<T>(
+  method: 'POST' | 'PUT',
+  path: string,
+  body: unknown,
+): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) {
-    throw new Response('API error', { status: res.status });
-  }
-  return res.json() as Promise<T>;
-}
-
-async function putApi<T>(path: string, body: unknown): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
-    method: 'PUT',
+    method,
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
@@ -123,27 +115,27 @@ function fetchAnnouncementReadStatus(postId: string) {
 
 /** Create and immediately send an announcement. */
 export function createAnnouncement(payload: PGApiCreateAnnouncementPayload) {
-  return postApi<{ postId: number }>('/announcements', payload);
+  return mutateApi<{ postId: number }>('POST', '/announcements', payload);
 }
 
 /** Save an announcement as draft. */
 export function createDraft(payload: PGApiCreateDraftPayload) {
-  return postApi<{ announcementDraftId: number }>('/announcements/drafts', payload);
+  return mutateApi<{ announcementDraftId: number }>('POST', '/announcements/drafts', payload);
 }
 
 /** Schedule a draft for future sending. */
 export function scheduleDraft(payload: PGApiScheduleDraftPayload) {
-  return postApi<void>('/announcements/drafts/schedule', payload);
+  return mutateApi<void>('POST', '/announcements/drafts/schedule', payload);
 }
 
 /** Update an existing draft. */
 export function updateDraft(draftId: number, payload: PGApiCreateDraftPayload) {
-  return putApi<void>(`/announcements/drafts/${draftId}`, payload);
+  return mutateApi<void>('PUT', `/announcements/drafts/${draftId}`, payload);
 }
 
 /** Duplicate an existing announcement. */
 export function duplicateAnnouncement(payload: PGApiDuplicatePayload) {
-  return postApi<{ postId: number }>('/announcements/duplicate', payload);
+  return mutateApi<{ postId: number }>('POST', '/announcements/duplicate', payload);
 }
 
 /** Delete a posted announcement. */
@@ -212,19 +204,19 @@ export function fetchConsentFormDetail(formId: string) {
 // ─── Write ──────────────────────────────────────────────────────────────────
 
 export function createConsentForm(payload: unknown) {
-  return postApi<{ consentFormId: number }>('/consentForms', payload);
+  return mutateApi<{ consentFormId: number }>('POST', '/consentForms', payload);
 }
 
 export function createConsentFormDraft(payload: unknown) {
-  return postApi<{ consentFormDraftId: number }>('/consentForms/drafts', payload);
+  return mutateApi<{ consentFormDraftId: number }>('POST', '/consentForms/drafts', payload);
 }
 
 export function updateConsentFormDraft(draftId: number, payload: unknown) {
-  return putApi<void>(`/consentForms/drafts/${draftId}`, payload);
+  return mutateApi<void>('PUT', `/consentForms/drafts/${draftId}`, payload);
 }
 
 export function updateConsentFormDueDate(formId: number, payload: { consentByDate: string }) {
-  return putApi<void>(`/consentForms/${formId}/updateDueDate`, payload);
+  return mutateApi<void>('PUT', `/consentForms/${formId}/updateDueDate`, payload);
 }
 
 export function deleteConsentForm(formId: string) {
@@ -283,9 +275,9 @@ export function fetchUserProfile() {
 }
 
 export function updateDisplayName(staffId: number, displayName: string) {
-  return putApi<void>(`/${staffId}/updateDisplayName`, { displayName });
+  return mutateApi<void>('PUT', `/${staffId}/updateDisplayName`, { displayName });
 }
 
 export function updateDisplayEmail(staffId: number, displayEmail: string) {
-  return putApi<void>(`/${staffId}/updateDisplayEmail`, { displayEmail });
+  return mutateApi<void>('PUT', `/${staffId}/updateDisplayEmail`, { displayEmail });
 }

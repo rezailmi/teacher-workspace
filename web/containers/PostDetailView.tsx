@@ -1,6 +1,6 @@
 import { Typography } from '@flow/core';
 import { ArrowLeft } from '@flow/icons';
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   isRouteErrorResponse,
   Link,
@@ -71,12 +71,15 @@ const PostDetailView: React.FC = () => {
     );
   }
 
-  // Sort recipients: unread first
-  const sortedRecipients = [...announcement.recipients].sort((a, b) => {
-    if (a.readStatus === 'unread' && b.readStatus === 'read') return -1;
-    if (a.readStatus === 'read' && b.readStatus === 'unread') return 1;
-    return 0;
-  });
+  const sortedRecipients = useMemo(
+    () =>
+      [...announcement.recipients].sort((a, b) => {
+        if (a.readStatus === 'unread' && b.readStatus === 'read') return -1;
+        if (a.readStatus === 'read' && b.readStatus === 'unread') return 1;
+        return 0;
+      }),
+    [announcement.recipients],
+  );
 
   return (
     <div className="mx-auto max-w-4xl space-y-8 px-6 py-6">
