@@ -27,6 +27,7 @@ import {
   Users,
 } from '@flow/icons';
 import React, { useMemo, useState } from 'react';
+import { Link } from 'react-router';
 
 import { ReadRate } from '~/components/comms/ReadRate';
 import { StatusBadge } from '~/components/comms/StatusBadge';
@@ -75,9 +76,11 @@ const PostsView: React.FC = () => {
           <Typography variant="title-lg" asChild>
             <h1>Posts</h1>
           </Typography>
-          <Button variant="default" size="sm" disabled>
-            <Plus className="h-4 w-4" />
-            Create
+          <Button variant="default" size="sm" asChild>
+            <Link to="/posts/new">
+              <Plus className="h-4 w-4" />
+              Create
+            </Link>
           </Button>
         </div>
         <Typography
@@ -147,9 +150,11 @@ const PostsView: React.FC = () => {
                   >
                     Create your first post to get started.
                   </Typography>
-                  <Button variant="default" size="sm" className="mt-4" disabled>
-                    <Plus className="h-4 w-4" />
-                    Create
+                  <Button variant="default" size="sm" className="mt-4" asChild>
+                    <Link to="/posts/new">
+                      <Plus className="h-4 w-4" />
+                      Create
+                    </Link>
                   </Button>
                 </>
               )}
