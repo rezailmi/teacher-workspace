@@ -1,0 +1,19 @@
+{
+  "eventId": 1001,
+  "bookings": [
+    {
+      "bookingId": 10,
+      "slotId": 2,
+      "startDateTime": "2026-04-10T01:10:00.000Z",
+      "endDateTime": "2026-04-10T01:20:00.000Z",
+      "studentId": 1,
+      "studentName": "TAN XIAO MING",
+      "className": "4A",
+      "parentName": "TAN AH KOW",
+      "parentContact": "+6591234567",
+      "bookedAt": "2026-04-06T09:00:00.000Z",
+      "bookedBy": "PARENT"
+    }
+  ],
+  "total": 1
+}
