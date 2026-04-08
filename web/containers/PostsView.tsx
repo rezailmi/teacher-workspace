@@ -281,9 +281,8 @@ const PostsView: React.FC = () => {
                                 duplicateAnnouncement({
                                   postId: Number(announcement.id),
                                 }).then(() => {
-                                  navigate('/posts', { replace: true });
+                                  revalidator.revalidate();
                                 }).catch(() => {
-                                  // Fallback: navigate to create page
                                   navigate('/posts/new');
                                 });
                               }}
