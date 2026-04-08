@@ -1,6 +1,5 @@
-import { cn, Typography } from '@flow/core';
+import { Typography } from '@flow/core';
 import {
-  Badge,
   Button,
   DropdownMenu,
   DropdownMenuContent,
@@ -34,25 +33,10 @@ import { StatusBadge } from '~/components/comms/StatusBadge';
 import {
   mockPGAnnouncements,
   type PGAnnouncement,
-  type ResponseTypeWithResponse,
   requiresResponse,
 } from '~/data/mock-pg-announcements';
 
 type PostTab = 'view-only' | 'with-responses';
-
-const RESPONSE_TYPE_CONFIG: Record<
-  ResponseTypeWithResponse,
-  { label: string; className: string }
-> = {
-  acknowledge: {
-    label: 'Acknowledge',
-    className: 'bg-blue-50 text-blue-600 ring-blue-200',
-  },
-  'yes-no': {
-    label: 'Yes/No',
-    className: 'bg-violet-50 text-violet-600 ring-violet-200',
-  },
-};
 
 const DATE_FORMATTER = new Intl.DateTimeFormat('en-SG', {
   day: 'numeric',
@@ -236,11 +220,6 @@ const PostsView: React.FC = () => {
                   );
                   const relevantDate = getRelevantDate(announcement);
                   const isShared = announcement.ownership === 'shared';
-                  const responseTypeConfig = requiresResponse(
-                    announcement.responseType,
-                  )
-                    ? RESPONSE_TYPE_CONFIG[announcement.responseType]
-                    : undefined;
 
                   return (
                     <TableRow key={announcement.id}>
@@ -251,17 +230,6 @@ const PostsView: React.FC = () => {
                             <span className="truncate font-medium">
                               {announcement.title}
                             </span>
-                            {responseTypeConfig && (
-                              <Badge
-                                variant="outline"
-                                className={cn(
-                                  'text-[10px]',
-                                  responseTypeConfig.className,
-                                )}
-                              >
-                                {responseTypeConfig.label}
-                              </Badge>
-                            )}
                             {showLowRead && (
                               <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-500" />
                             )}

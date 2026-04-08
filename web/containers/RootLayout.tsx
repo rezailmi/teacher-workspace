@@ -24,7 +24,7 @@ const RootLayout: React.FC = () => {
   const selected = useMemo(() => {
     switch (segment) {
       case 'students':
-      case 'announcements':
+      case 'posts':
         return segment;
       default:
         return '/';
@@ -57,8 +57,8 @@ const RootLayout: React.FC = () => {
                 icon={Mail}
                 label="Posts"
                 tooltip="Posts"
-                to="/announcements"
-                selected={selected === 'announcements'}
+                to="/posts"
+                selected={selected === 'posts'}
               />
             </SidebarContent>
 

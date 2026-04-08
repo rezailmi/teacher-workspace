@@ -11,14 +11,14 @@ import {
 } from '@flow/core';
 
 function TabsList({ className, ...props }: TabsListProps) {
-  return <FlowTabsList className={cn('rounded-4xl', className)} {...props} />;
+  return <FlowTabsList className={cn('rounded-full', className)} {...props} />;
 }
 TabsList.displayName = 'TabsList';
 
 function TabsTrigger({ className, ...props }: TabsTriggerProps) {
   return (
     <FlowTabsTrigger
-      className={cn('font-medium', className)}
+      className={cn('rounded-full font-medium', className)}
       {...props}
     />
   );
