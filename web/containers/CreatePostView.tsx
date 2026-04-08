@@ -111,7 +111,6 @@ type PostFormAction =
   | { type: 'SET_TITLE'; payload: string }
   | { type: 'SET_DESCRIPTION'; payload: string }
   | { type: 'SET_RESPONSE_TYPE'; payload: ResponseType }
-  | { type: 'SET_CLASSES'; payload: string[] }
   | { type: 'TOGGLE_CLASS'; payload: string }
   | { type: 'ADD_QUESTION' }
   | { type: 'UPDATE_QUESTION'; id: string; payload: Partial<FormQuestion> }
@@ -120,8 +119,7 @@ type PostFormAction =
   | { type: 'TOGGLE_SHORTCUT'; id: string }
   | { type: 'SET_STAFF'; payload: string }
   | { type: 'SET_EMAIL'; payload: string }
-  | { type: 'SET_DUE_DATE'; payload: string }
-  | { type: 'RESET'; payload?: PostFormState };
+  | { type: 'SET_DUE_DATE'; payload: string };
 
 const INITIAL_STATE: PostFormState = {
   title: '',
@@ -145,9 +143,6 @@ function formReducer(state: PostFormState, action: PostFormAction): PostFormStat
 
     case 'SET_RESPONSE_TYPE':
       return { ...state, responseType: action.payload };
-
-    case 'SET_CLASSES':
-      return { ...state, selectedClasses: action.payload };
 
     case 'TOGGLE_CLASS': {
       const id = action.payload;
@@ -240,9 +235,6 @@ function formReducer(state: PostFormState, action: PostFormAction): PostFormStat
 
     case 'SET_DUE_DATE':
       return { ...state, dueDate: action.payload };
-
-    case 'RESET':
-      return action.payload ?? INITIAL_STATE;
 
     default:
       return state;
