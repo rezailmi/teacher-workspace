@@ -81,7 +81,7 @@ export function mapAnnouncementDetail(
     title: detail.title,
     description: extractTextFromTiptap(detail.richTextContent),
     status,
-    responseType: 'view-only',
+    responseType: mapResponseType(detail.responseType),
     ownership: 'mine',
     recipients,
     stats: {

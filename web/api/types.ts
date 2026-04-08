@@ -27,6 +27,7 @@ export interface PGApiAnnouncementDetail {
   title: string;
   content: string | null;
   richTextContent: string;
+  responseType?: 'VIEW_ONLY' | 'ACKNOWLEDGE' | 'YES_NO';
   staffName: string;
   createdBy: number;
   createdAt: string;
