@@ -8,6 +8,7 @@ import type {
   PGOwnership,
   PGRecipient,
   PGStatus,
+  ResponseType,
 } from '~/data/mock-pg-announcements';
 
 /**
@@ -29,7 +30,7 @@ export function mapAnnouncementSummary(
     title: api.title,
     description: '',
     status,
-    responseType: 'view-only',
+    responseType: mapResponseType(api.responseType),
     ownership,
     recipients: [],
     stats: {
@@ -108,6 +109,17 @@ export function mergeAndDedup(
 ): PGAnnouncement[] {
   const ownIds = new Set(own.map((a) => a.id));
   return [...own, ...shared.filter((a) => !ownIds.has(a.id))];
+}
+
+const RESPONSE_TYPE_MAP: Record<string, ResponseType> = {
+  VIEW_ONLY: 'view-only',
+  ACKNOWLEDGE: 'acknowledge',
+  YES_NO: 'yes-no',
+};
+
+function mapResponseType(apiType?: string): ResponseType {
+  if (!apiType) return 'view-only';
+  return RESPONSE_TYPE_MAP[apiType] ?? 'view-only';
 }
 
 /**

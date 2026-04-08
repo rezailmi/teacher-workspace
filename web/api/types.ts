@@ -15,6 +15,7 @@ export interface PGApiAnnouncementSummary {
   title: string;
   date: string;
   status: 'POSTED' | 'SCHEDULED' | 'DRAFT';
+  responseType?: 'VIEW_ONLY' | 'ACKNOWLEDGE' | 'YES_NO';
   toParentsOf: string[];
   readMetrics: { readPerStudent: number; totalStudents: number };
   scheduledSendFailureCode: string | null;
