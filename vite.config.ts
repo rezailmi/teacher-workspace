@@ -15,7 +15,9 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      '/api': 'http://localhost:3000',
+      '/api/web': 'http://localhost:3000',
+      '/api/files': 'http://localhost:3000',
+      '/api/configs': 'http://localhost:3000',
     },
   },
   build: {
