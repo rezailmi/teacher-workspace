@@ -27,7 +27,7 @@ import {
   Users,
 } from '@flow/icons';
 import React, { useMemo, useState } from 'react';
-import { Link, useLoaderData, useNavigate } from 'react-router';
+import { Link, useLoaderData, useNavigate, useRevalidator } from 'react-router';
 
 import {
   deleteAnnouncement,
@@ -53,6 +53,7 @@ export async function loader() {
 const PostsView: React.FC = () => {
   const navigate = useNavigate();
   const announcements = useLoaderData<PGAnnouncement[]>();
+  const revalidator = useRevalidator();
   const [tab, setTab] = useState<PostTab>('view-only');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -75,7 +76,7 @@ const PostsView: React.FC = () => {
         const dateB = getRelevantDate(b) ?? '';
         return new Date(dateB).getTime() - new Date(dateA).getTime();
       });
-  }, [announcements, searchQuery]);
+  }, [announcements, searchQuery, tab]);
 
   return (
     <div className="flex flex-col">
@@ -293,12 +294,15 @@ const PostsView: React.FC = () => {
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
                               className="text-destructive focus:text-destructive"
-                              onClick={(e) => {
+                              onClick={async (e) => {
                                 e.stopPropagation();
                                 if (!confirm('Delete this post?')) return;
-                                deleteAnnouncement(announcement.id).catch(
-                                  () => {},
-                                );
+                                try {
+                                  await deleteAnnouncement(announcement.id);
+                                  revalidator.revalidate();
+                                } catch {
+                                  alert('Failed to delete post.');
+                                }
                               }}
                             >
                               <Trash2 className="mr-2 h-4 w-4" />

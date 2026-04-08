@@ -284,6 +284,7 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
   const loaderData = useLoaderData<PGAnnouncement | null>();
   const [showSendDialog, setShowSendDialog] = useState(false);
   const [showMobilePreview, setShowMobilePreview] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   // For edit mode, map loader data to form state
   const editData = loaderData ? announcementToFormState(loaderData) : null;
@@ -328,23 +329,35 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
     };
   }
 
-  function handleSaveDraft() {
+  async function handleSaveDraft() {
+    setIsSaving(true);
     const payload = buildPayload();
-    if (isEditing && editId) {
-      updateDraft(Number(editId), payload).catch(() => {});
-    } else {
-      createDraft(payload).catch(() => {});
+    try {
+      if (isEditing && editId) {
+        await updateDraft(Number(editId), payload);
+      } else {
+        await createDraft(payload);
+      }
+      navigate('/posts');
+    } catch {
+      alert('Failed to save draft. Please try again.');
+    } finally {
+      setIsSaving(false);
     }
-    alert('Draft saved');
-    navigate('/posts');
   }
 
-  function handleSendConfirm() {
+  async function handleSendConfirm() {
     setShowSendDialog(false);
+    setIsSaving(true);
     const payload = buildPayload();
-    createAnnouncement(payload).catch(() => {});
-    alert('Post sent successfully');
-    navigate('/posts');
+    try {
+      await createAnnouncement(payload);
+      navigate('/posts');
+    } catch {
+      alert('Failed to send post. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   return (
@@ -375,15 +388,15 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
             <Button
               variant="outline"
               size="sm"
-              disabled={!isFormValid}
+              disabled={!isFormValid || isSaving}
               onClick={handleSaveDraft}
             >
-              Save Draft
+              {isSaving ? 'Saving...' : 'Save Draft'}
             </Button>
             <Button
               variant="default"
               size="sm"
-              disabled={!isFormValid}
+              disabled={!isFormValid || isSaving}
               onClick={() => setShowSendDialog(true)}
             >
               {isEditing ? 'Update & Send' : 'Send'}

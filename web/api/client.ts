@@ -77,7 +77,9 @@ async function deleteApi(path: string): Promise<void> {
 async function fetchApiSafe<T>(path: string, fallback: T): Promise<T> {
   try {
     return await fetchApi<T>(path);
-  } catch {
+  } catch (err) {
+    // Re-throw AbortError so React Router's navigation cancellation works
+    if (err instanceof DOMException && err.name === 'AbortError') throw err;
     console.warn(`[PG API] Failed to fetch ${path}, using fixture fallback`);
     return fallback;
   }
