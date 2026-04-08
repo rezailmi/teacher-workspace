@@ -1,0 +1,18 @@
+export {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  type DialogCloseProps,
+  type DialogContentProps,
+  type DialogDescriptionProps,
+  type DialogFooterProps,
+  type DialogHeaderProps,
+  type DialogProps,
+  type DialogTitleProps,
+  type DialogTriggerProps,
+} from '@flow/core';
