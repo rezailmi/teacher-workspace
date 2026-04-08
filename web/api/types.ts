@@ -43,7 +43,7 @@ export interface PGApiAnnouncementDetail {
     className: string;
     isRead: boolean;
   }>;
-  status: string;
+  status: 'POSTED' | 'SCHEDULED' | 'DRAFT';
   scheduledSendAt: string | null;
   scheduledSendFailureCode: string | null;
 }
@@ -164,7 +164,7 @@ export interface PGApiConsentFormDetail {
     response: 'YES' | 'NO' | null;
     respondedAt: string | null;
   }>;
-  status: string;
+  status: 'OPEN' | 'CLOSED' | 'DRAFT';
   consentFormHistory: unknown[];
 }
 
