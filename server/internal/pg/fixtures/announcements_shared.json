@@ -6,6 +6,7 @@
       "title": "Sports Day Arrangements",
       "date": "2026-03-15T03:00:00.000Z",
       "status": "POSTED",
+      "responseType": "VIEW_ONLY",
       "toParentsOf": ["4A", "4B"],
       "readMetrics": { "readPerStudent": 0.8, "totalStudents": 60 },
       "scheduledSendFailureCode": null,

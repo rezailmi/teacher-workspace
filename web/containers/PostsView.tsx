@@ -7,6 +7,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
   Input,
+  Tabs,
+  TabsList,
+  TabsTrigger,
   Table,
   TableBody,
   TableCell,
@@ -30,7 +33,10 @@ import { loadPostsList } from '~/api/client';
 import { ReadRate } from '~/components/comms/ReadRate';
 import { StatusBadge } from '~/components/comms/StatusBadge';
 import type { PGAnnouncement } from '~/data/mock-pg-announcements';
+import { requiresResponse } from '~/data/mock-pg-announcements';
 import { formatDate, getRelevantDate, isLowReadRate } from '~/helpers/dateTime';
+
+type PostTab = 'view-only' | 'with-responses';
 
 // ─── Route loader ───────────────────────────────────────────────────────────
 
@@ -43,11 +49,17 @@ export async function loader() {
 const PostsView: React.FC = () => {
   const navigate = useNavigate();
   const announcements = useLoaderData<PGAnnouncement[]>();
+  const [tab, setTab] = useState<PostTab>('view-only');
   const [searchQuery, setSearchQuery] = useState('');
 
   const filtered = useMemo(() => {
     return announcements
       .filter((a) => {
+        if (tab === 'view-only' && requiresResponse(a.responseType))
+          return false;
+        if (tab === 'with-responses' && !requiresResponse(a.responseType))
+          return false;
+
         if (searchQuery) {
           const q = searchQuery.toLowerCase();
           return a.title.toLowerCase().includes(q);
@@ -88,9 +100,21 @@ const PostsView: React.FC = () => {
         </Typography>
       </div>
 
-      {/* Toolbar: search */}
+      {/* Toolbar: tabs + search */}
       <div className="mt-4 space-y-4">
-        <div className="flex flex-wrap items-center justify-end gap-4 px-6">
+        <div className="flex flex-wrap items-center justify-between gap-4 px-6">
+          <Tabs
+            value={tab}
+            onValueChange={(v) => setTab(v as PostTab)}
+          >
+            <TabsList>
+              <TabsTrigger value="view-only">Posts</TabsTrigger>
+              <TabsTrigger value="with-responses">
+                Posts with responses
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+
           <div className="relative">
             <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -105,7 +129,7 @@ const PostsView: React.FC = () => {
         </div>
 
         {/* Table */}
-        <div className="max-w-full overflow-x-auto bg-white">
+        <div className="max-w-full overflow-x-auto">
           {filtered.length === 0 ? (
             <div className="py-16 text-center">
               {searchQuery ? (
