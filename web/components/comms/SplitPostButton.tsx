@@ -57,21 +57,11 @@ function SplitPostButton({ disabled, onPost, onSchedule }: SplitPostButtonProps)
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem
-            onClick={() => {
-              setAction('post');
-              onPost();
-            }}
-          >
+          <DropdownMenuItem onClick={() => setAction('post')}>
             <Send className="h-4 w-4 mr-2" />
             Post now
           </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={() => {
-              setAction('schedule');
-              onSchedule?.();
-            }}
-          >
+          <DropdownMenuItem onClick={() => setAction('schedule')}>
             <CalendarClock className="h-4 w-4 mr-2" />
             Schedule for later
           </DropdownMenuItem>

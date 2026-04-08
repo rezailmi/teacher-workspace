@@ -283,18 +283,17 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
   const [showMobilePreview, setShowMobilePreview] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Type picker state — skip in edit mode
-  const [selectedType, setSelectedType] = useState<'post' | 'post-with-response' | null>(
-    editId ? 'post' : null,
-  );
+  // Type picker state — skip in edit mode, infer from loaded data
+  const [selectedType, setSelectedType] = useState<'post' | 'post-with-response' | null>(() => {
+    if (!editId) return null;
+    if (loaderData && (loaderData.responseType === 'acknowledge' || loaderData.responseType === 'yes-no')) {
+      return 'post-with-response';
+    }
+    return 'post';
+  });
 
   // For edit mode, map loader data to form state
   const editData = loaderData ? announcementToFormState(loaderData) : null;
-
-  // If editing but API returned nothing, redirect
-  if (editId && !editData) {
-    return <Navigate to="/posts" replace />;
-  }
 
   const [state, dispatch] = useReducer(
     formReducer,
@@ -305,6 +304,11 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
   const isFormValid = state.title.trim().length > 0;
   const recipientCount = getRecipientCount(state.selectedClasses);
   const isEditing = Boolean(editId);
+
+  // If editing but API returned nothing, redirect (after hooks)
+  if (editId && !editData) {
+    return <Navigate to="/posts" replace />;
+  }
 
   function handleTypeSelect(type: 'post' | 'post-with-response') {
     setSelectedType(type);
