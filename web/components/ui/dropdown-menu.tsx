@@ -1,24 +1,7 @@
-import {
-  cn,
-  DropdownMenuContent as FlowDropdownMenuContent,
-  type DropdownMenuContentProps,
-} from '@flow/core';
-
-function DropdownMenuContent({ className, ...props }: DropdownMenuContentProps) {
-  return (
-    <FlowDropdownMenuContent
-      className={cn('rounded-xl', className)}
-      {...props}
-    />
-  );
-}
-DropdownMenuContent.displayName = 'DropdownMenuContent';
-
-export { DropdownMenuContent, type DropdownMenuContentProps };
-
 export {
   DropdownMenu,
   DropdownMenuCheckboxItem,
+  DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
@@ -31,6 +14,7 @@ export {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
+  type DropdownMenuContentProps,
   type DropdownMenuItemProps,
   type DropdownMenuProps,
   type DropdownMenuSeparatorProps,

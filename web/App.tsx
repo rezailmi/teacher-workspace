@@ -20,7 +20,7 @@ const router = createBrowserRouter([
         lazy: () => import('./containers/StudentsView'),
       },
       {
-        path: 'announcements',
+        path: 'posts',
         lazy: () => import('./containers/PostsView'),
       },
       {

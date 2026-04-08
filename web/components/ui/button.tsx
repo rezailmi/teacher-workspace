@@ -2,7 +2,7 @@ import { Button as FlowButton, type ButtonProps, cn } from '@flow/core';
 
 function Button({ className, ...props }: ButtonProps) {
   return (
-    <FlowButton className={cn('font-medium', className)} {...props} />
+    <FlowButton className={cn('rounded-full font-medium', className)} {...props} />
   );
 }
 Button.displayName = 'Button';

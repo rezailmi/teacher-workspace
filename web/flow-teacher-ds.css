@@ -90,13 +90,10 @@
 }
 
 /* ── D. Radius ────────────────────────────────────────────────────── */
-/* Override --radius-lg to pill (9999px). This affects all components using
-   rounded-lg internally: Button, Badge, TabsTrigger → pill by default.
-   Components that need a different radius (Input, DropdownMenuContent, TabsList)
-   override via their ~/components/ui wrappers using a different radius token. */
-:root {
-  --radius-lg: 9999px;
-}
+/* Keep Flow DS scale hierarchy intact (xs < sm < md < lg < xl < ... < full).
+   Pill shapes use rounded-full via ~/components/ui wrappers.
+   No radius tokens are overridden — defaults are fine:
+   xs:2  sm:6  md:8  lg:10  xl:14  2xl:16  3xl:24  4xl:32  full:9999 */
 
 /* ── E. Spacing ───────────────────────────────────────────────────── */
 :root {
