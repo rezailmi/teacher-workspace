@@ -1,22 +1,61 @@
-import React from 'react';
-import { Link, Navigate, useParams } from 'react-router';
 import { Typography } from '@flow/core';
 import { ArrowLeft } from '@flow/icons';
+import React from 'react';
+import {
+  isRouteErrorResponse,
+  Link,
+  useLoaderData,
+  useParams,
+  useRouteError,
+} from 'react-router';
 
-import { Button, Separator } from '~/components/ui';
-import { StatusBadge } from '~/components/comms/StatusBadge';
+import { loadPostDetail } from '~/api/client';
 import { ReadTrackingCards } from '~/components/comms/ReadTrackingCards';
 import { RecipientReadTable } from '~/components/comms/RecipientReadTable';
-import { getPGAnnouncementById } from '~/data/mock-pg-announcements';
+import { StatusBadge } from '~/components/comms/StatusBadge';
+import { Button, Separator } from '~/components/ui';
+import type { PGAnnouncement } from '~/data/mock-pg-announcements';
 import { formatDate } from '~/helpers/dateTime';
+
+import type { LoaderFunctionArgs } from 'react-router';
+
+// ─── Route loader ───────────────────────────────────────────────────────────
+
+export async function loader({ params }: LoaderFunctionArgs) {
+  const id = params.id;
+  if (!id) throw new Response('Not Found', { status: 404 });
+  return loadPostDetail(id);
+}
+
+// ─── Error boundary ─────────────────────────────────────────────────────────
+
+export function ErrorBoundary() {
+  const error = useRouteError();
+
+  return (
+    <div className="flex flex-col items-center justify-center gap-4 px-6 py-16">
+      <Typography variant="title-md">
+        {isRouteErrorResponse(error) && error.status === 404
+          ? 'Post not found'
+          : 'Could not load post'}
+      </Typography>
+      <Typography variant="body-sm" className="text-muted-foreground">
+        {isRouteErrorResponse(error) && error.status === 404
+          ? 'This post may have been deleted.'
+          : 'The server may be unavailable. Please try again.'}
+      </Typography>
+      <Button variant="outline" size="sm" asChild>
+        <Link to="/posts">Back to Posts</Link>
+      </Button>
+    </div>
+  );
+}
+
+// ─── Component ──────────────────────────────────────────────────────────────
 
 const PostDetailView: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const announcement = id ? getPGAnnouncementById(id) : undefined;
-
-  if (!id || !announcement) {
-    return <Navigate to="/posts" replace />;
-  }
+  const announcement = useLoaderData<PGAnnouncement>();
 
   // Sort recipients: unread first
   const sortedRecipients = [...announcement.recipients].sort((a, b) => {
@@ -26,7 +65,7 @@ const PostDetailView: React.FC = () => {
   });
 
   return (
-    <div className="px-6 py-6 max-w-4xl space-y-8">
+    <div className="mx-auto max-w-4xl space-y-8 px-6 py-6">
       {/* Header: Back + Edit */}
       <div className="flex items-center justify-between">
         <Link
@@ -58,9 +97,11 @@ const PostDetailView: React.FC = () => {
           </p>
         </Typography>
 
-        <Typography variant="body-md" className="mt-4" asChild>
-          <p>{announcement.description}</p>
-        </Typography>
+        {announcement.description && (
+          <Typography variant="body-md" className="mt-4 whitespace-pre-line" asChild>
+            <p>{announcement.description}</p>
+          </Typography>
+        )}
       </div>
 
       <Separator />

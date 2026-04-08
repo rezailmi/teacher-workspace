@@ -1,8 +1,15 @@
 import { Typography } from '@flow/core';
 import { ArrowLeft, Eye } from '@flow/icons';
 import { useDeferredValue, useReducer, useState } from 'react';
-import { Link, Navigate, useNavigate, useParams } from 'react-router';
+import {
+  Link,
+  Navigate,
+  useLoaderData,
+  useNavigate,
+  useParams,
+} from 'react-router';
 
+import { loadPostDetail } from '~/api/client';
 import { PostPreview } from '~/components/comms/PostPreview';
 import { QuestionBuilder } from '~/components/comms/QuestionBuilder';
 import { RecipientSelector } from '~/components/comms/RecipientSelector';
@@ -21,11 +28,16 @@ import {
   Separator,
   Textarea,
 } from '~/components/ui';
-import {
-  getPGAnnouncementById,
-  type FormQuestion,
-  type ResponseType,
-} from '~/data/mock-pg-announcements';
+import type { FormQuestion, PGAnnouncement, ResponseType } from '~/data/mock-pg-announcements';
+
+import type { LoaderFunctionArgs } from 'react-router';
+
+// ─── Route loader (only fetches for edit mode) ──────────────────────────────
+
+export async function loader({ params }: LoaderFunctionArgs) {
+  if (!params.id) return null;
+  return loadPostDetail(params.id);
+}
 
 // ─── Mock data ───────────────────────────────────────────────────────────────
 
@@ -235,11 +247,8 @@ function formReducer(state: PostFormState, action: PostFormAction): PostFormStat
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function announcementToFormState(
-  id: string,
-): PostFormState | null {
-  const announcement = getPGAnnouncementById(id);
-  if (!announcement) return null;
-
+  announcement: PGAnnouncement,
+): PostFormState {
   return {
     title: announcement.title,
     description: announcement.description,
@@ -267,13 +276,14 @@ function getRecipientCount(selectedClasses: string[]): number {
 
 function CreatePostViewInner({ editId }: { editId?: string }) {
   const navigate = useNavigate();
+  const loaderData = useLoaderData<PGAnnouncement | null>();
   const [showSendDialog, setShowSendDialog] = useState(false);
   const [showMobilePreview, setShowMobilePreview] = useState(false);
 
-  // For edit mode, load existing data
-  const editData = editId ? announcementToFormState(editId) : null;
+  // For edit mode, map loader data to form state
+  const editData = loaderData ? announcementToFormState(loaderData) : null;
 
-  // If editing but ID not found, redirect
+  // If editing but API returned nothing, redirect
   if (editId && !editData) {
     return <Navigate to="/posts" replace />;
   }

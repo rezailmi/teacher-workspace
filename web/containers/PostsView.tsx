@@ -13,9 +13,6 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-  Tabs,
-  TabsList,
-  TabsTrigger,
 } from '~/components/ui';
 import {
   AlertTriangle,
@@ -27,38 +24,33 @@ import {
   Users,
 } from '@flow/icons';
 import React, { useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router';
+import { Link, useLoaderData, useNavigate } from 'react-router';
 
+import { loadPostsList } from '~/api/client';
 import { ReadRate } from '~/components/comms/ReadRate';
 import { StatusBadge } from '~/components/comms/StatusBadge';
-import {
-  mockPGAnnouncements,
-  requiresResponse,
-} from '~/data/mock-pg-announcements';
+import type { PGAnnouncement } from '~/data/mock-pg-announcements';
 import { formatDate, getRelevantDate, isLowReadRate } from '~/helpers/dateTime';
 
-type PostTab = 'view-only' | 'with-responses';
+// ─── Route loader ───────────────────────────────────────────────────────────
 
+export async function loader() {
+  return loadPostsList();
+}
+
+// ─── Component ──────────────────────────────────────────────────────────────
 
 const PostsView: React.FC = () => {
   const navigate = useNavigate();
-  const [tab, setTab] = useState<PostTab>('view-only');
+  const announcements = useLoaderData<PGAnnouncement[]>();
   const [searchQuery, setSearchQuery] = useState('');
 
   const filtered = useMemo(() => {
-    return mockPGAnnouncements
+    return announcements
       .filter((a) => {
-        if (tab === 'view-only' && requiresResponse(a.responseType))
-          return false;
-        if (tab === 'with-responses' && !requiresResponse(a.responseType))
-          return false;
-
         if (searchQuery) {
           const q = searchQuery.toLowerCase();
-          return (
-            a.title.toLowerCase().includes(q) ||
-            a.description.toLowerCase().includes(q)
-          );
+          return a.title.toLowerCase().includes(q);
         }
         return true;
       })
@@ -67,7 +59,7 @@ const PostsView: React.FC = () => {
         const dateB = getRelevantDate(b) ?? '';
         return new Date(dateB).getTime() - new Date(dateA).getTime();
       });
-  }, [tab, searchQuery]);
+  }, [announcements, searchQuery]);
 
   return (
     <div className="flex flex-col">
@@ -96,21 +88,9 @@ const PostsView: React.FC = () => {
         </Typography>
       </div>
 
-      {/* Toolbar: tabs + search */}
+      {/* Toolbar: search */}
       <div className="mt-4 space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-4 px-6">
-          <Tabs
-            value={tab}
-            onValueChange={(v) => setTab(v as PostTab)}
-          >
-            <TabsList>
-              <TabsTrigger value="view-only">Posts</TabsTrigger>
-              <TabsTrigger value="with-responses">
-                Posts with responses
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-
+        <div className="flex flex-wrap items-center justify-end gap-4 px-6">
           <div className="relative">
             <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -168,9 +148,7 @@ const PostsView: React.FC = () => {
                   <TableHead className="w-[110px]">Date</TableHead>
                   <TableHead className="w-[100px]">Status</TableHead>
                   <TableHead className="w-[90px]">Owner</TableHead>
-                  <TableHead className="w-[150px]">
-                    Read / Response
-                  </TableHead>
+                  <TableHead className="w-[150px]">Read</TableHead>
                   <TableHead className="w-[48px] pr-2">
                     <span className="sr-only">Actions</span>
                   </TableHead>
@@ -178,16 +156,7 @@ const PostsView: React.FC = () => {
               </TableHeader>
               <TableBody>
                 {filtered.map((announcement) => {
-                  const {
-                    totalCount,
-                    readCount,
-                    responseCount,
-                    yesCount,
-                    noCount,
-                  } = announcement.stats;
-                  const hasResponseType = requiresResponse(
-                    announcement.responseType,
-                  );
+                  const { totalCount, readCount } = announcement.stats;
                   const showLowRead = isLowReadRate(
                     announcement.postedAt,
                     readCount,
@@ -212,9 +181,6 @@ const PostsView: React.FC = () => {
                             {showLowRead && (
                               <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-500" />
                             )}
-                          </div>
-                          <div className="mt-0.5 line-clamp-1 text-sm text-muted-foreground">
-                            {announcement.description}
                           </div>
                         </div>
                       </TableCell>
@@ -251,41 +217,12 @@ const PostsView: React.FC = () => {
                         </div>
                       </TableCell>
 
-                      {/* Read / Response */}
+                      {/* Read */}
                       <TableCell className="pr-6">
                         {announcement.status !== 'posted' ? (
                           <span className="text-sm text-muted-foreground">
                             {'\u2014'}
                           </span>
-                        ) : hasResponseType ? (
-                          <div className="space-y-0.5">
-                            <ReadRate
-                              readCount={responseCount}
-                              totalCount={totalCount}
-                            />
-                            {announcement.responseType === 'yes-no' &&
-                              totalCount > 0 && (
-                                <Typography
-                                  variant="label-xs"
-                                  className="text-muted-foreground"
-                                  asChild
-                                >
-                                  <p>
-                                    {yesCount} yes &middot; {noCount} no
-                                  </p>
-                                </Typography>
-                              )}
-                            {announcement.responseType === 'acknowledge' &&
-                              responseCount > 0 && (
-                                <Typography
-                                  variant="label-xs"
-                                  className="text-muted-foreground"
-                                  asChild
-                                >
-                                  <p>{responseCount} acknowledged</p>
-                                </Typography>
-                              )}
-                          </div>
                         ) : (
                           <ReadRate
                             readCount={readCount}
