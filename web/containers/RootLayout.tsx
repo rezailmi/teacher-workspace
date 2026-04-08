@@ -86,7 +86,9 @@ const RootLayout: React.FC = () => {
 
             <div ref={topbarRef} className="absolute inset-x-0 top-0 h-px" />
 
-            <Outlet />
+            <React.Suspense fallback={null}>
+              <Outlet />
+            </React.Suspense>
           </div>
         </SidebarProvider>
       </div>

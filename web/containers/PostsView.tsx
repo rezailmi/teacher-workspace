@@ -32,42 +32,11 @@ import { ReadRate } from '~/components/comms/ReadRate';
 import { StatusBadge } from '~/components/comms/StatusBadge';
 import {
   mockPGAnnouncements,
-  type PGAnnouncement,
   requiresResponse,
 } from '~/data/mock-pg-announcements';
+import { formatDate, getRelevantDate, isLowReadRate } from '~/helpers/dateTime';
 
 type PostTab = 'view-only' | 'with-responses';
-
-const DATE_FORMATTER = new Intl.DateTimeFormat('en-SG', {
-  day: 'numeric',
-  month: 'short',
-  year: 'numeric',
-  timeZone: 'Asia/Singapore',
-});
-
-function formatDate(iso: string | undefined): string {
-  if (!iso) return '\u2014';
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return '\u2014';
-  return DATE_FORMATTER.format(date);
-}
-
-function isLowReadRate(
-  postedAt: string | undefined,
-  readCount: number,
-  total: number,
-): boolean {
-  if (!postedAt || total === 0) return false;
-  const hoursElapsed =
-    (Date.now() - new Date(postedAt).getTime()) / 3_600_000;
-  return hoursElapsed >= 48 && readCount / total < 0.5;
-}
-
-function getRelevantDate(announcement: PGAnnouncement): string | undefined {
-  if (announcement.status === 'posted') return announcement.postedAt;
-  if (announcement.status === 'scheduled') return announcement.scheduledAt;
-  return announcement.createdAt;
-}
 
 
 const PostsView: React.FC = () => {

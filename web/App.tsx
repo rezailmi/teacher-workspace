@@ -24,6 +24,18 @@ const router = createBrowserRouter([
         lazy: () => import('./containers/PostsView'),
       },
       {
+        path: 'posts/new',
+        lazy: () => import('./containers/CreatePostView'),
+      },
+      {
+        path: 'posts/:id',
+        lazy: () => import('./containers/PostDetailView'),
+      },
+      {
+        path: 'posts/:id/edit',
+        lazy: () => import('./containers/CreatePostView'),
+      },
+      {
         path: 'components',
         lazy: () => import('./containers/ComponentsView'),
       },
