@@ -1,5 +1,6 @@
 import { Typography } from '@flow/core';
 import React from 'react';
+
 import { Button } from '~/components/ui';
 import type { PostFormState } from '~/containers/CreatePostView';
 

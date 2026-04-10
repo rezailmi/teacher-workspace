@@ -1,4 +1,5 @@
 import { Typography } from '@flow/core';
+
 import { Badge, Checkbox } from '~/components/ui';
 
 interface ClassOption {

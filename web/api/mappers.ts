@@ -1,16 +1,17 @@
 import type {
-  PGApiAnnouncementDetail,
-  PGApiAnnouncementSummary,
-  PGApiConsentFormSummary,
-  PGApiReadStatus,
-} from './types';
-import type {
   PGAnnouncement,
   PGOwnership,
   PGRecipient,
   PGStatus,
   ResponseType,
 } from '~/data/mock-pg-announcements';
+
+import type {
+  PGApiAnnouncementDetail,
+  PGApiAnnouncementSummary,
+  PGApiConsentFormSummary,
+  PGApiReadStatus,
+} from './types';
 
 /**
  * Map a list-endpoint summary to a PGAnnouncement.

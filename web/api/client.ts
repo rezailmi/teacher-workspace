@@ -1,16 +1,16 @@
 import type { PGAnnouncement } from '~/data/mock-pg-announcements';
 
+import detailFixture from '../../server/internal/pg/fixtures/announcement_detail.json';
+import readStatusFixture from '../../server/internal/pg/fixtures/announcement_read_status.json';
+import announcementsFixture from '../../server/internal/pg/fixtures/announcements.json';
+import sharedFixture from '../../server/internal/pg/fixtures/announcements_shared.json';
+import consentFormsFixture from '../../server/internal/pg/fixtures/consent_forms.json';
 import {
   mapAnnouncementDetail,
   mapAnnouncementSummary,
   mapConsentFormSummary,
   mergeAndDedup,
 } from './mappers';
-import announcementsFixture from '../../server/internal/pg/fixtures/announcements.json';
-import sharedFixture from '../../server/internal/pg/fixtures/announcements_shared.json';
-import detailFixture from '../../server/internal/pg/fixtures/announcement_detail.json';
-import readStatusFixture from '../../server/internal/pg/fixtures/announcement_read_status.json';
-import consentFormsFixture from '../../server/internal/pg/fixtures/consent_forms.json';
 import type {
   PGApiAnnouncementDetail,
   PGApiAnnouncementList,

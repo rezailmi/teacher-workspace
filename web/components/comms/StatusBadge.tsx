@@ -1,7 +1,6 @@
 import { cn } from '@flow/core';
 
 import { Badge } from '~/components/ui';
-
 import type { PGStatus } from '~/data/mock-pg-announcements';
 
 const STATUS_CONFIG: Record<PGStatus, { label: string; className: string }> = {

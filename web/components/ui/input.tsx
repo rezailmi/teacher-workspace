@@ -1,7 +1,7 @@
 import {
+  cn,
   Input as FlowInput,
   type InputProps,
-  cn,
 } from '@flow/core';
 import { type ComponentRef, forwardRef } from 'react';
 

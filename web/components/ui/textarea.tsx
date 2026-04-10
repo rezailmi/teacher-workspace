@@ -1,7 +1,7 @@
 import {
+  cn,
   Textarea as FlowTextarea,
   type TextareaProps,
-  cn,
 } from '@flow/core';
 import { type ComponentRef, forwardRef } from 'react';
 

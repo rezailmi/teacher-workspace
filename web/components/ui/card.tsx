@@ -4,6 +4,6 @@ export {
   CardDescription,
   CardFooter,
   CardHeader,
-  CardTitle,
   type CardProps,
+  CardTitle,
 } from '@flow/core';

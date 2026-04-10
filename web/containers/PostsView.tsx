@@ -1,23 +1,5 @@
 import { Typography } from '@flow/core';
 import {
-  Button,
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-  Input,
-  Tabs,
-  TabsList,
-  TabsTrigger,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '~/components/ui';
-import {
   AlertTriangle,
   Copy,
   MoreHorizontal,
@@ -36,6 +18,24 @@ import {
 } from '~/api/client';
 import { ReadRate } from '~/components/comms/ReadRate';
 import { StatusBadge } from '~/components/comms/StatusBadge';
+import {
+  Button,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  Input,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  Tabs,
+  TabsList,
+  TabsTrigger,
+} from '~/components/ui';
 import type { PGAnnouncement } from '~/data/mock-pg-announcements';
 import { requiresResponse } from '~/data/mock-pg-announcements';
 import { formatDate, getRelevantDate, isLowReadRate } from '~/helpers/dateTime';

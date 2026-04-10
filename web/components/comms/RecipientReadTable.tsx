@@ -12,9 +12,8 @@ import {
   TableHeader,
   TableRow,
 } from '~/components/ui';
-import { formatDate } from '~/helpers/dateTime';
-
 import type { PGRecipient, ResponseType } from '~/data/mock-pg-announcements';
+import { formatDate } from '~/helpers/dateTime';
 
 interface RecipientReadTableProps {
   recipients: PGRecipient[];
