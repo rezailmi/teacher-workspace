@@ -1,8 +1,9 @@
 import { Typography } from '@flow/core';
 import { ChevronDown, ChevronUp, Plus, Trash2 } from '@flow/icons';
+
 import { Button, Input } from '~/components/ui';
-import type { FormQuestion } from '~/data/mock-pg-announcements';
 import type { PostFormAction } from '~/containers/CreatePostView';
+import type { FormQuestion } from '~/data/mock-pg-announcements';
 
 const MAX_QUESTIONS = 5;
 const MIN_MCQ_OPTIONS = 2;

@@ -37,13 +37,13 @@ export interface PGApiAnnouncementDetail {
   images: unknown[];
   shortcutLink: unknown[];
   websiteLinks: unknown[];
-  staffOwners: Array<{ staffID: number; staffName: string }>;
-  students: Array<{
+  staffOwners: { staffID: number; staffName: string }[];
+  students: {
     studentId: number;
     studentName: string;
     className: string;
     isRead: boolean;
-  }>;
+  }[];
   status: 'POSTED' | 'SCHEDULED' | 'DRAFT';
   scheduledSendAt: string | null;
   scheduledSendFailureCode: string | null;
@@ -53,13 +53,13 @@ export interface PGApiReadStatus {
   postId: number;
   totalRecipients: number;
   totalRead: number;
-  students: Array<{
+  students: {
     studentId: number;
     studentName: string;
     className: string;
     isRead: boolean;
     readAt: string | null;
-  }>;
+  }[];
 }
 
 export interface PGApiAnnouncementDraft {
@@ -72,7 +72,7 @@ export interface PGApiAnnouncementDraft {
   images: unknown[];
   shortcutLink: unknown[];
   websiteLinks: unknown[];
-  staffOwners: Array<{ staffID: number; staffName: string }>;
+  staffOwners: { staffID: number; staffName: string }[];
   recipients: {
     classIds: number[];
     customGroupIds: number[];
@@ -157,14 +157,14 @@ export interface PGApiConsentFormDetail {
   images: unknown[];
   websiteLinks: unknown[];
   customQuestions: unknown[];
-  staffOwners: Array<{ staffID: number; staffName: string }>;
-  students: Array<{
+  staffOwners: { staffID: number; staffName: string }[];
+  students: {
     studentId: number;
     studentName: string;
     className: string;
     response: 'YES' | 'NO' | null;
     respondedAt: string | null;
-  }>;
+  }[];
   status: 'OPEN' | 'CLOSED' | 'DRAFT';
   consentFormHistory: unknown[];
 }
@@ -180,22 +180,22 @@ export interface PGApiSchoolStaff {
 }
 
 export interface PGApiSchoolGroups {
-  classes: Array<{ classId: number; className: string; level: string; year: number }>;
-  levels: Array<{ levelId: number; levelName: string; year: number }>;
-  ccas: Array<{ ccaId: number; ccaName: string }>;
+  classes: { classId: number; className: string; level: string; year: number }[];
+  levels: { levelId: number; levelName: string; year: number }[];
+  ccas: { ccaId: number; ccaName: string }[];
 }
 
 export interface PGApiGroupsAssigned {
-  classes: Array<{
+  classes: {
     classId: number;
     className: string;
     level: string;
     year: number;
     role: string;
     studentCount: number;
-  }>;
-  ccas: Array<{ ccaId: number; ccaName: string; studentCount: number }>;
-  levels: Array<{ levelId: number; levelName: string; year: number; studentCount: number }>;
+  }[];
+  ccas: { ccaId: number; ccaName: string; studentCount: number }[];
+  levels: { levelId: number; levelName: string; year: number; studentCount: number }[];
   school: { schoolId: number; schoolName: string; studentCount: number };
 }
 
@@ -204,12 +204,12 @@ export interface PGApiClassDetail {
   className: string;
   level: string;
   year: number;
-  students: Array<{
+  students: {
     studentId: number;
     studentName: string;
     admissionNumber: string;
-  }>;
-  formTeachers: Array<{ staffID: number; staffName: string }>;
+  }[];
+  formTeachers: { staffID: number; staffName: string }[];
 }
 
 // ─── Session & Config ───────────────────────────────────────────────────────

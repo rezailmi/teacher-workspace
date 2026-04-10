@@ -1,13 +1,13 @@
 import {
+  cn,
   Tabs,
   TabsContent,
+  type TabsContentProps,
   TabsList as FlowTabsList,
   type TabsListProps,
+  type TabsProps,
   TabsTrigger as FlowTabsTrigger,
   type TabsTriggerProps,
-  cn,
-  type TabsContentProps,
-  type TabsProps,
 } from '@flow/core';
 
 function TabsList({ className, ...props }: TabsListProps) {
@@ -28,10 +28,10 @@ TabsTrigger.displayName = 'TabsTrigger';
 export {
   Tabs,
   TabsContent,
-  TabsList,
-  TabsTrigger,
   type TabsContentProps,
+  TabsList,
   type TabsListProps,
   type TabsProps,
+  TabsTrigger,
   type TabsTriggerProps,
 };

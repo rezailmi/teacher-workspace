@@ -49,6 +49,57 @@ func (h *Handler) registerMock(mux *http.ServeMux) {
 	// Account & notification prefs
 	mux.HandleFunc("GET /api/web/2/staff/users/me", serveFixture("fixtures/users_me.json"))
 	mux.HandleFunc("GET /api/web/2/staff/notificationPreference", serveFixture("fixtures/notification_preferences.json"))
+
+	// ── Write stubs (stateless — return realistic status codes + shapes) ──
+
+	// Announcements — write
+	mux.HandleFunc("POST /api/web/2/staff/announcements", jsonStub(http.StatusCreated, `{"postId":1041}`))
+	mux.HandleFunc("POST /api/web/2/staff/announcements/drafts", jsonStub(http.StatusCreated, `{"announcementDraftId":202}`))
+	mux.HandleFunc("POST /api/web/2/staff/announcements/drafts/schedule", jsonStub(http.StatusOK, `{}`))
+	mux.HandleFunc("POST /api/web/2/staff/announcements/duplicate", jsonStub(http.StatusCreated, `{"postId":1042}`))
+	mux.HandleFunc("PUT /api/web/2/staff/announcements/drafts/{announcementDraftId}", jsonStub(http.StatusOK, `{}`))
+	mux.HandleFunc("DELETE /api/web/2/staff/announcements/{postId}", noContent)
+	mux.HandleFunc("DELETE /api/web/2/staff/announcements/drafts/{announcementDraftId}", noContent)
+
+	// Consent forms — write
+	mux.HandleFunc("POST /api/web/2/staff/consentForms", jsonStub(http.StatusCreated, `{"consentFormId":301}`))
+	mux.HandleFunc("POST /api/web/2/staff/consentForms/drafts", jsonStub(http.StatusCreated, `{"consentFormDraftId":401}`))
+	mux.HandleFunc("PUT /api/web/2/staff/consentForms/drafts/{consentFormDraftId}", jsonStub(http.StatusOK, `{}`))
+	mux.HandleFunc("PUT /api/web/2/staff/consentForms/{consentFormId}/updateDueDate", jsonStub(http.StatusOK, `{}`))
+	mux.HandleFunc("DELETE /api/web/2/staff/consentForms/{consentFormId}", noContent)
+	mux.HandleFunc("DELETE /api/web/2/staff/consentForms/drafts/{consentFormDraftId}", noContent)
+
+	// Meetings (PTM) — write
+	mux.HandleFunc("POST /api/web/2/staff/ptm", jsonStub(http.StatusCreated, `{"eventId":1002}`))
+	mux.HandleFunc("DELETE /api/web/2/staff/ptm/{eventId}", noContent)
+	mux.HandleFunc("POST /api/web/2/staff/ptm/booking/block", jsonStub(http.StatusOK, `{}`))
+	mux.HandleFunc("POST /api/web/2/staff/ptm/booking/unblock", jsonStub(http.StatusOK, `{}`))
+	mux.HandleFunc("POST /api/web/2/staff/ptm/booking/add", jsonStub(http.StatusOK, `{}`))
+	mux.HandleFunc("POST /api/web/2/staff/ptm/booking/change", jsonStub(http.StatusOK, `{}`))
+	mux.HandleFunc("POST /api/web/2/staff/ptm/booking/remove", jsonStub(http.StatusOK, `{}`))
+
+	// Groups — write
+	mux.HandleFunc("POST /api/web/2/staff/groups/custom", jsonStub(http.StatusCreated, `{"customGroupId":6}`))
+	mux.HandleFunc("POST /api/web/2/staff/groups/custom/validateStudents", jsonStub(http.StatusOK, `{"valid":true}`))
+	mux.HandleFunc("POST /api/web/2/staff/groups/student/count", jsonStub(http.StatusOK, `{"count":30}`))
+	mux.HandleFunc("PUT /api/web/2/staff/groups/custom/{customGroupId}", jsonStub(http.StatusOK, `{}`))
+	mux.HandleFunc("PUT /api/web/2/staff/groups/custom/{customGroupId}/share", jsonStub(http.StatusOK, `{}`))
+	mux.HandleFunc("PUT /api/web/2/staff/groups/custom/{customGroupId}/removeAccess", jsonStub(http.StatusOK, `{}`))
+	mux.HandleFunc("DELETE /api/web/2/staff/groups/custom/{customGroupId}", noContent)
+
+	// School data — write
+	mux.HandleFunc("POST /api/web/2/staff/school/travelDeclaration", jsonStub(http.StatusOK, `{}`))
+	mux.HandleFunc("GET /api/web/2/staff/school/students/retrieveReport", jsonStub(http.StatusOK, `{}`))
+
+	// Account — write
+	mux.HandleFunc("PUT /api/web/2/staff/{staffId}/updateDisplayEmail", jsonStub(http.StatusOK, `{}`))
+	mux.HandleFunc("PUT /api/web/2/staff/{staffId}/updateDisplayName", jsonStub(http.StatusOK, `{}`))
+	mux.HandleFunc("PUT /api/web/2/staff/notificationPreference", jsonStub(http.StatusOK, `{}`))
+
+	// Files
+	mux.HandleFunc("POST /api/files/2/preUploadValidation", jsonStub(http.StatusOK, `{"valid":true}`))
+	mux.HandleFunc("GET /api/files/2/postUploadVerification", jsonStub(http.StatusOK, `{}`))
+	mux.HandleFunc("GET /api/files/2/handleDownloadAttachment", jsonStub(http.StatusOK, `{}`))
 }
 
 func serveFixture(path string) http.HandlerFunc {

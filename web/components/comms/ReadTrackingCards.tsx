@@ -1,7 +1,6 @@
 import { Typography } from '@flow/core';
 
 import { Card, CardContent, Progress } from '~/components/ui';
-
 import type { PGAnnouncementStats, ResponseType } from '~/data/mock-pg-announcements';
 
 interface ReadTrackingCardsProps {
