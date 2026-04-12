@@ -327,11 +327,11 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
       } else {
         await createDraft(payload);
       }
+      navigate('/posts');
     } catch {
       alert('Failed to save draft. Please try again.');
     } finally {
       setIsSaving(false);
-      navigate('/posts');
     }
   }
 
