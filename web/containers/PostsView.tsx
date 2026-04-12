@@ -71,11 +71,8 @@ const PostsView: React.FC = () => {
         }
         return true;
       })
-      .sort((a, b) => {
-        const dateA = getRelevantDate(a) ?? '';
-        const dateB = getRelevantDate(b) ?? '';
-        return new Date(dateB).getTime() - new Date(dateA).getTime();
-      });
+      .map((a) => ({ ...a, _date: getRelevantDate(a), _dateTs: new Date(getRelevantDate(a) ?? 0).getTime() }))
+      .sort((a, b) => b._dateTs - a._dateTs);
   }, [announcements, searchQuery, tab]);
 
   return (
@@ -191,7 +188,7 @@ const PostsView: React.FC = () => {
                     readCount,
                     totalCount,
                   );
-                  const relevantDate = getRelevantDate(announcement);
+                  const relevantDate = announcement._date;
                   const isShared = announcement.ownership === 'shared';
 
                   return (
@@ -283,7 +280,7 @@ const PostsView: React.FC = () => {
                                 }).then(() => {
                                   revalidator.revalidate();
                                 }).catch(() => {
-                                  navigate('/posts/new');
+                                  alert('Failed to duplicate post.');
                                 });
                               }}
                             >

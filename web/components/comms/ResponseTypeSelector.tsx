@@ -1,7 +1,7 @@
 import { Typography } from '@flow/core';
 
 import { Label, RadioGroup, RadioGroupItem } from '~/components/ui';
-import type { ResponseType } from '~/data/mock-pg-announcements';
+import { RESPONSE_TYPE_META, type ResponseType } from '~/data/mock-pg-announcements';
 
 interface ResponseTypeSelectorProps {
   value: ResponseType;
@@ -9,27 +9,9 @@ interface ResponseTypeSelectorProps {
   children?: React.ReactNode;
 }
 
-const RESPONSE_OPTIONS: {
-  value: ResponseType;
-  label: string;
-  description: string;
-}[] = [
-  {
-    value: 'view-only',
-    label: 'View Only',
-    description: 'Parents can read but not respond',
-  },
-  {
-    value: 'acknowledge',
-    label: 'Acknowledge',
-    description: 'Parents must acknowledge receipt',
-  },
-  {
-    value: 'yes-no',
-    label: 'Yes / No',
-    description: 'Parents respond with Yes or No',
-  },
-];
+const RESPONSE_OPTIONS = (
+  Object.entries(RESPONSE_TYPE_META) as [ResponseType, (typeof RESPONSE_TYPE_META)[ResponseType]][]
+).map(([value, meta]) => ({ value, ...meta }));
 
 function ResponseTypeSelector({
   value,

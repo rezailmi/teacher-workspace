@@ -115,10 +115,10 @@ export function mapConsentFormSummary(
  * Merge own and shared announcements, deduplicating by ID.
  * Own posts take priority (ownership: 'mine').
  */
-export function mergeAndDedup(
-  own: PGAnnouncement[],
-  shared: PGAnnouncement[],
-): PGAnnouncement[] {
+export function mergeAndDedup<T extends { id: string }>(
+  own: T[],
+  shared: T[],
+): T[] {
   const ownIds = new Set(own.map((a) => a.id));
   return [...own, ...shared.filter((a) => !ownIds.has(a.id))];
 }
