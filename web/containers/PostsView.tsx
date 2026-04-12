@@ -287,23 +287,27 @@ const PostsView: React.FC = () => {
                               <Copy className="mr-2 h-4 w-4" />
                               Duplicate
                             </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              className="text-destructive focus:text-destructive"
-                              onClick={async (e) => {
-                                e.stopPropagation();
-                                if (!confirm('Delete this post?')) return;
-                                try {
-                                  await deleteAnnouncement(announcement.id);
-                                  revalidator.revalidate();
-                                } catch {
-                                  alert('Failed to delete post.');
-                                }
-                              }}
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Delete
-                            </DropdownMenuItem>
+                            {!isShared && (
+                              <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  className="text-destructive focus:text-destructive"
+                                  onClick={async (e) => {
+                                    e.stopPropagation();
+                                    if (!confirm('Delete this post?')) return;
+                                    try {
+                                      await deleteAnnouncement(announcement.id);
+                                      revalidator.revalidate();
+                                    } catch {
+                                      alert('Failed to delete post.');
+                                    }
+                                  }}
+                                >
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  Delete
+                                </DropdownMenuItem>
+                              </>
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
