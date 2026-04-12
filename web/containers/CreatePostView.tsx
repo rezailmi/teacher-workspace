@@ -142,7 +142,7 @@ function formReducer(state: PostFormState, action: PostFormAction): PostFormStat
 
     case 'ADD_QUESTION': {
       const newQuestion: FormQuestion = {
-        id: Date.now().toString(),
+        id: crypto.randomUUID(),
         text: '',
         type: 'free-text',
       };
@@ -341,11 +341,10 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
     const payload = buildPayload();
     try {
       await createAnnouncement(payload);
-      // Wait for dialog close animation before navigating (prevents unmount mid-animation)
+      // Keep isSaving=true until navigation completes to prevent double-submit
       setTimeout(() => navigate('/posts'), 150);
     } catch {
       alert('Failed to send post. Please try again.');
-    } finally {
       setIsSaving(false);
     }
   }

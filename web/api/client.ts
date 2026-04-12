@@ -171,17 +171,12 @@ export async function loadPostsList(): Promise<PGAnnouncement[]> {
 
 export async function loadPostDetail(
   postId: string,
-): Promise<PGAnnouncement | null> {
-  try {
-    const [detail, readStatus] = await Promise.all([
-      fetchAnnouncementDetail(postId),
-      fetchAnnouncementReadStatus(postId),
-    ]);
-    return mapAnnouncementDetail(detail, readStatus);
-  } catch {
-    console.warn(`[PG API] Failed to load post ${postId}`);
-    return null;
-  }
+): Promise<PGAnnouncement> {
+  const [detail, readStatus] = await Promise.all([
+    fetchAnnouncementDetail(postId),
+    fetchAnnouncementReadStatus(postId),
+  ]);
+  return mapAnnouncementDetail(detail, readStatus);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

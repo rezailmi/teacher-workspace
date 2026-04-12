@@ -55,33 +55,17 @@ export function ErrorBoundary() {
 
 const PostDetailView: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const announcement = useLoaderData<PGAnnouncement | null>();
+  const announcement = useLoaderData<PGAnnouncement>();
 
   const sortedRecipients = useMemo(
     () =>
-      announcement
-        ? [...announcement.recipients].sort((a, b) => {
-            if (a.readStatus === 'unread' && b.readStatus === 'read') return -1;
-            if (a.readStatus === 'read' && b.readStatus === 'unread') return 1;
-            return 0;
-          })
-        : [],
+      [...announcement.recipients].sort((a, b) => {
+        if (a.readStatus === 'unread' && b.readStatus === 'read') return -1;
+        if (a.readStatus === 'read' && b.readStatus === 'unread') return 1;
+        return 0;
+      }),
     [announcement],
   );
-
-  if (!announcement) {
-    return (
-      <div className="flex flex-col items-center justify-center gap-4 px-6 py-16">
-        <Typography variant="title-md">Could not load post</Typography>
-        <Typography variant="body-sm" className="text-muted-foreground">
-          The server may be unavailable. Please try again.
-        </Typography>
-        <Button variant="outline" size="sm" asChild>
-          <Link to="/posts">Back to Posts</Link>
-        </Button>
-      </div>
-    );
-  }
 
   return (
     <div className="px-6 py-6 space-y-6">
