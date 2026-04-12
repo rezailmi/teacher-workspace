@@ -1,6 +1,15 @@
 export type PGStatus = 'posted' | 'scheduled' | 'draft';
 export type ResponseType = 'view-only' | 'acknowledge' | 'yes-no';
 
+export const RESPONSE_TYPE_META: Record<
+  ResponseType,
+  { label: string; description: string }
+> = {
+  'view-only': { label: 'View Only', description: 'Parents can read but not respond' },
+  acknowledge: { label: 'Acknowledge', description: 'Parents must acknowledge receipt' },
+  'yes-no': { label: 'Yes / No', description: 'Parents respond with Yes or No' },
+};
+
 export type ResponseTypeWithResponse = 'acknowledge' | 'yes-no';
 
 export function requiresResponse(

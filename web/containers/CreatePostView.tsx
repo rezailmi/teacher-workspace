@@ -350,7 +350,6 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
     }
   }
 
-  // ── Type picker (shown before form) ────────────────────────────────────
   if (!selectedType) {
     return (
       <div className="flex flex-col">

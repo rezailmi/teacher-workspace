@@ -9,13 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '~/components/ui';
-import type { ResponseType } from '~/data/mock-pg-announcements';
-
-const RESPONSE_TYPE_LABELS: Record<ResponseType, string> = {
-  'view-only': 'View Only',
-  acknowledge: 'Acknowledge',
-  'yes-no': 'Yes / No',
-};
+import { RESPONSE_TYPE_META, type ResponseType } from '~/data/mock-pg-announcements';
 
 interface SendConfirmationDialogProps {
   open: boolean;
@@ -67,7 +61,7 @@ function SendConfirmationDialog({
               Response Type
             </Typography>
             <Typography variant="body-sm" className="font-medium">
-              {RESPONSE_TYPE_LABELS[responseType]}
+              {RESPONSE_TYPE_META[responseType].label}
             </Typography>
           </div>
         </div>

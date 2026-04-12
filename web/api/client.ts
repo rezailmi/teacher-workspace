@@ -245,8 +245,7 @@ export async function loadConsentFormsList(): Promise<ConsentFormListItem[]> {
   ]);
   const mappedOwn = own.posts.map((p) => mapConsentFormSummary(p, 'mine'));
   const mappedShared = shared.posts.map((p) => mapConsentFormSummary(p, 'shared'));
-  const ownIds = new Set(mappedOwn.map((f) => f.id));
-  return [...mappedOwn, ...mappedShared.filter((f) => !ownIds.has(f.id))];
+  return mergeAndDedup(mappedOwn, mappedShared);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
