@@ -16,8 +16,8 @@ import {
   duplicateAnnouncement,
   loadPostsList,
 } from '~/api/client';
-import { ReadRate } from '~/components/comms/ReadRate';
-import { StatusBadge } from '~/components/comms/StatusBadge';
+import { ReadRate } from '~/components/posts/ReadRate';
+import { StatusBadge } from '~/components/posts/StatusBadge';
 import {
   Button,
   DropdownMenu,

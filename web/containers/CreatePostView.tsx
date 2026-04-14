@@ -16,15 +16,15 @@ import {
   loadPostDetail,
   updateDraft,
 } from '~/api/client';
-import { AttachmentSection } from '~/components/comms/AttachmentSection';
-import { PostPreview } from '~/components/comms/PostPreview';
-import { PostTypePicker } from '~/components/comms/PostTypePicker';
-import { QuestionBuilder } from '~/components/comms/QuestionBuilder';
-import { RecipientSelector } from '~/components/comms/RecipientSelector';
-import { ResponseTypeSelector } from '~/components/comms/ResponseTypeSelector';
-import { RichTextToolbar } from '~/components/comms/RichTextToolbar';
-import { SendConfirmationDialog } from '~/components/comms/SendConfirmationDialog';
-import { SplitPostButton } from '~/components/comms/SplitPostButton';
+import { AttachmentSection } from '~/components/posts/AttachmentSection';
+import { PostPreview } from '~/components/posts/PostPreview';
+import { PostTypePicker } from '~/components/posts/PostTypePicker';
+import { QuestionBuilder } from '~/components/posts/QuestionBuilder';
+import { RecipientSelector } from '~/components/posts/RecipientSelector';
+import { ResponseTypeSelector } from '~/components/posts/ResponseTypeSelector';
+import { RichTextToolbar } from '~/components/posts/RichTextToolbar';
+import { SendConfirmationDialog } from '~/components/posts/SendConfirmationDialog';
+import { SplitPostButton } from '~/components/posts/SplitPostButton';
 import {
   Button,
   Card,

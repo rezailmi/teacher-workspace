@@ -12,7 +12,7 @@
 ```
 Routes (App.tsx, lazy-loaded)
   └── Containers (web/containers/) — page-level views with route loaders
-       └── Domain components (web/components/comms/) — Posts-specific UI
+       └── Domain components (web/components/posts/) — Posts-specific UI
             └── UI primitives (web/components/ui/) — Flow DS wrappers
                  └── @flow/core — base design system
 ```
