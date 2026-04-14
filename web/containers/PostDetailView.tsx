@@ -11,10 +11,10 @@ import {
 } from 'react-router';
 
 import { loadPostDetail } from '~/api/client';
-import { AnnouncementCard } from '~/components/comms/AnnouncementCard';
-import { ReadTrackingCards } from '~/components/comms/ReadTrackingCards';
-import { RecipientReadTable } from '~/components/comms/RecipientReadTable';
-import { StatusBadge } from '~/components/comms/StatusBadge';
+import { AnnouncementCard } from '~/components/posts/AnnouncementCard';
+import { ReadTrackingCards } from '~/components/posts/ReadTrackingCards';
+import { RecipientReadTable } from '~/components/posts/RecipientReadTable';
+import { StatusBadge } from '~/components/posts/StatusBadge';
 import { Button } from '~/components/ui';
 import type { PGAnnouncement } from '~/data/mock-pg-announcements';
 import { formatDate } from '~/helpers/dateTime';

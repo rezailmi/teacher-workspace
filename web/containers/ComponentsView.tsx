@@ -2,6 +2,17 @@ import { Typography } from '@flow/core';
 import { Mail, Plus, Upload } from '@flow/icons';
 import React, { useState } from 'react';
 
+import { AnnouncementCard } from '~/components/posts/AnnouncementCard';
+import { AttachmentSection } from '~/components/posts/AttachmentSection';
+import { PostTypePicker } from '~/components/posts/PostTypePicker';
+import { ReadRate } from '~/components/posts/ReadRate';
+import { ReadTrackingCards } from '~/components/posts/ReadTrackingCards';
+import { RecipientSelector } from '~/components/posts/RecipientSelector';
+import { ResponseTypeSelector } from '~/components/posts/ResponseTypeSelector';
+import { RichTextToolbar } from '~/components/posts/RichTextToolbar';
+import { SendConfirmationDialog } from '~/components/posts/SendConfirmationDialog';
+import { SplitPostButton } from '~/components/posts/SplitPostButton';
+import { StatusBadge } from '~/components/posts/StatusBadge';
 import {
   Badge,
   Button,
@@ -20,6 +31,20 @@ import {
   TabsList,
   TabsTrigger,
 } from '~/components/ui';
+import type { ResponseType } from '~/data/mock-pg-announcements';
+
+const DEMO_CLASSES = [
+  { id: '4a', label: '4A', students: ['Aiden Tan', 'Bella Lim', 'Chen Wei'] },
+  { id: '4b', label: '4B', students: ['Dinesh Rao', 'Eva Ng'] },
+];
+
+const DEMO_STATS = {
+  totalCount: 32,
+  readCount: 24,
+  responseCount: 19,
+  yesCount: 15,
+  noCount: 4,
+};
 
 function Section({
   title,
@@ -58,6 +83,12 @@ function Subsection({
 const ComponentsView: React.FC = () => {
   const [defaultTab, setDefaultTab] = useState('account');
   const [lineTab, setLineTab] = useState('overview');
+  const [pickedType, setPickedType] = useState<
+    'post' | 'post-with-response' | null
+  >(null);
+  const [selectedClasses, setSelectedClasses] = useState<string[]>(['4a']);
+  const [responseType, setResponseType] = useState<ResponseType>('acknowledge');
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-16 px-6 py-8">
@@ -295,6 +326,111 @@ const ComponentsView: React.FC = () => {
               </Typography>
             </div>
           </div>
+        </Subsection>
+      </Section>
+
+      {/* ── Post building blocks ────────────────────────────────── */}
+      <Section title="Post building blocks">
+        <Subsection label="StatusBadge">
+          <div className="flex flex-wrap items-center gap-3">
+            <StatusBadge status="posted" />
+            <StatusBadge status="scheduled" />
+            <StatusBadge status="draft" />
+          </div>
+        </Subsection>
+
+        <Subsection label="ReadRate">
+          <div className="flex flex-wrap items-center gap-6">
+            <ReadRate readCount={24} totalCount={32} />
+            <ReadRate readCount={0} totalCount={32} />
+            <ReadRate readCount={0} totalCount={0} />
+          </div>
+        </Subsection>
+
+        <Subsection label="AnnouncementCard">
+          <AnnouncementCard
+            className="max-w-sm"
+            title="Term 2 Parent-Teacher Meeting"
+            description="Dear parents, the term 2 PTM will be held on Saturday, 19 April. Please book a slot via Parents Gateway."
+            enquiryEmail="ptm@school.edu.sg"
+            staffInCharge="Ms Lee"
+          />
+        </Subsection>
+
+        <Subsection label="AttachmentSection">
+          <div className="max-w-md rounded-xl border p-4">
+            <AttachmentSection />
+          </div>
+        </Subsection>
+
+        <Subsection label="RichTextToolbar">
+          <RichTextToolbar className="max-w-xl" />
+        </Subsection>
+
+        <Subsection label="SplitPostButton">
+          <div className="flex flex-wrap items-center gap-4">
+            <SplitPostButton
+              onPost={() => window.alert('Post clicked')}
+              onSchedule={() => window.alert('Schedule clicked')}
+            />
+            <SplitPostButton
+              disabled
+              onPost={() => window.alert('Post clicked')}
+            />
+          </div>
+        </Subsection>
+
+        <Subsection label="PostTypePicker">
+          <div className="rounded-xl border">
+            <PostTypePicker onSelect={setPickedType} />
+          </div>
+          {pickedType && (
+            <Typography variant="body-sm" className="text-muted-foreground">
+              Picked: <code>{pickedType}</code>
+            </Typography>
+          )}
+        </Subsection>
+      </Section>
+
+      {/* ── Post building blocks (PG-coupled) ───────────────────── */}
+      <Section title="Post building blocks (PG-coupled)">
+        <Subsection label="RecipientSelector">
+          <RecipientSelector
+            classes={DEMO_CLASSES}
+            selectedClasses={selectedClasses}
+            onToggleClass={(id) =>
+              setSelectedClasses((prev) =>
+                prev.includes(id)
+                  ? prev.filter((x) => x !== id)
+                  : [...prev, id],
+              )
+            }
+          />
+        </Subsection>
+
+        <Subsection label="ResponseTypeSelector">
+          <ResponseTypeSelector
+            value={responseType}
+            onChange={setResponseType}
+          />
+        </Subsection>
+
+        <Subsection label="ReadTrackingCards">
+          <ReadTrackingCards responseType={responseType} stats={DEMO_STATS} />
+        </Subsection>
+
+        <Subsection label="SendConfirmationDialog">
+          <Button variant="outline" onClick={() => setDialogOpen(true)}>
+            Open send confirmation
+          </Button>
+          <SendConfirmationDialog
+            open={dialogOpen}
+            onOpenChange={setDialogOpen}
+            title="Term 2 Parent-Teacher Meeting"
+            recipientCount={32}
+            responseType={responseType}
+            onConfirm={() => setDialogOpen(false)}
+          />
         </Subsection>
       </Section>
     </div>
