@@ -1,5 +1,5 @@
 ---
-title: "feat: Wire Frontend to PG Proxy API"
+title: 'feat: Wire Frontend to PG Proxy API'
 type: feat
 status: completed
 date: 2026-04-08
@@ -29,46 +29,46 @@ Create an API client layer with typed responses and mapper functions.
 
 **List endpoint** (`GET /api/web/2/staff/announcements`):
 
-| API field | Maps to FE field | Conversion |
-|-----------|-----------------|------------|
-| `postId` | `id` | `String(postId)` |
-| `title` | `title` | direct |
-| `date` | `postedAt` / `scheduledAt` / `createdAt` | route by `status` |
-| `status` | `status` | `.toLowerCase()` → `PGStatus` |
-| `toParentsOf` | (none — not used by components) | drop |
-| `readMetrics.readPerStudent` | `stats.readCount` | `Math.round(readPerStudent * totalStudents)` |
-| `readMetrics.totalStudents` | `stats.totalCount` | direct |
-| `createdByName` | `createdBy` | direct |
-| (missing) `description` | `description` | `""` — not available on list |
-| (missing) `responseType` | `responseType` | `"view-only"` default |
-| (missing) `ownership` | `ownership` | derived: own endpoint → `"mine"`, shared endpoint → `"shared"` |
-| (missing) `stats.responseCount/yesCount/noCount` | `stats.*` | `0` defaults |
-| (missing) `recipients` | `recipients` | `[]` — not available on list |
+| API field                                        | Maps to FE field                         | Conversion                                                     |
+| ------------------------------------------------ | ---------------------------------------- | -------------------------------------------------------------- |
+| `postId`                                         | `id`                                     | `String(postId)`                                               |
+| `title`                                          | `title`                                  | direct                                                         |
+| `date`                                           | `postedAt` / `scheduledAt` / `createdAt` | route by `status`                                              |
+| `status`                                         | `status`                                 | `.toLowerCase()` → `PGStatus`                                  |
+| `toParentsOf`                                    | (none — not used by components)          | drop                                                           |
+| `readMetrics.readPerStudent`                     | `stats.readCount`                        | `Math.round(readPerStudent * totalStudents)`                   |
+| `readMetrics.totalStudents`                      | `stats.totalCount`                       | direct                                                         |
+| `createdByName`                                  | `createdBy`                              | direct                                                         |
+| (missing) `description`                          | `description`                            | `""` — not available on list                                   |
+| (missing) `responseType`                         | `responseType`                           | `"view-only"` default                                          |
+| (missing) `ownership`                            | `ownership`                              | derived: own endpoint → `"mine"`, shared endpoint → `"shared"` |
+| (missing) `stats.responseCount/yesCount/noCount` | `stats.*`                                | `0` defaults                                                   |
+| (missing) `recipients`                           | `recipients`                             | `[]` — not available on list                                   |
 
 **Detail endpoint** (`GET /api/web/2/staff/announcements/{postId}`):
 
-| API field | Maps to FE field | Conversion |
-|-----------|-----------------|------------|
-| `announcementId` | `id` | `String(announcementId)` |
-| `title` | `title` | direct |
-| `richTextContent` | `description` | extract text nodes from Tiptap JSON, join with `\n` |
-| `status` | `status` | `.toLowerCase()` |
-| `postedDate` | `postedAt` | direct |
-| `createdAt` | `createdAt` | direct |
-| `staffName` | `createdBy` | direct |
-| `enquiryEmailAddress` | `enquiryEmail` | direct |
-| `staffOwners` | `staffInCharge` | first owner name |
-| `students[]` | `recipients[]` | map `isRead` → `readStatus` |
+| API field             | Maps to FE field | Conversion                                          |
+| --------------------- | ---------------- | --------------------------------------------------- |
+| `announcementId`      | `id`             | `String(announcementId)`                            |
+| `title`               | `title`          | direct                                              |
+| `richTextContent`     | `description`    | extract text nodes from Tiptap JSON, join with `\n` |
+| `status`              | `status`         | `.toLowerCase()`                                    |
+| `postedDate`          | `postedAt`       | direct                                              |
+| `createdAt`           | `createdAt`      | direct                                              |
+| `staffName`           | `createdBy`      | direct                                              |
+| `enquiryEmailAddress` | `enquiryEmail`   | direct                                              |
+| `staffOwners`         | `staffInCharge`  | first owner name                                    |
+| `students[]`          | `recipients[]`   | map `isRead` → `readStatus`                         |
 
 **Read status endpoint** (`GET /api/web/2/staff/announcements/{postId}/readStatus`):
 
-| API field | Maps to FE field | Conversion |
-|-----------|-----------------|------------|
-| `totalRecipients` | `stats.totalCount` | direct |
-| `totalRead` | `stats.readCount` | direct |
-| `students[].isRead` | `recipients[].readStatus` | `isRead ? 'read' : 'unread'` |
-| `students[].readAt` | `recipients[].respondedAt` | direct |
-| `students[].className` | `recipients[].classLabel` | direct |
+| API field              | Maps to FE field           | Conversion                   |
+| ---------------------- | -------------------------- | ---------------------------- |
+| `totalRecipients`      | `stats.totalCount`         | direct                       |
+| `totalRead`            | `stats.readCount`          | direct                       |
+| `students[].isRead`    | `recipients[].readStatus`  | `isRead ? 'read' : 'unread'` |
+| `students[].readAt`    | `recipients[].respondedAt` | direct                       |
+| `students[].className` | `recipients[].classLabel`  | direct                       |
 
 ### UI Adaptations (list page)
 
@@ -327,10 +327,12 @@ In CreatePostView, use `useLoaderData<PGAnnouncement | null>()` — `null` for c
 ## Dependencies & Risks
 
 **Dependencies:**
+
 - Go BFF must be running for API calls to work (`go run ./server/cmd/tw`)
 - Vite proxy config for dev environment
 
 **Risks:**
+
 - **Go not installed locally** — Vite proxy will fail. Loader errors surface via React Router's error boundary. Add a route-level `ErrorBoundary` export to PostsView/PostDetailView that shows a "Could not load data" message with a retry button.
 - **richTextContent parsing** — Tiptap JSON may have edge cases. Start with simple text extraction (concatenate all `text` nodes, join paragraphs with `\n`).
 - **List page simplification** — Removing tabs changes the UX. Tabs can be restored when the API provides `responseType`.
@@ -338,7 +340,8 @@ In CreatePostView, use `useLoaderData<PGAnnouncement | null>()` — `null` for c
 ## Sources & References
 
 ### Internal References
-- FE API wiring instructions: `plans/FE-API-WIRING.md` (PR #1, partially outdated after PR #2)
+
+- FE API wiring instructions: _deleted 2026-04-15 — superseded by `web/api/client.ts`, `web/api/mappers.ts`, `web/api/types.ts` and `docs/pg-audit-findings.md`_
 - Go fixtures: `server/internal/pg/fixtures/announcements.json` (real API shapes)
 - Go mock routes: `server/internal/pg/mock.go`
 - Current FE types: `web/data/mock-pg-announcements.ts`
@@ -347,6 +350,7 @@ In CreatePostView, use `useLoaderData<PGAnnouncement | null>()` — `null` for c
 - Vite config: `vite.config.ts`
 
 ### Related PRs
+
 - PR #1: `feat(server): add PG mock proxy` — initial mock proxy
 - PR #2: `feat(server): add full PG fixture set in real API shapes` — changed fixtures to real shapes
 - PR #3: `feat(server/pg): add real reverse proxy handler` — production proxy
