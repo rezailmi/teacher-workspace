@@ -17,4 +17,3 @@ local-infile
 [client]
 socket=/var/run/mysqld/mysqld.sock
 !includedir /etc/mysql/conf.d/
-local-infile
