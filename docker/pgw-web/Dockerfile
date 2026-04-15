@@ -22,6 +22,13 @@ COPY pgw-db-migration/dist/ node_modules/@pgw/db-migration/dist/
 # Copy pgw-web source (after install for layer caching)
 COPY pgw-web/ ./
 
+# Patch: stub out CSRF middleware. Per plans/PG-BFF-DESIGN.md, TW is a BFF —
+# CSRF is a browser-to-server concern and has no meaning on the TW→pgw-web
+# server-to-server link. Prod target (plans/PG-TEAM-ASKS.md #3) has pgw-web
+# skip CSRF for TW's allowlisted IP; this stub gives us the same behavior
+# locally without requiring PG team changes or adding CSRF shims to TW.
+RUN node -e "require('fs').writeFileSync('src/server/routers/csrf.middleware.ts', 'import express from \"express\";\nexport default function(_csrfCookieName){return express.Router();}\n');"
+
 # Copy env file so webpack can read config values during server build
 COPY tw-pg-experiment/pgw-web.env.example .env
 
