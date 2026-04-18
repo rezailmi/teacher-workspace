@@ -1,7 +1,7 @@
 ---
 title: Refactor Posts components to reuse shadcn UI primitives
 type: refactor
-status: active
+status: completed
 date: 2026-04-18
 ---
 
