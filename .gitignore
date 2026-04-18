@@ -20,9 +20,10 @@ dist
 out
 
 # Ignore environment variables.
+# All env files — including .env.example templates — are gitignored to prevent
+# leaking real secrets through "example" files. Share env shape via docs or a
+# separate sanitized template kept outside this directory.
 *.env*
-!.env.example
-!pgw-web.env.example
 
 # Ignore worktrees.
 .worktrees

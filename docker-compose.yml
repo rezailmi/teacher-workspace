@@ -16,14 +16,14 @@ services:
     environment:
       MYSQL_DATABASE: pgdb
       MYSQL_USER: pg-local
-      MYSQL_PASSWORD: LOCAL_DEV_REPLACED
-      MYSQL_ROOT_PASSWORD: LOCAL_DEV_REPLACED
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?MYSQL_PASSWORD must be set in .env}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD must be set in .env}
       TZ: Asia/Singapore
     volumes:
       - mysql_master_data:/var/lib/mysql
       - ./docker/mysql/master.cnf:/etc/my.cnf
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pLOCAL_DEV_REPLACED"]
+      test: ["CMD", "sh", "-c", "mysqladmin ping -h localhost -u root -p\"$$MYSQL_ROOT_PASSWORD\""]
       interval: 5s
       timeout: 5s
       retries: 30
@@ -37,8 +37,8 @@ services:
     environment:
       MYSQL_DATABASE: pgdb
       MYSQL_USER: pg-local
-      MYSQL_PASSWORD: LOCAL_DEV_REPLACED
-      MYSQL_ROOT_PASSWORD: LOCAL_DEV_REPLACED
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?MYSQL_PASSWORD must be set in .env}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD must be set in .env}
       TZ: Asia/Singapore
     volumes:
       - mysql_replica_data:/var/lib/mysql
@@ -47,7 +47,7 @@ services:
       mysql-master:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pLOCAL_DEV_REPLACED"]
+      test: ["CMD", "sh", "-c", "mysqladmin ping -h localhost -u root -p\"$$MYSQL_ROOT_PASSWORD\""]
       interval: 5s
       timeout: 5s
       retries: 30
@@ -85,8 +85,8 @@ services:
       - pgw-web.env.example
     environment:
       # Override DB hosts to use Docker network names instead of localhost
-      DB_LOCAL_WRITER_CONNECTION_CONFIG: '{"username":"pg-local","password":"LOCAL_DEV_REPLACED","host":"mysql-master","connectionEndpoint":"mysql-master","port":"3306"}'
-      DB_LOCAL_READER_CONNECTION_CONFIG: '{"username":"pg-local-read","password":"LOCAL_DEV_REPLACED","host":"mysql-replica","connectionEndpoint":"mysql-replica","port":"3306"}'
+      DB_LOCAL_WRITER_CONNECTION_CONFIG: '{"username":"pg-local","password":"${MYSQL_PASSWORD}","host":"mysql-master","connectionEndpoint":"mysql-master","port":"3306"}'
+      DB_LOCAL_READER_CONNECTION_CONFIG: '{"username":"pg-local-read","password":"${MYSQL_PASSWORD_READ}","host":"mysql-replica","connectionEndpoint":"mysql-replica","port":"3306"}'
       REDIS_URL: redis://redis:6379
     depends_on:
       mysql-master:
