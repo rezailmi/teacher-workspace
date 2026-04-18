@@ -36,4 +36,4 @@ web/components/comms/entity-selector.tsx:556  # create-link hover bg-slate-2 —
 web/components/comms/entity-selector.tsx:646  # active scope-tab bg-twblue-2 — no --primary-subtle
 # ─── Misc intentional raw refs ───────────────────────────────────────────────
 web/components/posts/PostPreview.tsx:28  # intentional high-contrast border-slate-12 (PG preview card)
-web/components/posts/RichTextToolbar.tsx:135  # toolbar surface bg-slate-2 — sidebar-color bleed outside Sidebar/
+web/components/posts/RichTextToolbar.tsx:137  # toolbar surface bg-slate-2 — sidebar-color bleed outside Sidebar/
