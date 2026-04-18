@@ -49,6 +49,12 @@ load-bearing — changing them shifts the whole app.
 | `--accent-foreground`      | `--slate-12` | Text on accent surfaces.                                                                                                                                                                     |
 | `--destructive`            | `--red-9`    | Radix scale's "solid fill" step for destructive.                                                                                                                                             |
 | `--destructive-foreground` | `#ffffff`    | White text on solid destructive.                                                                                                                                                             |
+| `--success`                | `--green-3`  | Radix scale's "subtle bg" step — paired with `--green-11` text for soft success badges.                                                                                                      |
+| `--success-foreground`     | `--green-11` | Radix scale's accessible-text step for green.                                                                                                                                                |
+| `--warning`                | `--amber-3`  | Radix scale's "subtle bg" step — paired with `--amber-11` text for soft warning badges.                                                                                                      |
+| `--warning-foreground`     | `--amber-11` | Radix scale's accessible-text step for amber.                                                                                                                                                |
+| `--info`                   | `--blue-3`   | Radix scale's "subtle bg" step — paired with `--blue-11` text for soft info badges.                                                                                                          |
+| `--info-foreground`        | `--blue-11`  | Radix scale's accessible-text step for blue.                                                                                                                                                 |
 | `--border`                 | `--slate-6`  | Radix scale's "non-interactive-border" step.                                                                                                                                                 |
 | `--input`                  | `--slate-7`  | Radix scale's "interactive-border" step.                                                                                                                                                     |
 | `--ring`                   | `--twblue-7` | Two steps lighter than primary — subtle focus ring.                                                                                                                                          |
@@ -99,24 +105,34 @@ utilities. See "Known deviations" below.
 
 ### Tokens we declare that are NOT in the canonical list
 
-| Declared                   | Status                        | Action                                                                                                                                                                               |
-| -------------------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `--destructive-foreground` | Not canonical                 | Retained as `#ffffff`; shadcn v4 only ships `--destructive`. Consumers that need white text on solid destructive bg use this locally. Candidate for removal if no consumer needs it. |
-| `--radius-input`           | Not canonical (project value) | Maps to `14px` (which equals `--radius-xl` when `--radius: 0.625rem`). Candidate for replacement with canonical `rounded-xl` after adding the full radius family.                    |
+| Declared                                                                                                | Status                        | Action                                                                                                                                                                                                                                                                    |
+| ------------------------------------------------------------------------------------------------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--destructive-foreground`                                                                              | Not canonical                 | Retained as `#ffffff`; shadcn v4 only ships `--destructive`. Consumers that need white text on solid destructive bg use this locally. Candidate for removal if no consumer needs it.                                                                                      |
+| `--success`, `--success-foreground`, `--warning`, `--warning-foreground`, `--info`, `--info-foreground` | Project-local status tokens   | shadcn v4 does not ship these ([GH Discussion #8986](https://github.com/shadcn-ui/ui/discussions/8986)). Added to centralize status styling for `<Badge variant="success\|warning\|info">` and future consumers. Override of the earlier "no invented tokens" constraint. |
+| `--radius-input`                                                                                        | Not canonical (project value) | Maps to `14px` (which equals `--radius-xl` when `--radius: 0.625rem`). Candidate for replacement with canonical `rounded-xl` after adding the full radius family.                                                                                                         |
 
-No other project-invented tokens are declared.
+### Invented tokens — constrained, not forbidden
 
-### Why not invent tokens
+Default preference is canonical-only, because:
 
 - Matches upstream snippets: `npx shadcn@latest add <component>` slots in
   without remapping.
-- Avoids `--success` / `--warning` / `--info` — shadcn explicitly does not
-  ship these ([GH Discussion #8986](https://github.com/shadcn-ui/ui/discussions/8986)).
-  We keep status colors raw + registered (see exemption policy below).
 - Neither Radix nor shadcn ship `--white` or `--black` — pure white is
   written as the CSS literal `#ffffff` at the handful of consumers.
 - Sidebar token set is a shadcn v4 addition; earlier versions used
   `--sidebar-background`. We use the current `--sidebar` name.
+
+**Documented exceptions** (added deliberately after weighing the cost):
+
+- **`--success` / `--warning` / `--info`** (+ `-foreground` variants) —
+  shadcn does not ship these ([GH Discussion #8986](https://github.com/shadcn-ui/ui/discussions/8986)),
+  but status badges are a recurring need and leaving them raw pushed status
+  styling into call-site classes. Badge now exposes `success`/`warning`/`info`
+  variants driven by these tokens. Future status consumers should use the
+  variant or the token, not raw Radix.
+
+Any further additions require the same bar: an existing pattern at 3+ call
+sites that canonical tokens can't express, documented here before landing.
 
 ## Exemption policy
 
@@ -146,25 +162,28 @@ Do not register an exemption when:
 
 ### Direct-replace mapping table (use when migrating)
 
-| Raw utility                          | Semantic utility                     | Notes                                        |
-| ------------------------------------ | ------------------------------------ | -------------------------------------------- |
-| `text-slate-11`                      | `text-muted-foreground`              |                                              |
-| `text-slate-12`                      | `text-foreground`                    |                                              |
-| `bg-slate-12`                        | `bg-foreground`                      | e.g. tooltip bg.                             |
-| `bg-slate-3`                         | `bg-muted`                           |                                              |
-| `bg-slate-4`                         | `bg-accent`                          | Non-sidebar call sites only (see below).     |
-| `border-slate-6`                     | `border-border`                      |                                              |
-| `outline-slate-6`                    | `outline-border`                     |                                              |
-| `border-slate-7`                     | `border-input`                       |                                              |
-| `bg-twblue-9`                        | `bg-primary`                         |                                              |
-| `text-twblue-9`                      | `text-primary`                       |                                              |
-| `ring-twblue-8`                      | `ring-ring`                          |                                              |
-| `bg-slate-2`                         | `bg-sidebar`                         | Sidebar chrome only.                         |
-| `border-slate-5`                     | `border-sidebar-border`              | Sidebar chrome only.                         |
-| `hover:bg-slate-4`                   | `hover:bg-sidebar-accent/60`         | Sidebar-only hover tier.                     |
-| `bg-slate-5` (active)                | `bg-sidebar-accent`                  | Sidebar select/active state.                 |
-| `text-red-9/10`                      | `text-destructive`                   | Error/danger intent. Not for non-error reds. |
-| `bg-red-3 text-red-11` (error badge) | `bg-destructive/10 text-destructive` | Check WCAG AA on the `/10` pair.             |
+| Raw utility                          | Semantic utility                                                    | Notes                                        |
+| ------------------------------------ | ------------------------------------------------------------------- | -------------------------------------------- |
+| `text-slate-11`                      | `text-muted-foreground`                                             |                                              |
+| `text-slate-12`                      | `text-foreground`                                                   |                                              |
+| `bg-slate-12`                        | `bg-foreground`                                                     | e.g. tooltip bg.                             |
+| `bg-slate-3`                         | `bg-muted`                                                          |                                              |
+| `bg-slate-4`                         | `bg-accent`                                                         | Non-sidebar call sites only (see below).     |
+| `border-slate-6`                     | `border-border`                                                     |                                              |
+| `outline-slate-6`                    | `outline-border`                                                    |                                              |
+| `border-slate-7`                     | `border-input`                                                      |                                              |
+| `bg-twblue-9`                        | `bg-primary`                                                        |                                              |
+| `text-twblue-9`                      | `text-primary`                                                      |                                              |
+| `ring-twblue-8`                      | `ring-ring`                                                         |                                              |
+| `bg-slate-2`                         | `bg-sidebar`                                                        | Sidebar chrome only.                         |
+| `border-slate-5`                     | `border-sidebar-border`                                             | Sidebar chrome only.                         |
+| `hover:bg-slate-4`                   | `hover:bg-sidebar-accent/60`                                        | Sidebar-only hover tier.                     |
+| `bg-slate-5` (active)                | `bg-sidebar-accent`                                                 | Sidebar select/active state.                 |
+| `text-red-9/10`                      | `text-destructive`                                                  | Error/danger intent. Not for non-error reds. |
+| `bg-red-3 text-red-11` (error badge) | `bg-destructive/10 text-destructive`                                | Check WCAG AA on the `/10` pair.             |
+| `bg-green-3 text-green-11` (success) | `<Badge variant="success">` or `bg-success text-success-foreground` | Prefer Badge variant at call sites.          |
+| `bg-amber-3 text-amber-11` (warning) | `<Badge variant="warning">` or `bg-warning text-warning-foreground` | Prefer Badge variant at call sites.          |
+| `bg-blue-3 text-blue-11` (info)      | `<Badge variant="info">` or `bg-info text-info-foreground`          | Prefer Badge variant at call sites.          |
 
 ### Decorative `bg-slate-4` split
 
@@ -179,29 +198,31 @@ Do not register an exemption when:
 A filled skeleton using `bg-border` would be too dark; a divider using
 `bg-accent` would be too faint. Pick based on visual weight.
 
-## No invented tokens
+## Invented-token policy
 
-The project lead has set a firm constraint: **use shadcn v4 canonical tokens
-only; do not introduce project-local semantic tokens** (e.g. no `--success`,
-`--warning`, `--info`, `--surface-muted`, `--primary-subtle`, `--white`, etc.).
+The working rule is: **prefer shadcn v4 canonical tokens; invent sparingly and
+only when a recurring pattern can't be expressed canonically.**
 
 Neither Radix nor shadcn publishes a `--white` variable — white is written as
 the CSS literal `#ffffff` at the handful of consumers that need it
 (`--card`, `--popover`, `--primary-foreground`, `--secondary`,
 `--destructive-foreground`, `--sidebar-primary-foreground`).
 
-When a recurring exemption pattern (3+ call sites of the same raw ref) appears,
-it is **tracked, not graduated**. The registry header in
+**Status tokens (`--success`, `--warning`, `--info`) are the one graduated
+exception** — they were added because ~11 call sites shared the raw green/
+amber/blue pattern and a canonical mapping does not exist upstream. See
+"Invented tokens — constrained, not forbidden" above for the rule that gates
+any future additions.
+
+When a raw-ref pattern appears but does not meet the bar for graduation, it is
+**tracked, not graduated**. The registry header in
 [`scripts/raw-color-exemptions.txt`](../../scripts/raw-color-exemptions.txt)
 lists the patterns. Resolving them requires either (a) accepting a visual
-shift to the nearest canonical token, or (b) an explicit project-lead decision
-to override the no-new-tokens constraint. Default: accept the exemption.
+shift to the nearest canonical token, or (b) a documented decision to add a
+new token (as was done for status). Default: accept the exemption.
 
 Current patterns at or above the threshold (intentionally not graduated):
 
-- **Status colors** (green/amber/blue) — ~11 exemptions. No shadcn canonical;
-  raw refs remain. `red-*` destructive intent already migrates to
-  `--destructive`.
 - **`bg-twblue-{1-4}` brand tints** — ~5 exemptions in `entity-selector.tsx`.
   No `--primary-subtle` in shadcn; raw refs remain.
 - **Sidebar-color surfaces outside `Sidebar/`** — 3 exemptions
