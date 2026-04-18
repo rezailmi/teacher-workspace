@@ -90,7 +90,7 @@ const PostPreview = React.memo(function PostPreview({
 
         {responseType === 'acknowledge' && (
           <div className="mt-5">
-            <Button variant="outline" size="sm" className="w-full" disabled>
+            <Button variant="secondary" size="sm" className="w-full" disabled>
               Acknowledge
             </Button>
           </div>
@@ -100,7 +100,7 @@ const PostPreview = React.memo(function PostPreview({
             <Button variant="default" size="sm" className="flex-1" disabled>
               Yes
             </Button>
-            <Button variant="outline" size="sm" className="flex-1" disabled>
+            <Button variant="secondary" size="sm" className="flex-1" disabled>
               No
             </Button>
           </div>

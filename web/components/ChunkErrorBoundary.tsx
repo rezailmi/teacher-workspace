@@ -26,7 +26,7 @@ class ChunkErrorBoundaryInner extends React.Component<
             The page failed to load. This can happen due to a network issue.
           </p>
           <Button
-            variant="outline"
+            variant="secondary"
             onClick={() => {
               this.setState({ hasError: false });
               this.props.onRetry();

@@ -54,7 +54,7 @@ function SendConfirmationDialog({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="secondary" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
           <Button variant="default" onClick={onConfirm}>

@@ -1,24 +1,15 @@
-import { Badge } from '~/components/ui';
-import type { PGStatus } from '~/data/mock-pg-announcements';
-import { cn } from '~/lib/utils';
+import type { VariantProps } from 'class-variance-authority';
 
-const STATUS_CONFIG: Record<PGStatus, { label: string; className: string }> = {
-  posted: {
-    label: 'Posted',
-    className: 'bg-green-3 text-green-11 hover:bg-green-3',
-  },
-  scheduled: {
-    label: 'Scheduled',
-    className: 'bg-blue-3 text-blue-11 hover:bg-blue-3',
-  },
-  posting: {
-    label: 'Posting',
-    className: 'bg-blue-3 text-blue-11 hover:bg-blue-3',
-  },
-  draft: {
-    label: 'Draft',
-    className: 'bg-muted text-muted-foreground hover:bg-muted',
-  },
+import { Badge, type badgeVariants } from '~/components/ui';
+import type { PGStatus } from '~/data/mock-pg-announcements';
+
+type BadgeVariant = NonNullable<VariantProps<typeof badgeVariants>['variant']>;
+
+const STATUS_CONFIG: Record<PGStatus, { label: string; variant: BadgeVariant }> = {
+  posted: { label: 'Posted', variant: 'success' },
+  scheduled: { label: 'Scheduled', variant: 'info' },
+  posting: { label: 'Posting', variant: 'info' },
+  draft: { label: 'Draft', variant: 'secondary' },
 };
 
 const FALLBACK = STATUS_CONFIG.draft;
@@ -30,5 +21,9 @@ interface StatusBadgeProps {
 
 export function StatusBadge({ status, className }: StatusBadgeProps) {
   const config = STATUS_CONFIG[status] ?? FALLBACK;
-  return <Badge className={cn(config.className, className)}>{config.label}</Badge>;
+  return (
+    <Badge variant={config.variant} className={className}>
+      {config.label}
+    </Badge>
+  );
 }

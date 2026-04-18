@@ -37,7 +37,7 @@ export function ErrorBoundary() {
           ? 'This post may have been deleted.'
           : 'The server may be unavailable. Please try again.'}
       </p>
-      <Button variant="outline" size="sm" render={<Link to="/posts" />} nativeButton={false}>
+      <Button variant="secondary" size="sm" render={<Link to="/posts" />} nativeButton={false}>
         Back to Posts
       </Button>
     </div>
@@ -91,7 +91,7 @@ const PostDetailView: React.FC = () => {
         </div>
 
         <Button
-          variant="outline"
+          variant="secondary"
           size="sm"
           render={<Link to={`/posts/${announcement.id}/edit`} />}
           nativeButton={false}

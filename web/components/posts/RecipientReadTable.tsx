@@ -36,15 +36,15 @@ export function RecipientReadTable({ recipients, responseType }: RecipientReadTa
           />
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" disabled>
+          <Button variant="secondary" size="sm" disabled>
             <SlidersHorizontal className="h-4 w-4" />
             Filter
           </Button>
-          <Button variant="outline" size="sm" disabled>
+          <Button variant="secondary" size="sm" disabled>
             <Columns3 className="h-4 w-4" />
             Columns
           </Button>
-          <Button variant="outline" size="sm" disabled>
+          <Button variant="secondary" size="sm" disabled>
             <Download className="h-4 w-4" />
             Export
           </Button>

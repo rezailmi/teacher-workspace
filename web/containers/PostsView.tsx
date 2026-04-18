@@ -121,7 +121,7 @@ const PostsView: React.FC = () => {
                 aria-label="Search posts"
               />
             </div>
-            <Button variant="outline" size="sm">
+            <Button variant="secondary" size="sm">
               <SlidersHorizontal className="h-4 w-4" />
               Filter
             </Button>

@@ -244,7 +244,7 @@ function ThemeMappingTable() {
       </ul>
 
       <div className="flex items-center justify-end gap-2">
-        <Button variant="outline" onClick={handleReset} disabled={!isDirty}>
+        <Button variant="secondary" onClick={handleReset} disabled={!isDirty}>
           Reset
         </Button>
         <Button onClick={handleCopy}>Copy mapping</Button>
@@ -279,16 +279,16 @@ const ComponentsView: React.FC = () => {
 
         <Subsection label="Toast">
           <div className="flex flex-wrap items-center gap-3">
-            <Button variant="outline" onClick={() => toast('Default toast message')}>
+            <Button variant="secondary" onClick={() => toast('Default toast message')}>
               Default
             </Button>
-            <Button variant="outline" onClick={() => toast.success('Saved changes')}>
+            <Button variant="secondary" onClick={() => toast.success('Saved changes')}>
               Success
             </Button>
-            <Button variant="outline" onClick={() => toast.error('Something failed')}>
+            <Button variant="secondary" onClick={() => toast.error('Something failed')}>
               Error
             </Button>
-            <Button variant="outline" onClick={() => toast.info('Heads up')}>
+            <Button variant="secondary" onClick={() => toast.info('Heads up')}>
               Info
             </Button>
           </div>
@@ -300,7 +300,6 @@ const ComponentsView: React.FC = () => {
         <Subsection label="Variants">
           <div className="flex flex-wrap items-center gap-3">
             <Button variant="default">default</Button>
-            <Button variant="outline">outline</Button>
             <Button variant="secondary">secondary</Button>
             <Button variant="ghost">ghost</Button>
             <Button variant="destructive">destructive</Button>
@@ -319,16 +318,16 @@ const ComponentsView: React.FC = () => {
 
         <Subsection label="Icon sizes">
           <div className="flex flex-wrap items-center gap-3">
-            <Button variant="outline" size="icon-xs" aria-label="Add">
+            <Button variant="secondary" size="icon-xs" aria-label="Add">
               <Plus />
             </Button>
-            <Button variant="outline" size="icon-sm" aria-label="Add">
+            <Button variant="secondary" size="icon-sm" aria-label="Add">
               <Plus />
             </Button>
-            <Button variant="outline" size="icon" aria-label="Add">
+            <Button variant="secondary" size="icon" aria-label="Add">
               <Plus />
             </Button>
-            <Button variant="outline" size="icon-lg" aria-label="Add">
+            <Button variant="secondary" size="icon-lg" aria-label="Add">
               <Plus />
             </Button>
           </div>
@@ -336,7 +335,7 @@ const ComponentsView: React.FC = () => {
 
         <Subsection label="With icons">
           <div className="flex flex-wrap items-center gap-3">
-            <Button variant="outline">
+            <Button variant="secondary">
               <Mail className="mr-2 h-4 w-4" />
               Email
             </Button>
@@ -350,7 +349,7 @@ const ComponentsView: React.FC = () => {
         <Subsection label="Disabled">
           <div className="flex flex-wrap items-center gap-3">
             <Button disabled>Disabled</Button>
-            <Button variant="outline" disabled>
+            <Button variant="secondary" disabled>
               Disabled
             </Button>
           </div>
@@ -361,10 +360,11 @@ const ComponentsView: React.FC = () => {
       <Section title="Badge">
         <Subsection label="Variants">
           <div className="flex flex-wrap items-center gap-3">
-            <Badge variant="default">default</Badge>
             <Badge variant="secondary">secondary</Badge>
             <Badge variant="destructive">destructive</Badge>
-            <Badge variant="outline">outline</Badge>
+            <Badge variant="success">success</Badge>
+            <Badge variant="warning">warning</Badge>
+            <Badge variant="info">info</Badge>
           </div>
         </Subsection>
       </Section>
@@ -381,7 +381,7 @@ const ComponentsView: React.FC = () => {
               <p className="text-sm">Card content goes here.</p>
             </CardContent>
             <CardFooter className="flex justify-between">
-              <Button variant="outline">Cancel</Button>
+              <Button variant="secondary">Cancel</Button>
               <Button>Save</Button>
             </CardFooter>
           </Card>
@@ -570,7 +570,7 @@ const ComponentsView: React.FC = () => {
 
         <Subsection label="SchedulePickerDialog">
           <div className="flex flex-wrap items-center gap-4">
-            <Button variant="outline" onClick={() => setScheduleOpen(true)}>
+            <Button variant="secondary" onClick={() => setScheduleOpen(true)}>
               Open schedule picker
             </Button>
             {lastScheduledAt && (
@@ -624,7 +624,7 @@ const ComponentsView: React.FC = () => {
         </Subsection>
 
         <Subsection label="SendConfirmationDialog">
-          <Button variant="outline" onClick={() => setDialogOpen(true)}>
+          <Button variant="secondary" onClick={() => setDialogOpen(true)}>
             Open send confirmation
           </Button>
           <SendConfirmationDialog

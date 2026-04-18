@@ -36,7 +36,7 @@ function QuestionBuilder({ questions, dispatch }: QuestionBuilderProps) {
 
               <div className="flex items-center gap-2">
                 <Button
-                  variant={question.type === 'free-text' ? 'default' : 'outline'}
+                  variant={question.type === 'free-text' ? 'default' : 'secondary'}
                   size="sm"
                   onClick={() =>
                     dispatch({
@@ -49,7 +49,7 @@ function QuestionBuilder({ questions, dispatch }: QuestionBuilderProps) {
                   Free Text
                 </Button>
                 <Button
-                  variant={question.type === 'mcq' ? 'default' : 'outline'}
+                  variant={question.type === 'mcq' ? 'default' : 'secondary'}
                   size="sm"
                   onClick={() =>
                     dispatch({
@@ -177,7 +177,7 @@ function QuestionBuilder({ questions, dispatch }: QuestionBuilderProps) {
       ))}
 
       <Button
-        variant="outline"
+        variant="secondary"
         size="sm"
         disabled={questions.length >= MAX_QUESTIONS}
         onClick={() => dispatch({ type: 'ADD_QUESTION' })}

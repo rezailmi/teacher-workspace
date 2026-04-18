@@ -176,7 +176,7 @@ export function SchedulePickerDialog({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={busy}>
+          <Button variant="secondary" onClick={() => onOpenChange(false)} disabled={busy}>
             Cancel
           </Button>
           <Button onClick={handleConfirm} disabled={!validation.ok || busy}>
