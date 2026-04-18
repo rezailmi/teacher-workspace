@@ -4,8 +4,18 @@
   "richTextContent": {
     "type": "doc",
     "content": [
-      { "type": "paragraph", "attrs": { "textAlign": "left" }, "content": [{ "type": "text", "text": "Dear Parents," }] },
-      { "type": "paragraph", "attrs": { "textAlign": "left" }, "content": [{ "type": "text", "text": "We are organising a field trip and require your consent." }] }
+      {
+        "type": "paragraph",
+        "attrs": { "textAlign": "left" },
+        "content": [{ "type": "text", "text": "Dear Parents," }]
+      },
+      {
+        "type": "paragraph",
+        "attrs": { "textAlign": "left" },
+        "content": [
+          { "type": "text", "text": "We are organising a field trip and require your consent." }
+        ]
+      }
     ]
   },
   "responseType": "YES_NO",

@@ -1,5 +1,5 @@
 ---
-title: "feat: Posts End-to-End Frontend (Create, Detail, Edit)"
+title: 'feat: Posts End-to-End Frontend (Create, Detail, Edit)'
 type: feat
 status: active
 date: 2026-04-08
@@ -13,6 +13,7 @@ date: 2026-04-08
 **Agents used:** TypeScript reviewer, Pattern recognition, Performance oracle, Code simplicity, Frontend races, Architecture strategist, Best practices researcher, Frontend design
 
 ### Key Improvements from Deepening
+
 1. **Consolidated form state** — `useReducer` with typed action union replaces 10 `useState` hooks
 2. **Route remount safety** — `key={id ?? 'new'}` pattern prevents stale state when navigating between create/edit
 3. **Performance** — `useDeferredValue` + `React.memo` for preview panel, prevents re-render cascades
@@ -22,6 +23,7 @@ date: 2026-04-08
 7. **Error handling** — Suspense boundary around Outlet, 404 handling for invalid post IDs
 
 ### New Considerations Discovered
+
 - CreatePostView must use `key` prop to force remount when switching between create and edit modes
 - Missing root Suspense boundary in RootLayout will cause blank flashes during lazy route loads
 - Dialog close animation races with navigate — must sequence close → animate → navigate
@@ -43,10 +45,10 @@ The Posts list page is functional but teachers cannot create, view details, or e
 
 Add three routes under `/posts`:
 
-| Route | Page | Purpose |
-|-------|------|---------|
-| `/posts/new` | CreatePostView | Compose new post with form + live preview |
-| `/posts/:id` | PostDetailView | View post details, read tracking, recipient table |
+| Route             | Page                       | Purpose                                            |
+| ----------------- | -------------------------- | -------------------------------------------------- |
+| `/posts/new`      | CreatePostView             | Compose new post with form + live preview          |
+| `/posts/:id`      | PostDetailView             | View post details, read tracking, recipient table  |
 | `/posts/:id/edit` | CreatePostView (edit mode) | Edit existing post (same component, pre-populated) |
 
 ### Architecture Decisions
@@ -64,14 +66,14 @@ Add three routes under `/posts`:
 
 ### New UI Wrappers Needed (`~/components/ui/`)
 
-| Component | Wrapper Override | File |
-|-----------|-----------------|------|
-| Textarea | `rounded-xl` (match Input) | `textarea.tsx` |
-| Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter | Pure re-export | `dialog.tsx` |
-| Select, SelectTrigger, SelectContent, SelectItem, SelectValue | Pure re-export | `select.tsx` |
-| Separator | Pure re-export | `separator.tsx` |
-| RadioGroup, RadioGroupItem | Pure re-export | `radio-group.tsx` |
-| Progress | Pure re-export | `progress.tsx` |
+| Component                                                      | Wrapper Override           | File              |
+| -------------------------------------------------------------- | -------------------------- | ----------------- |
+| Textarea                                                       | `rounded-xl` (match Input) | `textarea.tsx`    |
+| Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter | Pure re-export             | `dialog.tsx`      |
+| Select, SelectTrigger, SelectContent, SelectItem, SelectValue  | Pure re-export             | `select.tsx`      |
+| Separator                                                      | Pure re-export             | `separator.tsx`   |
+| RadioGroup, RadioGroupItem                                     | Pure re-export             | `radio-group.tsx` |
+| Progress                                                       | Pure re-export             | `progress.tsx`    |
 
 ### Data Model Extensions
 
@@ -146,6 +148,7 @@ These are tiny mock constants that will be replaced by API calls. No separate fi
 ### Shared Helper Extraction (prerequisite refactor)
 
 Move from `PostsView.tsx` to `web/helpers/dateTime.ts`:
+
 - `DATE_FORMATTER` — reused in PostDetailView
 - `formatDate(iso)` — reused in PostDetailView
 - `isLowReadRate(postedAt, readCount, total)` — reused in PostDetailView
@@ -161,6 +164,7 @@ ArrowLeft, Calendar, ChevronDown, ChevronUp, Eye, EyeOff, Plus, Search, Send, Tr
 **Files to modify:**
 
 - **`web/App.tsx`** — Add 3 new routes as children alongside existing routes:
+
   ```typescript
   { path: 'posts/new', lazy: () => import('./containers/CreatePostView') }
   { path: 'posts/:id', lazy: () => import('./containers/PostDetailView') }
@@ -168,6 +172,7 @@ ArrowLeft, Calendar, ChevronDown, ChevronUp, Eye, EyeOff, Plus, Search, Send, Tr
   ```
 
 - **`web/containers/RootLayout.tsx`** — Add Suspense boundary around `<Outlet />`:
+
   ```tsx
   <React.Suspense fallback={null}>
     <Outlet />
@@ -230,6 +235,7 @@ Below `lg` (1024px): single column, preview hidden. "Preview" toggle button in h
 #### Component Architecture
 
 **Route component (thin wrapper with key):**
+
 ```tsx
 function CreatePostView() {
   const { id } = useParams();
@@ -239,6 +245,7 @@ export { CreatePostView as Component };
 ```
 
 **Inner component uses `useReducer`:**
+
 ```tsx
 function CreatePostViewInner({ editId }: { editId?: string }) {
   const navigate = useNavigate();
@@ -267,21 +274,23 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
 
 #### Components (extracted, in `web/components/comms/`)
 
-| Component | File | Description |
-|-----------|------|-------------|
-| `RecipientSelector` | `RecipientSelector.tsx` | Checkbox list grouped by class (3A, 3B, 3C) with "Select all" per class. Shows selected count as Badge. Uses Checkbox + Label from `~/components/ui`. |
-| `ResponseTypeSelector` | `ResponseTypeSelector.tsx` | RadioGroup with 3 options. When acknowledge/yes-no: reveals due date input + question builder section with `animate-in fade-in` transition. |
-| `QuestionBuilder` | `QuestionBuilder.tsx` | Add/edit/reorder up to 5 questions. Each question: text Input + type selector (free-text/MCQ). MCQ: 2-6 options. Reorder via ChevronUp/ChevronDown buttons. |
-| `PostPreview` | `PostPreview.tsx` | Styled Card preview of parent-facing view. Shows title, description, response buttons. Receives `deferredState` as props. Wrapped in `React.memo`. |
-| `SendConfirmationDialog` | `SendConfirmationDialog.tsx` | Dialog showing title + recipient count. Cancel / Confirm & Send buttons. On confirm: close dialog → wait for animation → toast → navigate. |
+| Component                | File                         | Description                                                                                                                                                 |
+| ------------------------ | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `RecipientSelector`      | `RecipientSelector.tsx`      | Checkbox list grouped by class (3A, 3B, 3C) with "Select all" per class. Shows selected count as Badge. Uses Checkbox + Label from `~/components/ui`.       |
+| `ResponseTypeSelector`   | `ResponseTypeSelector.tsx`   | RadioGroup with 3 options. When acknowledge/yes-no: reveals due date input + question builder section with `animate-in fade-in` transition.                 |
+| `QuestionBuilder`        | `QuestionBuilder.tsx`        | Add/edit/reorder up to 5 questions. Each question: text Input + type selector (free-text/MCQ). MCQ: 2-6 options. Reorder via ChevronUp/ChevronDown buttons. |
+| `PostPreview`            | `PostPreview.tsx`            | Styled Card preview of parent-facing view. Shows title, description, response buttons. Receives `deferredState` as props. Wrapped in `React.memo`.          |
+| `SendConfirmationDialog` | `SendConfirmationDialog.tsx` | Dialog showing title + recipient count. Cancel / Confirm & Send buttons. On confirm: close dialog → wait for animation → toast → navigate.                  |
 
 **RecipientSelector implementation:**
+
 - Simple inline checkbox groups (not Popover + Command — overkill for 3 mock classes)
 - Each class group: "Select all 3A" checkbox + individual student checkboxes
 - Selected count displayed as Badge pill
 - Wrapped in a bordered container with `rounded-xl`
 
 **PostPreview implementation:**
+
 - Styled `Card` with rounded corners (`rounded-2xl`)
 - Header bar: "Parents Gateway" in `bg-blue-9 text-white rounded-t-2xl`
 - Content area: post title (`font-medium`), description text, response buttons
@@ -289,6 +298,7 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
 - `React.memo` wrapped — receives `deferredState` from `useDeferredValue`
 
 **SendConfirmationDialog implementation:**
+
 - `Dialog` from `~/components/ui`
 - Summary: post title, recipient count, response type
 - Sequenced close: `setOpen(false)` → `onOpenChange` fires after animation → `toast.success()` → `navigate('/posts')`
@@ -335,6 +345,7 @@ Reads announcement data from `getPGAnnouncementById(id)` using `useParams`.
 ```
 
 **404 handling:**
+
 ```tsx
 const { id } = useParams();
 const announcement = id ? getPGAnnouncementById(id) : undefined;
@@ -343,12 +354,13 @@ if (!announcement) return <Navigate to="/posts" replace />;
 
 **Components (in `web/components/comms/`):**
 
-| Component | File | Description |
-|-----------|------|-------------|
-| `ReadTrackingCards` | `ReadTrackingCards.tsx` | 2-3 metric cards with Progress bars. Uses Card from `~/components/ui`, Progress from `@flow/core`. |
+| Component            | File                     | Description                                                                                                                                                  |
+| -------------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `ReadTrackingCards`  | `ReadTrackingCards.tsx`  | 2-3 metric cards with Progress bars. Uses Card from `~/components/ui`, Progress from `@flow/core`.                                                           |
 | `RecipientReadTable` | `RecipientReadTable.tsx` | Simple table showing per-student status. Columns vary by response type (conditional ternary, not dynamic config). No search/filter for mock data (3-5 rows). |
 
 **ReadTrackingCards:**
+
 - Cards: `Card size="sm"` from `~/components/ui`
 - Progress: `Progress` from `@flow/core`
 - Always show "Read" card (readCount / totalCount)
@@ -357,6 +369,7 @@ if (!announcement) return <Navigate to="/posts" replace />;
 - Card value uses `Typography variant="title-md"` for prominence
 
 **RecipientReadTable:**
+
 - Base columns: Student, Class, Read Status (check/x icon), Read At
 - If acknowledge: add Acknowledged column
 - If yes-no: add Response (Yes/No Badge), Responded At
@@ -406,59 +419,66 @@ if (!announcement) return <Navigate to="/posts" replace />;
 ## File Manifest (Creation/Modification Order)
 
 ### Phase 1 — Foundation
-| Action | File |
-|--------|------|
-| Create | `web/components/ui/dialog.tsx` |
-| Create | `web/components/ui/textarea.tsx` |
-| Create | `web/components/ui/select.tsx` |
-| Create | `web/components/ui/separator.tsx` |
-| Create | `web/components/ui/radio-group.tsx` |
-| Create | `web/components/ui/progress.tsx` |
-| Modify | `web/components/ui/index.ts` — add 6 new exports |
+
+| Action | File                                                                                        |
+| ------ | ------------------------------------------------------------------------------------------- |
+| Create | `web/components/ui/dialog.tsx`                                                              |
+| Create | `web/components/ui/textarea.tsx`                                                            |
+| Create | `web/components/ui/select.tsx`                                                              |
+| Create | `web/components/ui/separator.tsx`                                                           |
+| Create | `web/components/ui/radio-group.tsx`                                                         |
+| Create | `web/components/ui/progress.tsx`                                                            |
+| Modify | `web/components/ui/index.ts` — add 6 new exports                                            |
 | Modify | `web/data/mock-pg-announcements.ts` — extend types, add fields, add `getPGAnnouncementById` |
-| Modify | `web/helpers/dateTime.ts` — add `DATE_FORMATTER`, `formatDate`, `isLowReadRate` |
-| Modify | `web/containers/PostsView.tsx` — import from `~/helpers/dateTime`, remove inline defs |
-| Modify | `web/containers/RootLayout.tsx` — add Suspense boundary |
-| Modify | `web/App.tsx` — add 3 new routes |
-| Create | `web/containers/CreatePostView.tsx` — stub |
-| Create | `web/containers/PostDetailView.tsx` — stub |
+| Modify | `web/helpers/dateTime.ts` — add `DATE_FORMATTER`, `formatDate`, `isLowReadRate`             |
+| Modify | `web/containers/PostsView.tsx` — import from `~/helpers/dateTime`, remove inline defs       |
+| Modify | `web/containers/RootLayout.tsx` — add Suspense boundary                                     |
+| Modify | `web/App.tsx` — add 3 new routes                                                            |
+| Create | `web/containers/CreatePostView.tsx` — stub                                                  |
+| Create | `web/containers/PostDetailView.tsx` — stub                                                  |
 
 ### Phase 2 — Create Post Page
-| Action | File |
-|--------|------|
-| Create | `web/components/comms/RecipientSelector.tsx` |
-| Create | `web/components/comms/ResponseTypeSelector.tsx` |
-| Create | `web/components/comms/QuestionBuilder.tsx` |
-| Create | `web/components/comms/PostPreview.tsx` |
-| Create | `web/components/comms/SendConfirmationDialog.tsx` |
+
+| Action  | File                                                      |
+| ------- | --------------------------------------------------------- |
+| Create  | `web/components/comms/RecipientSelector.tsx`              |
+| Create  | `web/components/comms/ResponseTypeSelector.tsx`           |
+| Create  | `web/components/comms/QuestionBuilder.tsx`                |
+| Create  | `web/components/comms/PostPreview.tsx`                    |
+| Create  | `web/components/comms/SendConfirmationDialog.tsx`         |
 | Replace | `web/containers/CreatePostView.tsx` — full implementation |
 
 ### Phase 3 — Post Detail Page
-| Action | File |
-|--------|------|
-| Create | `web/components/comms/ReadTrackingCards.tsx` |
-| Create | `web/components/comms/RecipientReadTable.tsx` |
+
+| Action  | File                                                      |
+| ------- | --------------------------------------------------------- |
+| Create  | `web/components/comms/ReadTrackingCards.tsx`              |
+| Create  | `web/components/comms/RecipientReadTable.tsx`             |
 | Replace | `web/containers/PostDetailView.tsx` — full implementation |
 
 ### Phase 4 — List Updates + Polish
-| Action | File |
-|--------|------|
+
+| Action | File                                                                      |
+| ------ | ------------------------------------------------------------------------- |
 | Modify | `web/containers/PostsView.tsx` — enable Create, clickable rows, duplicate |
-| Create | `web/components/comms/index.ts` — barrel export |
+| Create | `web/components/comms/index.ts` — barrel export                           |
 
 ## Dependencies & Risks
 
 **Dependencies:**
+
 - `@flow/core`: Dialog, Select, Textarea, RadioGroup, Progress, Separator — all verified available
 - `@flow/icons`: ArrowLeft, Send, Eye, GripVertical, etc. — all verified
 - React Router 7: `useParams`, `useNavigate`, `Link` — standard API
 
 **Risks:**
+
 - **Flow DS Dialog/Select styling**: Token overrides (shadows: none) apply globally. Verify visual appearance.
 - **Create page size**: Target ~500 lines by extracting 5 form section components. If larger, split further.
 - **Route param validation**: Handled by redirecting to `/posts` for invalid IDs.
 
 **Future enhancements (not in scope):**
+
 - `useBlocker` for unsaved-changes guard
 - Root error boundary for chunk load failures
 - Virtualized recipient list for real data (200+ students)
@@ -467,6 +487,7 @@ if (!announcement) return <Navigate to="/posts" replace />;
 ## Sources & References
 
 ### Internal References
+
 - Posts list page: `web/containers/PostsView.tsx`
 - Status badge pattern: `web/components/comms/StatusBadge.tsx`
 - Read rate component: `web/components/comms/ReadRate.tsx`
@@ -477,6 +498,7 @@ if (!announcement) return <Navigate to="/posts" replace />;
 - Date helper: `web/helpers/dateTime.ts`
 
 ### External References
+
 - Design reference repo: `String-sg/design-teacher-workspace`
   - Create page: `src/routes/announcements.new.tsx` (1637 lines)
   - Detail page: `src/routes/announcements.$id.tsx` (795 lines)

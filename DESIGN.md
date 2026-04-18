@@ -32,15 +32,15 @@ Setting `--radius-lg: 9999px` breaks the semantic hierarchy (`xs < sm < md < lg 
 
 Wrappers in `web/components/ui/` apply shape overrides via `className` + `twMerge`:
 
-| Component | Wrapper override | Result |
-|-----------|-----------------|--------|
-| Button | `rounded-full font-medium` | pill, medium weight |
-| Badge | `rounded-full` | pill |
-| Input | `rounded-xl` | 14px corners |
-| TabsTrigger | `rounded-full font-medium` | pill, medium weight |
-| TabsList | `rounded-xl` | 14px container |
-| DropdownMenuContent | pure re-export | 10px (default `rounded-lg`) |
-| Card, Checkbox, Switch, Label, Table | pure re-exports | use Flow DS defaults |
+| Component                            | Wrapper override           | Result                      |
+| ------------------------------------ | -------------------------- | --------------------------- |
+| Button                               | `rounded-full font-medium` | pill, medium weight         |
+| Badge                                | `rounded-full`             | pill                        |
+| Input                                | `rounded-xl`               | 14px corners                |
+| TabsTrigger                          | `rounded-full font-medium` | pill, medium weight         |
+| TabsList                             | `rounded-xl`               | 14px container              |
+| DropdownMenuContent                  | pure re-export             | 10px (default `rounded-lg`) |
+| Card, Checkbox, Switch, Label, Table | pure re-exports            | use Flow DS defaults        |
 
 ### Color Token Strategy
 
@@ -53,15 +53,15 @@ Semantic color tokens use slate for neutral UI and blue for brand/interactive:
 
 ### What gets token-overridden vs wrapper-overridden
 
-| Category | Method | Example |
-|----------|--------|---------|
-| Colors | Token override | `--color-fill-inactive: var(--color-slate-3)` |
-| Spacing | Token override | `--spacing-2xl: 2.25rem` |
-| Typography sizes | Token override | `--font-size-200: 0.875rem` |
-| Typography weights | Token override | `--text-style-title-sm-weight: 500` |
-| Shadows | Token override | `--shadow-xs: none` |
-| Pill shapes | Wrapper (`rounded-full`) | Button, Badge, TabsTrigger |
-| Custom radius | Wrapper (specific token) | Input (`rounded-xl`), TabsList (`rounded-xl`) |
+| Category           | Method                   | Example                                       |
+| ------------------ | ------------------------ | --------------------------------------------- |
+| Colors             | Token override           | `--color-fill-inactive: var(--color-slate-3)` |
+| Spacing            | Token override           | `--spacing-2xl: 2.25rem`                      |
+| Typography sizes   | Token override           | `--font-size-200: 0.875rem`                   |
+| Typography weights | Token override           | `--text-style-title-sm-weight: 500`           |
+| Shadows            | Token override           | `--shadow-xs: none`                           |
+| Pill shapes        | Wrapper (`rounded-full`) | Button, Badge, TabsTrigger                    |
+| Custom radius      | Wrapper (specific token) | Input (`rounded-xl`), TabsList (`rounded-xl`) |
 
 ### Files
 

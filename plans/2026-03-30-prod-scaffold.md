@@ -49,6 +49,7 @@ vite.config.ts · tsconfig.json
 ## Task 1: Copy Go backend
 
 **Files:**
+
 - Create: `server/` (copy entire directory from prod)
 - Create: `go.mod`, `go.sum`, `.golangci.yaml`, `.env.example`
 
@@ -82,6 +83,7 @@ git commit -m "feat: add Go BFF backend from prod"
 ## Task 2: Swap Bun to pnpm
 
 **Files:**
+
 - Delete: `bun.lock`, `bunfig.toml`, `package-lock.json`
 - Create: `pnpm-workspace.yaml`, `.npmrc`
 - Modify: `package.json`
@@ -211,6 +213,7 @@ git commit -m "chore: switch from bun to pnpm"
 ## Task 3: Replace TanStack Start with plain Vite SPA
 
 **Files:**
+
 - Modify: `vite.config.ts`
 - Create: `web/index.html`
 - Modify: `tsconfig.json`
@@ -271,7 +274,13 @@ Replace the `paths` block and add `baseUrl` pointing to web:
 
 ```json
 {
-  "include": ["web/**/*.ts", "web/**/*.tsx", "eslint.config.js", "prettier.config.js", "vite.config.ts"],
+  "include": [
+    "web/**/*.ts",
+    "web/**/*.tsx",
+    "eslint.config.js",
+    "prettier.config.js",
+    "vite.config.ts"
+  ],
   "compilerOptions": {
     "target": "ES2022",
     "jsx": "react-jsx",
@@ -308,6 +317,7 @@ git commit -m "chore: replace TanStack Start with plain Vite SPA"
 ## Task 4: Create web/ entry point
 
 **Files:**
+
 - Create: `web/main.tsx`
 - Create: `web/router.tsx` (updated from `src/router.tsx`)
 
@@ -359,6 +369,7 @@ git commit -m "chore: add web/ SPA entry point"
 ## Task 5: Create RFC-027 directory skeleton
 
 **Files:**
+
 - Create: directory structure under `web/`
 
 **Step 1: Create all directories**
@@ -397,6 +408,7 @@ git commit -m "chore: create RFC-027 directory skeleton under web/"
 Move shadcn UI primitives, lib utils, and generic hooks.
 
 **Files:**
+
 - Move: `src/components/ui/*` → `web/shared/components/ui/`
 - Move: `src/lib/utils.ts` → `web/shared/lib/utils.ts`
 - Move: `src/hooks/use-mobile.ts` → `web/shared/hooks/use-mobile.ts`
@@ -425,6 +437,7 @@ git commit -m "chore: move shared UI primitives and utils to web/shared/"
 Move shell-level components (sidebar, header, home page elements) and platform lib (auth, feature-flags).
 
 **Files:**
+
 - Move: `src/components/app-sidebar.tsx` → `web/platform/components/app-sidebar.tsx`
 - Move: `src/components/app-header.tsx` → `web/platform/components/app-header.tsx`
 - Move: `src/components/app-card.tsx` → `web/platform/components/app-card.tsx`
@@ -471,6 +484,7 @@ git commit -m "chore: move platform shell components to web/platform/"
 Move all PG-specific components, data, hooks, and types.
 
 **Files:**
+
 - Move: `src/components/comms/*` → `web/apps/pg/components/comms/`
 - Move: `src/components/forms/*` → `web/apps/pg/components/forms/`
 - Move: `src/components/announcements/*` → `web/apps/pg/components/announcements/`
@@ -511,6 +525,7 @@ git commit -m "chore: move PG feature components to web/apps/pg/"
 ## Task 9: Move routes and CSS
 
 **Files:**
+
 - Move: `src/routes/*` → `web/routes/`
 - Move: `src/styles.css` → `web/styles.css`
 - Move: `src/flow-ds-theme.css` → `web/flow-ds-theme.css`
@@ -532,14 +547,15 @@ git commit -m "chore: move routes and CSS to web/"
 
 ---
 
-## Task 10: Update __root.tsx — remove TanStack Start SSR APIs
+## Task 10: Update \_\_root.tsx — remove TanStack Start SSR APIs
 
 The current `web/routes/__root.tsx` uses TanStack Start-specific APIs (`HeadContent`, `Scripts`, `shellComponent`). Strip these out for plain TanStack Router.
 
 **Files:**
+
 - Modify: `web/routes/__root.tsx`
 
-**Step 1: Rewrite web/routes/__root.tsx**
+**Step 1: Rewrite web/routes/\_\_root.tsx**
 
 ```tsx
 import { Outlet, createRootRoute, useRouterState } from '@tanstack/react-router';
@@ -634,6 +650,7 @@ git commit -m "chore: remove TanStack Start SSR APIs from __root.tsx"
 All files copied from `src/` still have `@/` imports pointing at the old `src/` structure. Replace them systematically with `~/` paths reflecting the new `web/` layout.
 
 **Files:**
+
 - Modify: all `*.tsx` and `*.ts` files under `web/`
 
 **Step 1: Run import replacement script**
@@ -687,7 +704,7 @@ grep -r "from '@/" web/ --include="*.tsx" --include="*.ts"
 
 Expected: no output. If any remain, manually update those files.
 
-**Step 3: Fix CSS imports in routes/__root.tsx**
+**Step 3: Fix CSS imports in routes/\_\_root.tsx**
 
 The old root imported a CSS URL: `import appCss from '../styles.css?url'`. Replace with a direct import:
 
@@ -710,6 +727,7 @@ git commit -m "chore: update all imports to ~/  aliases"
 ## Task 12: Port CI/tooling from prod
 
 **Files:**
+
 - Create: `.github/workflows/ci.yaml`
 - Create: `.github/workflows/sast.yml`
 - Create: `.husky/pre-commit`
@@ -837,6 +855,7 @@ Navigate to `http://localhost:3000`. Expected: home page renders with sidebar an
 **Step 3: Spot-check routes**
 
 Visit:
+
 - `/announcements` — announcements list
 - `/forms` — forms list
 - `/groups` — groups overview
@@ -847,6 +866,7 @@ All should render without console errors.
 **Step 4: If there are import errors**
 
 Run:
+
 ```bash
 grep -r "from '@/" web/ --include="*.tsx" --include="*.ts"
 ```
@@ -892,12 +912,14 @@ git commit -m "chore: delete old src/ directory"
 ## Done
 
 After Task 14, the repo is a production-grade monorepo with:
+
 - Go BFF backend in `/server/`
 - RFC-027 frontend in `web/apps/`, `web/platform/`, `web/shared/`
 - pnpm, ESLint, Prettier, Husky, GitHub Actions CI
 - All existing prototype UI preserved and working
 
 Next steps (out of scope for this plan):
+
 - Wire Go BFF to serve `web/index.html` (inject `preloaded-data` bootstrap JSON)
 - Add real auth (MIMS SSO / EduPass OTP via Go `/otp/*` endpoints)
 - Replace mock data with real API calls under `/api/web/2/staff/…`

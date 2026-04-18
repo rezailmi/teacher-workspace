@@ -4,8 +4,21 @@
   "richTextContent": {
     "type": "doc",
     "content": [
-      { "type": "paragraph", "attrs": { "textAlign": "left" }, "content": [{ "type": "text", "text": "Dear Parents," }] },
-      { "type": "paragraph", "attrs": { "textAlign": "left" }, "content": [{ "type": "text", "text": "Your child has been selected to represent the school in the National Boxing Competition on 1 April 2026. Please indicate your consent below." }] }
+      {
+        "type": "paragraph",
+        "attrs": { "textAlign": "left" },
+        "content": [{ "type": "text", "text": "Dear Parents," }]
+      },
+      {
+        "type": "paragraph",
+        "attrs": { "textAlign": "left" },
+        "content": [
+          {
+            "type": "text",
+            "text": "Your child has been selected to represent the school in the National Boxing Competition on 1 April 2026. Please indicate your consent below."
+          }
+        ]
+      }
     ]
   },
   "responseType": "YES_NO",
@@ -26,8 +39,20 @@
   "customQuestions": [],
   "staffOwners": [{ "staffID": 1013, "staffName": "TAN GUANG SHIN" }],
   "students": [
-    { "studentId": 1, "studentName": "TAN XIAO MING", "className": "Boxing", "response": "YES", "respondedAt": "2026-03-25T09:00:00.000Z" },
-    { "studentId": 5, "studentName": "EMILY WONG SHU HUI", "className": "Boxing", "response": null, "respondedAt": null }
+    {
+      "studentId": 1,
+      "studentName": "TAN XIAO MING",
+      "className": "Boxing",
+      "response": "YES",
+      "respondedAt": "2026-03-25T09:00:00.000Z"
+    },
+    {
+      "studentId": 5,
+      "studentName": "EMILY WONG SHU HUI",
+      "className": "Boxing",
+      "response": null,
+      "respondedAt": null
+    }
   ],
   "status": "OPEN",
   "consentFormHistory": []

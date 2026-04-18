@@ -2,8 +2,23 @@
   "ccaId": 10,
   "ccaName": "BOXING",
   "students": [
-    { "studentId": 1, "studentName": "TAN XIAO MING", "className": "4A", "admissionNumber": "S2310001A" },
-    { "studentId": 5, "studentName": "EMILY WONG SHU HUI", "className": "3B", "admissionNumber": "S2410005E" },
-    { "studentId": 6, "studentName": "MUHAMMAD FARID BIN AZIZ", "className": "2C", "admissionNumber": "S2510006F" }
+    {
+      "studentId": 1,
+      "studentName": "TAN XIAO MING",
+      "className": "4A",
+      "admissionNumber": "S2310001A"
+    },
+    {
+      "studentId": 5,
+      "studentName": "EMILY WONG SHU HUI",
+      "className": "3B",
+      "admissionNumber": "S2410005E"
+    },
+    {
+      "studentId": 6,
+      "studentName": "MUHAMMAD FARID BIN AZIZ",
+      "className": "2C",
+      "admissionNumber": "S2510006F"
+    }
   ]
 }

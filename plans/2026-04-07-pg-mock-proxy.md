@@ -11,6 +11,7 @@
 ## Task 1: Add PGConfig to server config
 
 **Files:**
+
 - Modify: `server/internal/config/config.go`
 
 Add `PGConfig` struct and wire it into `Config`:
@@ -22,9 +23,10 @@ type PGConfig struct {
 }
 ```
 
-Add `PG PGConfig \`dotenv:",squash"\`` field to `Config` struct.
+Add `PG PGConfig \`dotenv:",squash"\``field to`Config` struct.
 
 Add defaults in `Default()`:
+
 ```go
 PG: PGConfig{
     Mock:    true,
@@ -41,6 +43,7 @@ No validation needed for Phase 1 (mock mode only).
 ## Task 2: Create server/internal/pg package
 
 **Files to create:**
+
 - `server/internal/pg/handler.go` — Handler struct, New(), Register()
 - `server/internal/pg/mock.go` — mock mode: serves fixture JSON from embedded FS
 - `server/internal/pg/fixtures/announcements.json` — announcements list fixture
@@ -80,6 +83,7 @@ func (h *Handler) Register(mux *http.ServeMux) {
 Use `embed` to bundle fixture files into the binary. Serve fixture JSON based on request path.
 
 Route map (path suffix → fixture file):
+
 - `GET /api/web/2/staff/announcements` → `fixtures/announcements.json`
 
 Return 404 for unknown routes.
@@ -93,6 +97,7 @@ JSON array matching Reza's `PGAnnouncement[]` type from `web/data/mock-pg-announ
 ## Task 3: Wire PG handler into main handler
 
 **Files:**
+
 - Modify: `server/internal/handler/handler.go`
 
 In `New()`, instantiate `pg.New(&cfg.PG)` and call `.Register(mux)` inside `Register()`.
@@ -102,6 +107,7 @@ In `New()`, instantiate `pg.New(&cfg.PG)` and call `.Register(mux)` inside `Regi
 ## Task 4: Update .env.example
 
 Add PG vars to `.env.example`:
+
 ```
 # PG (Parents Gateway) integration
 TW_PG_MOCK=true
@@ -118,6 +124,7 @@ go test ./...
 ```
 
 Then manually test:
+
 ```bash
 curl http://localhost:3000/api/web/2/staff/announcements
 ```

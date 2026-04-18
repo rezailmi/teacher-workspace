@@ -6,9 +6,27 @@
   "isShared": false,
   "sharedWith": [],
   "students": [
-    { "studentId": 1, "studentName": "TAN XIAO MING", "className": "4A", "indexNumber": 15, "ccas": ["BOXING"] },
-    { "studentId": 2, "studentName": "LEE WEI LIANG", "className": "4A", "indexNumber": 8, "ccas": [] },
-    { "studentId": 3, "studentName": "CAROL CHEN HUI", "className": "4A", "indexNumber": 3, "ccas": ["CHOIR"] }
+    {
+      "studentId": 1,
+      "studentName": "TAN XIAO MING",
+      "className": "4A",
+      "indexNumber": 15,
+      "ccas": ["BOXING"]
+    },
+    {
+      "studentId": 2,
+      "studentName": "LEE WEI LIANG",
+      "className": "4A",
+      "indexNumber": 8,
+      "ccas": []
+    },
+    {
+      "studentId": 3,
+      "studentName": "CAROL CHEN HUI",
+      "className": "4A",
+      "indexNumber": 3,
+      "ccas": ["CHOIR"]
+    }
   ],
   "createdAt": "2026-03-01T08:00:00.000Z"
 }

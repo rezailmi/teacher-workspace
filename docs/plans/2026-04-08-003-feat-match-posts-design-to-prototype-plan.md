@@ -1,5 +1,5 @@
 ---
-title: "feat: Match Posts design to prototype"
+title: 'feat: Match Posts design to prototype'
 type: feat
 status: completed
 date: 2026-04-08
@@ -42,9 +42,11 @@ Update the Posts detail and create pages to match the design prototype at `Strin
 ```
 
 **Files to modify:**
+
 - `web/containers/PostDetailView.tsx` — restructure to grid layout, move announcement content to right sidebar card
 
 **New component:**
+
 - `web/components/comms/AnnouncementCard.tsx` — right sidebar card showing title, description, enquiry email, staff in charge, shortcuts, attachments
 
 ### 2. Create Page — Type Picker + Card-Based Form
@@ -72,6 +74,7 @@ Update the Posts detail and create pages to match the design prototype at `Strin
 **Approach:** Show the type picker as the initial state of CreatePostView when no type is selected yet. Use local state (`selectedType: 'post' | 'post-with-response' | null`) to toggle between picker and form. No new route needed.
 
 **New component:**
+
 - `web/components/comms/PostTypePicker.tsx` — two-card grid with mockup illustrations, title, description
 
 #### 2b. Card-Based Form Sections
@@ -131,6 +134,7 @@ Update the Posts detail and create pages to match the design prototype at `Strin
 ```
 
 **Files to modify:**
+
 - `web/containers/CreatePostView.tsx` — wrap form sections in cards, reorder (Recipients first, then Content), add section headers
 
 #### 2c. Header Redesign
@@ -138,6 +142,7 @@ Update the Posts detail and create pages to match the design prototype at `Strin
 **Current:** "Back to Posts" link + Save Draft + Send buttons.
 
 **Target:**
+
 ```
 ← New Post                              👁 Show Preview   [📤 Post ▾]
 ```
@@ -147,6 +152,7 @@ Update the Posts detail and create pages to match the design prototype at `Strin
 - Split "Post" button: primary action (Post now) + dropdown chevron (Schedule for later)
 
 **New component:**
+
 - `web/components/comms/SplitPostButton.tsx` — Button + DropdownMenu trigger, handles post now / schedule options
 
 #### 2d. Rich Text Editor
@@ -156,6 +162,7 @@ Update the Posts detail and create pages to match the design prototype at `Strin
 **Target:** Toolbar with formatting buttons above the text area. For the initial implementation, keep `<Textarea>` but add a **visual-only toolbar** (non-functional buttons showing the intended formatting options). Full Tiptap integration is a follow-up.
 
 **New component:**
+
 - `web/components/comms/RichTextToolbar.tsx` — toolbar row with icon buttons (B, I, U, S, <>, H1, H2, H3, alignment, lists, blockquote, link, highlight). Non-functional for now — the Textarea remains the input.
 
 #### 2e. Shortcuts as Bordered Rows
@@ -163,6 +170,7 @@ Update the Posts detail and create pages to match the design prototype at `Strin
 **Current:** Inline checkboxes.
 
 **Target:** Each shortcut in its own bordered row:
+
 ```
 ┌──────────────────────────────────┐
 │ ☐  Declare travels               │
@@ -187,6 +195,7 @@ Photos 0/12 · Add up to 12 photos, less than 5 MB each.
 ```
 
 **New component:**
+
 - `web/components/comms/AttachmentSection.tsx` — visual placeholder with file/photo counters and disabled add buttons
 
 ### 3. Recipient Table Toolbar
@@ -194,6 +203,7 @@ Photos 0/12 · Add up to 12 photos, less than 5 MB each.
 **Current:** Plain table with no toolbar.
 
 **Target:** Search + Filter + Columns + Export toolbar above the table:
+
 ```
 🔍 Search student or parent...   ⚙ Filter   ⊞ Columns   ⬇ Export
 3 recipients
@@ -231,20 +241,22 @@ Photos 0/12 · Add up to 12 photos, less than 5 MB each.
 ## Files Summary
 
 ### New Components
-| File | Purpose |
-|------|---------|
-| `web/components/comms/AnnouncementCard.tsx` | Detail page sidebar card |
-| `web/components/comms/PostTypePicker.tsx` | Type selection (Post vs Post with Response) |
-| `web/components/comms/SplitPostButton.tsx` | Split Post/Schedule button |
-| `web/components/comms/RichTextToolbar.tsx` | Visual formatting toolbar |
-| `web/components/comms/AttachmentSection.tsx` | File/photo upload placeholder |
+
+| File                                         | Purpose                                     |
+| -------------------------------------------- | ------------------------------------------- |
+| `web/components/comms/AnnouncementCard.tsx`  | Detail page sidebar card                    |
+| `web/components/comms/PostTypePicker.tsx`    | Type selection (Post vs Post with Response) |
+| `web/components/comms/SplitPostButton.tsx`   | Split Post/Schedule button                  |
+| `web/components/comms/RichTextToolbar.tsx`   | Visual formatting toolbar                   |
+| `web/components/comms/AttachmentSection.tsx` | File/photo upload placeholder               |
 
 ### Modified Files
-| File | Changes |
-|------|---------|
-| `web/containers/PostDetailView.tsx` | Two-column grid layout |
-| `web/containers/CreatePostView.tsx` | Type picker, card sections, header redesign |
-| `web/components/comms/RecipientReadTable.tsx` | Add search/filter/export toolbar |
+
+| File                                          | Changes                                     |
+| --------------------------------------------- | ------------------------------------------- |
+| `web/containers/PostDetailView.tsx`           | Two-column grid layout                      |
+| `web/containers/CreatePostView.tsx`           | Type picker, card sections, header redesign |
+| `web/components/comms/RecipientReadTable.tsx` | Add search/filter/export toolbar            |
 
 ## Acceptance Criteria
 

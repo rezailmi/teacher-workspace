@@ -33,6 +33,7 @@
 Called on every page load to validate session and get user context.
 
 **Response:**
+
 ```json
 {
   "staffId": 1013,
@@ -55,6 +56,7 @@ Called on every page load to validate session and get user context.
 ```
 
 **Notes:**
+
 - `isA` = is admin
 - `sessionTimeLeft` in seconds (~1800 = 30 min)
 - `heyTaliaAccess` gates HeyTalia AI feature in UI
@@ -67,6 +69,7 @@ Called on every page load to validate session and get user context.
 Feature flags and system config. Controls which UI elements are visible.
 
 **Response:**
+
 ```json
 {
   "flags": {
@@ -107,6 +110,7 @@ Feature flags and system config. Controls which UI elements are visible.
 List of announcements created by the logged-in staff.
 
 **Query params:**
+
 - `page` (int, default 1)
 - `pageSize` (int, default 10)
 - `search` (string, title search)
@@ -115,6 +119,7 @@ List of announcements created by the logged-in staff.
 - `dateTo` (ISO string)
 
 **Response:**
+
 ```json
 {
   "posts": [
@@ -156,6 +161,7 @@ Same response shape as list above. Includes `createdByName` column in UI.
 Full announcement detail including attachments, images, read status.
 
 **Response:**
+
 ```json
 {
   "announcementId": 1036,
@@ -190,9 +196,7 @@ Full announcement detail including attachments, images, read status.
       "description": "Registration link"
     }
   ],
-  "staffOwners": [
-    { "staffID": 1013, "staffName": "EBI HO BIN BIN" }
-  ],
+  "staffOwners": [{ "staffID": 1013, "staffName": "EBI HO BIN BIN" }],
   "students": [
     {
       "studentId": 1,
@@ -208,6 +212,7 @@ Full announcement detail including attachments, images, read status.
 ```
 
 **Notes:**
+
 - `richTextContent` is a JSON string (ProseMirror doc format), NOT an object
 - `content` is the legacy plain-text field, use `richTextContent`
 - `shortcutLink` values: `"TRAVEL_DECLARATION"` | `"EDIT_CONTACT_DETAILS"`
@@ -219,6 +224,7 @@ Full announcement detail including attachments, images, read status.
 Read status breakdown per student for the detail page stats row.
 
 **Response:**
+
 ```json
 {
   "readCount": 1,
@@ -269,6 +275,7 @@ Publish a new announcement immediately.
 **Rate limited.** Requires CSRF token.
 
 **Request body:**
+
 ```json
 {
   "title": "Term 2 School Camp",
@@ -280,9 +287,7 @@ Publish a new announcement immediately.
   ],
   "staffOwners": [1013, 1014],
   "shortcutLink": ["TRAVEL_DECLARATION"],
-  "websiteLinks": [
-    { "url": "https://example.com", "description": "Registration" }
-  ],
+  "websiteLinks": [{ "url": "https://example.com", "description": "Registration" }],
   "attachmentIds": [1, 2],
   "imageIds": [3, 4],
   "coverImageIds": [3]
@@ -290,6 +295,7 @@ Publish a new announcement immediately.
 ```
 
 **Response:**
+
 ```json
 { "announcementId": 1037, "postId": 1037 }
 ```
@@ -303,6 +309,7 @@ Save as draft.
 **Request body:** Same as publish but without required validation enforcement.
 
 **Response:**
+
 ```json
 { "announcementDraftId": 55 }
 ```
@@ -324,6 +331,7 @@ Update existing draft.
 Save draft + schedule for future send.
 
 **Request body:** Create draft body + schedule fields:
+
 ```json
 {
   "scheduledSendAt": "2026-04-10T01:00:00.000Z"
@@ -337,6 +345,7 @@ Save draft + schedule for future send.
 Duplicate a posted announcement into a new draft.
 
 **Request body:**
+
 ```json
 { "announcementId": 1036 }
 ```
@@ -370,6 +379,7 @@ List consent forms created by logged-in staff.
 **Query params:** `page`, `pageSize`, `search`, `status`, `dateFrom`, `dateTo`
 
 **Response:**
+
 ```json
 {
   "posts": [
@@ -410,6 +420,7 @@ Consent forms shared with logged-in staff. Same shape as list.
 Full consent form detail.
 
 **Response:**
+
 ```json
 {
   "consentFormId": 1038,
@@ -468,6 +479,7 @@ Load a saved consent form draft.
 Publish a consent form. Rate limited. Requires CSRF.
 
 **Request body:**
+
 ```json
 {
   "title": "Consent Form for Boxing Competition",
@@ -483,9 +495,7 @@ Publish a consent form. Rate limited. Requires CSRF.
   "staffOwners": [1013],
   "attachmentIds": [],
   "imageIds": [],
-  "customQuestions": [
-    { "questionText": "Dietary restrictions?", "questionType": "TEXT" }
-  ]
+  "customQuestions": [{ "questionText": "Dietary restrictions?", "questionType": "TEXT" }]
 }
 ```
 
@@ -512,6 +522,7 @@ Update existing consent form draft.
 Update consent-by date after publishing.
 
 **Request body:**
+
 ```json
 { "consentByDate": "2026-04-05T15:59:59.000Z" }
 ```
@@ -539,6 +550,7 @@ Delete a draft. Requires CSRF.
 List all meetings (upcoming + past).
 
 **Response:**
+
 ```json
 {
   "upcoming": [
@@ -584,6 +596,7 @@ List all meetings (upcoming + past).
 Meeting event detail.
 
 **Response:**
+
 ```json
 {
   "eventId": 1001,
@@ -622,6 +635,7 @@ Meeting event detail.
 All timeslots for a meeting event (full schedule grid).
 
 **Response:**
+
 ```json
 {
   "eventId": 1001,
@@ -663,9 +677,11 @@ All timeslots for a meeting event (full schedule grid).
 Bookings for a specific meeting day.
 
 **Query params:**
+
 - `scheduleDate` (ISO string, required) — the specific meeting day to view
 
 **Response:**
+
 ```json
 {
   "eventId": 1001,
@@ -704,6 +720,7 @@ Server date/time used for meeting creation validation.
 Create a new meeting event. Rate limited. Requires CSRF.
 
 **Request body:**
+
 ```json
 {
   "title": "Meeting with Boxing Coaches",
@@ -746,6 +763,7 @@ Delete a meeting event. Requires CSRF.
 Block a timeslot (staff side). Requires CSRF.
 
 **Request body:**
+
 ```json
 { "slotId": 5, "eventId": 1001 }
 ```
@@ -757,6 +775,7 @@ Block a timeslot (staff side). Requires CSRF.
 Unblock a timeslot. Requires CSRF.
 
 **Request body:**
+
 ```json
 { "slotId": 5, "eventId": 1001 }
 ```
@@ -768,6 +787,7 @@ Unblock a timeslot. Requires CSRF.
 Add a booking manually (staff adds on behalf of parent). Requires CSRF.
 
 **Request body:**
+
 ```json
 {
   "slotId": 5,
@@ -783,6 +803,7 @@ Add a booking manually (staff adds on behalf of parent). Requires CSRF.
 Move a booking to a different slot. Requires CSRF.
 
 **Request body:**
+
 ```json
 {
   "bookingId": 10,
@@ -797,6 +818,7 @@ Move a booking to a different slot. Requires CSRF.
 Remove a booking. Requires CSRF.
 
 **Request body:**
+
 ```json
 { "bookingId": 10 }
 ```
@@ -810,9 +832,11 @@ Remove a booking. Requires CSRF.
 Returns all groups assigned to the logged-in staff (form class, co-form class, CCAs, subject groups).
 
 **Query params:**
+
 - `type` = `summary` (returns condensed list for recipient picker)
 
 **Response:**
+
 ```json
 {
   "classes": [
@@ -855,9 +879,11 @@ Returns all groups assigned to the logged-in staff (form class, co-form class, C
 List custom groups created by or shared with logged-in staff.
 
 **Query params:**
+
 - `type` = `summary`
 
 **Response:**
+
 ```json
 {
   "customGroups": [
@@ -881,6 +907,7 @@ List custom groups created by or shared with logged-in staff.
 Custom group detail with student list.
 
 **Response:**
+
 ```json
 {
   "customGroupId": 5,
@@ -923,6 +950,7 @@ CCA student list.
 Create a custom group. Requires CSRF.
 
 **Request body:**
+
 ```json
 {
   "name": "My Study Group",
@@ -939,6 +967,7 @@ Create a custom group. Requires CSRF.
 Update custom group name or students. Requires CSRF.
 
 **Request body:**
+
 ```json
 {
   "name": "My Study Group (Updated)",
@@ -959,6 +988,7 @@ Delete custom group. Requires CSRF.
 Share group with other staff. Requires CSRF.
 
 **Request body:**
+
 ```json
 { "staffIds": [1014, 1015] }
 ```
@@ -970,6 +1000,7 @@ Share group with other staff. Requires CSRF.
 Remove a staff member's access to the shared group. Requires CSRF.
 
 **Request body:**
+
 ```json
 { "staffId": 1014 }
 ```
@@ -989,6 +1020,7 @@ Validate a student list (e.g. from Excel upload) before creating group.
 Get student count for an array of groups (used for meeting creation summary box).
 
 **Request body:**
+
 ```json
 {
   "groups": [
@@ -1009,6 +1041,7 @@ Get student count for an array of groups (used for meeting creation summary box)
 All staff in the same school. Used for recipient/staff-in-charge pickers.
 
 **Response:**
+
 ```json
 {
   "staff": [
@@ -1030,11 +1063,13 @@ All staff in the same school. Used for recipient/staff-in-charge pickers.
 All students in the school. Used for custom group student picker and onboarding report.
 
 **Query params:**
+
 - `search` (string)
 - `level` (string)
 - `className` (string)
 
 **Response:**
+
 ```json
 {
   "students": [
@@ -1058,17 +1093,12 @@ All students in the school. Used for custom group student picker and onboarding 
 All student groups (classes, levels, CCAs) in school. Used for recipient dropdowns.
 
 **Response:**
+
 ```json
 {
-  "classes": [
-    { "classId": 101, "className": "H6-05", "level": "SECONDARY 4", "year": 2026 }
-  ],
-  "levels": [
-    { "levelId": 6, "levelName": "SECONDARY 4", "year": 2026 }
-  ],
-  "ccas": [
-    { "ccaId": 10, "ccaName": "BOXING" }
-  ]
+  "classes": [{ "classId": 101, "className": "H6-05", "level": "SECONDARY 4", "year": 2026 }],
+  "levels": [{ "levelId": 6, "levelName": "SECONDARY 4", "year": 2026 }],
+  "ccas": [{ "ccaId": 10, "ccaName": "BOXING" }]
 }
 ```
 
@@ -1087,6 +1117,7 @@ Generate onboarding status report. Returns Excel file.
 Generate travel declaration report. Returns Excel file.
 
 **Request body:**
+
 ```json
 {
   "declarationStatus": "NOT_DECLARED",
@@ -1106,6 +1137,7 @@ Generate travel declaration report. Returns Excel file.
 Current user profile.
 
 **Response:**
+
 ```json
 {
   "staffId": 1013,
@@ -1133,6 +1165,7 @@ Current user profile.
 Update preferred enquiry/display email. Requires CSRF.
 
 **Request body:**
+
 ```json
 { "displayEmail": "personal@schools.gov.sg" }
 ```
@@ -1144,6 +1177,7 @@ Update preferred enquiry/display email. Requires CSRF.
 Update display name. Requires CSRF.
 
 **Request body:**
+
 ```json
 { "displayName": "Mr Tan" }
 ```
@@ -1155,6 +1189,7 @@ Update display name. Requires CSRF.
 Get current notification preference settings.
 
 **Response:**
+
 ```json
 {
   "preferences": [
@@ -1184,11 +1219,10 @@ Get current notification preference settings.
 Update notification preferences. Requires CSRF.
 
 **Request body:**
+
 ```json
 {
-  "preferences": [
-    { "eventType": "CONSENT_FORM_RESPONSE_YES", "enabled": false }
-  ]
+  "preferences": [{ "eventType": "CONSENT_FORM_RESPONSE_YES", "enabled": false }]
 }
 ```
 
@@ -1203,12 +1237,14 @@ File handling uses a separate auth path — existing file routes support token-b
 Validate file before S3 upload. Returns presigned S3 URL.
 
 **Request body:** `multipart/form-data`
+
 - `file`: the file
 - `type`: `ANNOUNCEMENT` | `CONSENT_FORM` | `MEETING` | `GROUP`
 - `mimeType`: file MIME type
 - `fileSize`: bytes
 
 **Response:**
+
 ```json
 {
   "attachmentId": 99,
@@ -1224,6 +1260,7 @@ Validate file before S3 upload. Returns presigned S3 URL.
 Confirm S3 upload completed.
 
 **Query params:**
+
 - `attachmentId` (int)
 
 **Response:** `{ "verified": true }`
@@ -1235,6 +1272,7 @@ Confirm S3 upload completed.
 Download an attachment (returns presigned S3 URL redirect or stream).
 
 **Query params:**
+
 - `attachmentId` (int)
 
 ---
@@ -1245,29 +1283,29 @@ How TW frontend routes map to TW BFF endpoints, which then proxy to pgw-web.
 
 Convention: TW frontend calls `/<base-path>/<resource>.json` → TW BFF strips base path → forwards to pgw-web.
 
-| TW Frontend | TW BFF endpoint | pgw-web endpoint |
-|---|---|---|
-| `GET /teachers/session/current.json` | `/teachers/session/current.json` | `GET /api/web/2/staff/session/current` |
-| `GET /teachers/configs.json` | `/teachers/configs.json` | `GET /api/configs` |
-| `GET /teachers/announcements.json` | `/teachers/announcements.json` | `GET /api/web/2/staff/announcements` |
-| `GET /teachers/announcements/shared.json` | `/teachers/announcements/shared.json` | `GET /api/web/2/staff/announcements/shared` |
-| `GET /teachers/announcements/:id.json` | `/teachers/announcements/:id.json` | `GET /api/web/2/staff/announcements/:id` |
-| `GET /teachers/announcements/:id/readStatus.json` | — | `GET /api/web/2/staff/announcements/:id/readStatus` |
-| `GET /teachers/consentForms.json` | — | `GET /api/web/2/staff/consentForms` |
-| `GET /teachers/consentForms/shared.json` | — | `GET /api/web/2/staff/consentForms/shared` |
-| `GET /teachers/consentForms/:id.json` | — | `GET /api/web/2/staff/consentForms/:id` |
-| `GET /teachers/meetings.json` | — | `GET /api/web/2/staff/ptm` |
-| `GET /teachers/meetings/:id.json` | — | `GET /api/web/2/staff/ptm/:id` |
-| `GET /teachers/meetings/:id/timeslots.json` | — | `GET /api/web/2/staff/ptm/timeslots/:id` |
-| `GET /teachers/meetings/:id/bookings.json` | — | `GET /api/web/2/staff/ptm/bookings/:id` |
-| `GET /teachers/groups/assigned.json` | — | `GET /api/web/2/staff/groups/assigned` |
-| `GET /teachers/groups/custom.json` | — | `GET /api/web/2/staff/groups/custom` |
-| `GET /teachers/groups/custom/:id.json` | — | `GET /api/web/2/staff/groups/custom/:id` |
-| `GET /teachers/school/staff.json` | — | `GET /api/web/2/staff/school/staff` |
-| `GET /teachers/school/students.json` | — | `GET /api/web/2/staff/school/students` |
-| `GET /teachers/school/groups.json` | — | `GET /api/web/2/staff/school/groups` |
-| `GET /teachers/me.json` | — | `GET /api/web/2/staff/users/me` |
-| `GET /teachers/notification-preferences.json` | — | `GET /api/web/2/staff/notificationPreference` |
+| TW Frontend                                       | TW BFF endpoint                       | pgw-web endpoint                                    |
+| ------------------------------------------------- | ------------------------------------- | --------------------------------------------------- |
+| `GET /teachers/session/current.json`              | `/teachers/session/current.json`      | `GET /api/web/2/staff/session/current`              |
+| `GET /teachers/configs.json`                      | `/teachers/configs.json`              | `GET /api/configs`                                  |
+| `GET /teachers/announcements.json`                | `/teachers/announcements.json`        | `GET /api/web/2/staff/announcements`                |
+| `GET /teachers/announcements/shared.json`         | `/teachers/announcements/shared.json` | `GET /api/web/2/staff/announcements/shared`         |
+| `GET /teachers/announcements/:id.json`            | `/teachers/announcements/:id.json`    | `GET /api/web/2/staff/announcements/:id`            |
+| `GET /teachers/announcements/:id/readStatus.json` | —                                     | `GET /api/web/2/staff/announcements/:id/readStatus` |
+| `GET /teachers/consentForms.json`                 | —                                     | `GET /api/web/2/staff/consentForms`                 |
+| `GET /teachers/consentForms/shared.json`          | —                                     | `GET /api/web/2/staff/consentForms/shared`          |
+| `GET /teachers/consentForms/:id.json`             | —                                     | `GET /api/web/2/staff/consentForms/:id`             |
+| `GET /teachers/meetings.json`                     | —                                     | `GET /api/web/2/staff/ptm`                          |
+| `GET /teachers/meetings/:id.json`                 | —                                     | `GET /api/web/2/staff/ptm/:id`                      |
+| `GET /teachers/meetings/:id/timeslots.json`       | —                                     | `GET /api/web/2/staff/ptm/timeslots/:id`            |
+| `GET /teachers/meetings/:id/bookings.json`        | —                                     | `GET /api/web/2/staff/ptm/bookings/:id`             |
+| `GET /teachers/groups/assigned.json`              | —                                     | `GET /api/web/2/staff/groups/assigned`              |
+| `GET /teachers/groups/custom.json`                | —                                     | `GET /api/web/2/staff/groups/custom`                |
+| `GET /teachers/groups/custom/:id.json`            | —                                     | `GET /api/web/2/staff/groups/custom/:id`            |
+| `GET /teachers/school/staff.json`                 | —                                     | `GET /api/web/2/staff/school/staff`                 |
+| `GET /teachers/school/students.json`              | —                                     | `GET /api/web/2/staff/school/students`              |
+| `GET /teachers/school/groups.json`                | —                                     | `GET /api/web/2/staff/school/groups`                |
+| `GET /teachers/me.json`                           | —                                     | `GET /api/web/2/staff/users/me`                     |
+| `GET /teachers/notification-preferences.json`     | —                                     | `GET /api/web/2/staff/notificationPreference`       |
 
 Write operations follow same pattern but with HTTP method passthrough (POST/PUT/DELETE).
 
@@ -1278,11 +1316,13 @@ Write operations follow same pattern but with HTTP method passthrough (POST/PUT/
 All `richTextContent` fields store ProseMirror JSON as a **string** (not object).
 
 Example minimal paragraph:
+
 ```json
 "{\"type\":\"doc\",\"content\":[{\"type\":\"paragraph\",\"attrs\":{\"textAlign\":\"left\"},\"content\":[{\"type\":\"text\",\"text\":\"Dear Parents,\"}]}]}"
 ```
 
 Node types observed in PG content:
+
 - `doc` — root
 - `paragraph` — with `attrs.textAlign`: `"left"` | `"center"` | `"right"` | `"justify"`
 - `text` — with optional `marks`: `[{ "type": "bold" }]` | `[{ "type": "italic" }]` | `[{ "type": "underline" }]`
@@ -1299,9 +1339,9 @@ Parse with a ProseMirror-compatible renderer or Tiptap's `generateHTML` on the f
 
 Used in announcement `shortcutLink` array:
 
-| Value | Displayed as |
-|---|---|
-| `TRAVEL_DECLARATION` | "Declare travels" |
+| Value                  | Displayed as           |
+| ---------------------- | ---------------------- |
+| `TRAVEL_DECLARATION`   | "Declare travels"      |
 | `EDIT_CONTACT_DETAILS` | "Edit contact details" |
 
 ---
@@ -1310,11 +1350,11 @@ Used in announcement `shortcutLink` array:
 
 Used in `studentGroups` arrays on create/post endpoints:
 
-| `type` value | Description |
-|---|---|
-| `CLASS` | Specific form class (by `classId`) |
-| `LEVEL` | Entire year level (by `levelId`) |
-| `CCA` | CCA group (by `ccaId`) |
-| `SCHOOL` | Whole school (by `schoolId`) |
-| `CUSTOM_GROUP` | Custom group (by `customGroupId`) |
-| `STUDENT` | Individual student (by `studentId`) |
+| `type` value   | Description                         |
+| -------------- | ----------------------------------- |
+| `CLASS`        | Specific form class (by `classId`)  |
+| `LEVEL`        | Entire year level (by `levelId`)    |
+| `CCA`          | CCA group (by `ccaId`)              |
+| `SCHOOL`       | Whole school (by `schoolId`)        |
+| `CUSTOM_GROUP` | Custom group (by `customGroupId`)   |
+| `STUDENT`      | Individual student (by `studentId`) |

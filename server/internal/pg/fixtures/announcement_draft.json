@@ -5,8 +5,18 @@
   "richTextContent": {
     "type": "doc",
     "content": [
-      { "type": "paragraph", "attrs": { "textAlign": "left" }, "content": [{ "type": "text", "text": "Dear Parents," }] },
-      { "type": "paragraph", "attrs": { "textAlign": "left" }, "content": [{ "type": "text", "text": "Please find attached information about Term 3 arrangements." }] }
+      {
+        "type": "paragraph",
+        "attrs": { "textAlign": "left" },
+        "content": [{ "type": "text", "text": "Dear Parents," }]
+      },
+      {
+        "type": "paragraph",
+        "attrs": { "textAlign": "left" },
+        "content": [
+          { "type": "text", "text": "Please find attached information about Term 3 arrangements." }
+        ]
+      }
     ]
   },
   "enquiryEmailAddress": "greenridge_sec@moe.edu.sg",
@@ -14,9 +24,7 @@
   "images": [],
   "shortcutLink": [],
   "websiteLinks": [],
-  "staffOwners": [
-    { "staffID": 1013, "staffName": "TAN GUANG SHIN" }
-  ],
+  "staffOwners": [{ "staffID": 1013, "staffName": "TAN GUANG SHIN" }],
   "recipients": {
     "classIds": [101],
     "customGroupIds": [],

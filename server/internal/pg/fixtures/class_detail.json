@@ -9,7 +9,5 @@
     { "studentId": 3, "studentName": "CAROL CHEN HUI", "admissionNumber": "S2310003C" },
     { "studentId": 4, "studentName": "DAVID NG JUN WEI", "admissionNumber": "S2310004D" }
   ],
-  "formTeachers": [
-    { "staffID": 1013, "staffName": "TAN GUANG SHIN" }
-  ]
+  "formTeachers": [{ "staffID": 1013, "staffName": "TAN GUANG SHIN" }]
 }

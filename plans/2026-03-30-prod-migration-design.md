@@ -77,15 +77,16 @@ Mock data stays in place throughout — API wiring is out of scope for this migr
 
 ## Stack Changes
 
-| Removed | Replacement |
-|---|---|
-| `@tanstack/react-start` | Plain Vite + React 19 |
-| TanStack Router (file-based, codegen) | TanStack Router (manual route tree) |
-| `bun` / `bunfig.toml` | pnpm |
-| `src/routeTree.gen.ts` | Deleted |
-| `src/` flat structure | `web/apps/`, `web/platform/`, `web/shared/` |
+| Removed                               | Replacement                                 |
+| ------------------------------------- | ------------------------------------------- |
+| `@tanstack/react-start`               | Plain Vite + React 19                       |
+| TanStack Router (file-based, codegen) | TanStack Router (manual route tree)         |
+| `bun` / `bunfig.toml`                 | pnpm                                        |
+| `src/routeTree.gen.ts`                | Deleted                                     |
+| `src/` flat structure                 | `web/apps/`, `web/platform/`, `web/shared/` |
 
 Kept unchanged:
+
 - Tailwind CSS v4
 - shadcn/ui + Base UI primitives
 - Tiptap rich text

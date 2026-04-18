@@ -21,13 +21,13 @@ Routes (App.tsx, lazy-loaded)
 
 **Token-first:** Override CSS tokens in `web/flow-teacher-ds.css` for colors, spacing, typography, shadows. Use `~/components/ui/` wrappers **only** for per-component shape overrides (pill buttons, rounder inputs).
 
-| Component | Override | Result |
-|-----------|---------|--------|
-| Button | `rounded-full font-medium` | Pill shape |
-| Badge | `rounded-full` | Pill shape |
-| Input, Textarea | `rounded-xl` | 14px corners |
-| TabsTrigger | `rounded-full font-medium` | Pill tabs |
-| Everything else | Pure re-export | Flow DS defaults |
+| Component       | Override                   | Result           |
+| --------------- | -------------------------- | ---------------- |
+| Button          | `rounded-full font-medium` | Pill shape       |
+| Badge           | `rounded-full`             | Pill shape       |
+| Input, Textarea | `rounded-xl`               | 14px corners     |
+| TabsTrigger     | `rounded-full font-medium` | Pill tabs        |
+| Everything else | Pure re-export             | Flow DS defaults |
 
 ### API Client Layer (`web/api/`)
 
@@ -45,7 +45,9 @@ Each view co-exports `loader` + `Component`. React Router's `lazy()` picks up bo
 
 ```typescript
 // PostsView.tsx
-export async function loader() { return loadPostsList(); }
+export async function loader() {
+  return loadPostsList();
+}
 export { PostsView as Component };
 ```
 
@@ -66,15 +68,15 @@ The Go server at `server/internal/pg/` has two modes controlled by `TW_PG_MOCK` 
 
 ### Endpoints Available
 
-| Feature | Read | Write | Fixtures |
-|---------|------|-------|----------|
-| Announcements | 6 GET | 7 POST/PUT/DELETE | 5 files |
-| Consent Forms | 4 GET | 6 POST/PUT/DELETE | 3 files |
-| Meetings (PTM) | 5 GET | 7 POST/DELETE | 5 files |
-| Groups | 5 GET | 7 POST/PUT/DELETE | 5 files |
-| School Data | 3 GET | 1 POST | 3 files |
-| Account | 2 GET | 3 PUT | 2 files |
-| Files | 2 GET | 1 POST | none |
+| Feature        | Read  | Write             | Fixtures |
+| -------------- | ----- | ----------------- | -------- |
+| Announcements  | 6 GET | 7 POST/PUT/DELETE | 5 files  |
+| Consent Forms  | 4 GET | 6 POST/PUT/DELETE | 3 files  |
+| Meetings (PTM) | 5 GET | 7 POST/DELETE     | 5 files  |
+| Groups         | 5 GET | 7 POST/PUT/DELETE | 5 files  |
+| School Data    | 3 GET | 1 POST            | 3 files  |
+| Account        | 2 GET | 3 PUT             | 2 files  |
+| Files          | 2 GET | 1 POST            | none     |
 
 ### Fixture Fallbacks
 
@@ -88,15 +90,15 @@ When the Go server is not running, the frontend falls back to the same fixture J
 
 ## Key Type Mappings
 
-| API field | FE field | Conversion |
-|-----------|----------|------------|
-| `status: "POSTED"` | `status: "posted"` | `.toLowerCase()` |
-| `responseType: "VIEW_ONLY"` | `responseType: "view-only"` | Lookup map |
-| `readMetrics.readPerStudent` | `stats.readCount` | `Math.round(ratio * total)` |
-| `date` (single) | `postedAt` / `scheduledAt` / `createdAt` | Route by status |
-| `richTextContent` (Tiptap JSON) | `description` (plain text) | Extract text nodes |
-| `students[].isRead` | `recipients[].readStatus` | `isRead ? 'read' : 'unread'` |
-| Own endpoint vs shared endpoint | `ownership: 'mine' \| 'shared'` | Derived from which endpoint returned the post |
+| API field                       | FE field                                 | Conversion                                    |
+| ------------------------------- | ---------------------------------------- | --------------------------------------------- |
+| `status: "POSTED"`              | `status: "posted"`                       | `.toLowerCase()`                              |
+| `responseType: "VIEW_ONLY"`     | `responseType: "view-only"`              | Lookup map                                    |
+| `readMetrics.readPerStudent`    | `stats.readCount`                        | `Math.round(ratio * total)`                   |
+| `date` (single)                 | `postedAt` / `scheduledAt` / `createdAt` | Route by status                               |
+| `richTextContent` (Tiptap JSON) | `description` (plain text)               | Extract text nodes                            |
+| `students[].isRead`             | `recipients[].readStatus`                | `isRead ? 'read' : 'unread'`                  |
+| Own endpoint vs shared endpoint | `ownership: 'mine' \| 'shared'`          | Derived from which endpoint returned the post |
 
 ## Dev Setup
 
