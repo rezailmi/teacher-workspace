@@ -7,9 +7,8 @@ import { loadPostDetail } from '~/api/client';
 import { AnnouncementCard } from '~/components/posts/AnnouncementCard';
 import { ReadTrackingCards } from '~/components/posts/ReadTrackingCards';
 import { RecipientReadTable } from '~/components/posts/RecipientReadTable';
-import { StatusBadge } from '~/components/posts/StatusBadge';
-import { Button } from '~/components/ui';
-import type { PGAnnouncement } from '~/data/mock-pg-announcements';
+import { Badge, Button } from '~/components/ui';
+import { PG_STATUS_BADGE, type PGAnnouncement } from '~/data/mock-pg-announcements';
 import { formatDate, formatDateTime } from '~/helpers/dateTime';
 
 // ─── Route loader ───────────────────────────────────────────────────────────
@@ -81,7 +80,9 @@ const PostDetailView: React.FC = () => {
           <div className="space-y-1">
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="text-2xl font-semibold tracking-tight">{announcement.title}</h1>
-              <StatusBadge status={announcement.status} />
+              <Badge variant={PG_STATUS_BADGE[announcement.status].variant}>
+                {PG_STATUS_BADGE[announcement.status].label}
+              </Badge>
             </div>
             <p className="text-sm text-muted-foreground">
               Posted {postedDate}

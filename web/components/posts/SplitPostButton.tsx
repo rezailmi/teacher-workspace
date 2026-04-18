@@ -52,7 +52,7 @@ function SplitPostButton({ disabled, onPost, onSchedule }: SplitPostButtonProps)
               variant="default"
               size="sm"
               disabled={disabled}
-              className="rounded-l-none border-l border-white/20 px-2"
+              className="rounded-l-none border-l border-primary-foreground/20 px-2"
             />
           }
         >

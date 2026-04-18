@@ -1,6 +1,18 @@
 export type PGStatus = 'posted' | 'scheduled' | 'draft' | 'posting';
 export type ResponseType = 'view-only' | 'acknowledge' | 'yes-no';
 
+// Presentation mapping for status badges. Living here (alongside the PGStatus
+// type) keeps the status set and its label/variant in sync.
+export const PG_STATUS_BADGE: Record<
+  PGStatus,
+  { label: string; variant: 'success' | 'info' | 'secondary' }
+> = {
+  posted: { label: 'Posted', variant: 'success' },
+  scheduled: { label: 'Scheduled', variant: 'info' },
+  posting: { label: 'Posting', variant: 'info' },
+  draft: { label: 'Draft', variant: 'secondary' },
+};
+
 export const RESPONSE_TYPE_META: Record<ResponseType, { label: string; description: string }> = {
   'view-only': { label: 'View Only', description: 'Parents can read but not respond' },
   acknowledge: { label: 'Acknowledge', description: 'Parents must acknowledge receipt' },

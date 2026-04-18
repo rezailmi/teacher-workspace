@@ -13,7 +13,6 @@ import { RichTextEditor } from '~/components/posts/RichTextEditor';
 import { SchedulePickerDialog } from '~/components/posts/SchedulePickerDialog';
 import { SendConfirmationDialog } from '~/components/posts/SendConfirmationDialog';
 import { SplitPostButton } from '~/components/posts/SplitPostButton';
-import { StatusBadge } from '~/components/posts/StatusBadge';
 import {
   Badge,
   Button,
@@ -520,11 +519,11 @@ const ComponentsView: React.FC = () => {
 
       {/* ── Post building blocks ────────────────────────────────── */}
       <Section title="Post building blocks">
-        <Subsection label="StatusBadge">
+        <Subsection label="Status badge">
           <div className="flex flex-wrap items-center gap-3">
-            <StatusBadge status="posted" />
-            <StatusBadge status="scheduled" />
-            <StatusBadge status="draft" />
+            <Badge variant="success">Posted</Badge>
+            <Badge variant="info">Scheduled</Badge>
+            <Badge variant="secondary">Draft</Badge>
           </div>
         </Subsection>
 
@@ -547,9 +546,11 @@ const ComponentsView: React.FC = () => {
         </Subsection>
 
         <Subsection label="AttachmentSection">
-          <div className="max-w-md rounded-xl border p-4">
-            <AttachmentSection />
-          </div>
+          <Card size="sm" className="max-w-md">
+            <CardContent>
+              <AttachmentSection />
+            </CardContent>
+          </Card>
         </Subsection>
 
         <Subsection label="RichTextEditor">

@@ -14,8 +14,8 @@ import { Link, useLoaderData, useNavigate, useRevalidator } from 'react-router';
 import { deleteAnnouncement, duplicateAnnouncement, loadPostsList } from '~/api/client';
 import { PGError } from '~/api/errors';
 import { ReadRate } from '~/components/posts/ReadRate';
-import { StatusBadge } from '~/components/posts/StatusBadge';
 import {
+  Badge,
   Button,
   DropdownMenu,
   DropdownMenuContent,
@@ -33,8 +33,8 @@ import {
   TabsList,
   TabsTrigger,
 } from '~/components/ui';
+import { PG_STATUS_BADGE, requiresResponse } from '~/data/mock-pg-announcements';
 import type { PGAnnouncement } from '~/data/mock-pg-announcements';
-import { requiresResponse } from '~/data/mock-pg-announcements';
 import { formatDate, getRelevantDate, isLowReadRate } from '~/helpers/dateTime';
 import { notify } from '~/lib/notify';
 
@@ -217,7 +217,9 @@ const PostsView: React.FC = () => {
 
                       {/* Status */}
                       <TableCell>
-                        <StatusBadge status={announcement.status} />
+                        <Badge variant={PG_STATUS_BADGE[announcement.status].variant}>
+                          {PG_STATUS_BADGE[announcement.status].label}
+                        </Badge>
                       </TableCell>
 
                       {/* Owner */}
