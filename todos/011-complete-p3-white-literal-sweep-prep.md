@@ -29,8 +29,10 @@ project-local alias.
 - `--card: #ffffff` (line 32)
 - `--popover: #ffffff` (line 34)
 - `--primary-foreground: #ffffff` (line 37)
-- `--destructive-foreground: #ffffff` (line 45)
 - `--sidebar-primary-foreground: #ffffff` (line 57)
+
+(`--destructive-foreground` was removed on a later pass — shadcn v4 does not
+ship this token; call sites now use `text-white` directly.)
 
 The project is light-only (per commit `50a3f12`). If dark mode ships in the future, these six are the exact list of places to sweep. Making them easy to find reduces that cost.
 

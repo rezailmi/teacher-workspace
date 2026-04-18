@@ -88,7 +88,6 @@ const SHADCN_DEFAULTS = {
   accent: 'var(--slate-4)',
   'accent-foreground': 'var(--slate-12)',
   destructive: 'var(--red-9)',
-  'destructive-foreground': '#ffffff',
   border: 'var(--slate-6)',
   input: 'var(--slate-7)',
   ring: 'var(--twblue-8)',

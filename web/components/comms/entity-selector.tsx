@@ -685,7 +685,7 @@ export function EntitySelector({
         }
       }}
       className={cn(
-        'flex min-h-9 w-full flex-wrap items-center gap-1.5 rounded-[var(--radius-input)] border border-input bg-background px-2.5 py-1.5 transition-colors',
+        'flex min-h-9 w-full flex-wrap items-center gap-1.5 rounded-[14px] border border-input bg-background px-2.5 py-1.5 transition-colors',
         'cursor-text hover:border-ring',
         isOpen && 'border-ring ring-[3px] ring-ring/50',
       )}

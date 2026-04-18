@@ -27,8 +27,7 @@
   --twblue-12: #0b2d6b;
 
   /* Shadcn semantic tokens — rebased on Radix slate + twblue.
-     All canonical shadcn v4 names; no project-invented tokens. Mapping
-     rationale documented at docs/architecture/color-tokens.md. */
+     All canonical shadcn v4 names; no project-invented tokens. */
   --background: var(--slate-1);
   --foreground: var(--slate-12);
   --card: #ffffff;
@@ -44,12 +43,11 @@
   --accent: var(--slate-4);
   --accent-foreground: var(--slate-12);
   --destructive: var(--red-9);
-  --destructive-foreground: #ffffff;
 
   /* Status tokens — project-local extension beyond shadcn v4 canonical.
      shadcn does not ship --success/--warning/--info (GH discussion #8986);
      added here to centralize status styling for Badge variants and future
-     consumers. See docs/architecture/color-tokens.md. */
+     consumers. */
   --success: var(--green-3);
   --success-foreground: var(--green-11);
   --warning: var(--amber-3);
@@ -61,7 +59,6 @@
   --input: var(--slate-7);
   --ring: var(--twblue-7);
   --radius: 0.625rem;
-  --radius-input: 14px;
 
   /* Sidebar — shadcn v4 canonical token set. No renames, no additions.
      Consumed by web/components/Sidebar/*. If those files stop referencing
@@ -166,7 +163,6 @@
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
-  --color-destructive-foreground: var(--destructive-foreground);
   --color-success: var(--success);
   --color-success-foreground: var(--success-foreground);
   --color-warning: var(--warning);
