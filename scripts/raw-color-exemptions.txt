@@ -18,12 +18,7 @@
 # they need specific steps (e.g. 9/11) that the semantic tokens don't expose.
 web/containers/PostsView.tsx:196  # warning icon text-amber-11 — direct step ref
 web/containers/PostsView.tsx:211  # scheduled-past-due — no shadcn --warning
-web/components/posts/RecipientReadTable.tsx:89  # read-status label — no --success
-web/components/posts/RecipientReadTable.tsx:94  # unread-status label — no --warning
-web/components/posts/RecipientReadTable.tsx:107  # check icon — no --success
-web/components/posts/RecipientReadTable.tsx:121  # Yes badge — no --success
 web/components/posts/ReadTrackingCards.tsx:38  # brand-tinted count bg — bg-twblue-3, no --primary-subtle
-web/components/posts/ReadTrackingCards.tsx:60  # unread-count label — no --warning
 # ─── Decorative info hover (PostTypePicker cards) ────────────────────────────
 web/components/posts/PostTypePicker.tsx:16  # post card hover — no --info
 web/components/posts/PostTypePicker.tsx:34  # post-with-response card hover — no --info
