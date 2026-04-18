@@ -27,3 +27,6 @@ out
 
 # Ignore worktrees.
 .worktrees
+
+# Scratch TS narrowing experiments at repo root.
+/test-narrowing*.ts
