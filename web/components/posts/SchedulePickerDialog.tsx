@@ -10,6 +10,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  Label,
   Select,
   SelectContent,
   SelectItem,
@@ -137,12 +138,9 @@ export function SchedulePickerDialog({
           </div>
 
           <div className="space-y-1.5">
-            <label
-              htmlFor="schedule-time-select"
-              className="text-sm font-medium text-muted-foreground"
-            >
+            <Label htmlFor="schedule-time-select" className="text-muted-foreground">
               Time (Asia/Singapore)
-            </label>
+            </Label>
             <Select
               value={time}
               onValueChange={(v) => {
