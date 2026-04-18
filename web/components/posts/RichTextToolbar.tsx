@@ -18,6 +18,7 @@ import {
   Underline as UnderlineIcon,
 } from 'lucide-react';
 
+import { Button } from '~/components/ui';
 import { cn } from '~/lib/utils';
 
 interface RichTextToolbarProps {
@@ -33,13 +34,14 @@ interface ButtonProps {
   onClick: () => void;
 }
 
-const btnClass =
-  'h-7 w-7 flex items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-40 disabled:cursor-not-allowed';
-const activeClass = 'bg-accent text-foreground';
-
 function ToolbarButton({ label, icon, active, disabled, onClick }: ButtonProps) {
+  // onMouseDown preventDefault keeps ProseMirror's selection alive across the
+  // click — without it, focus leaves the editor before the command runs and
+  // the selection collapses.
   return (
-    <button
+    <Button
+      variant="ghost"
+      size="icon-xs"
       type="button"
       title={label}
       aria-label={label}
@@ -47,10 +49,10 @@ function ToolbarButton({ label, icon, active, disabled, onClick }: ButtonProps) 
       disabled={disabled}
       onMouseDown={(e) => e.preventDefault()}
       onClick={onClick}
-      className={cn(btnClass, active && activeClass)}
+      className="size-7 rounded text-muted-foreground aria-pressed:bg-accent aria-pressed:text-foreground"
     >
       {icon}
-    </button>
+    </Button>
   );
 }
 
