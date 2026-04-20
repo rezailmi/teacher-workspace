@@ -71,6 +71,11 @@ export interface PGAnnouncementStats {
 }
 
 export interface PGAnnouncement {
+  /**
+   * Discriminant for the `PGPost` union. `'announcement'` routes to
+   * `/announcements`; `'form'` (on `PGConsentFormPost`) routes to `/consentForms`.
+   */
+  kind: 'announcement';
   id: string;
   title: string;
   /** Plain-text derivation of `richTextContent`; kept for list/preview display. */
@@ -99,4 +104,143 @@ export interface PGAnnouncement {
   shortcuts?: PGShortcut[];
   questions?: FormQuestion[];
   dueDate?: string;
+}
+
+// ─── Consent form variant ─────────────────────────────────────────────────────
+
+/**
+ * Reminder schedule on a consent form. Encoded as a 3-branch nested union so
+ * `date` is present exactly when the branch needs it — never `type + optional
+ * date`, which creates invalid nominal states (e.g. `NONE` with a date).
+ */
+export type ReminderConfig =
+  | { type: 'NONE' }
+  | { type: 'ONE_TIME'; date: string }
+  | { type: 'DAILY'; date: string };
+
+/**
+ * Event details on a consent form. Start/end/venue travel together — either
+ * all three exist or none do. Encoded as an optional object rather than three
+ * sibling optionals (which would allow 2³ nominal states; only 2 are valid).
+ */
+export interface PGEvent {
+  start: string;
+  end: string;
+  venue?: string;
+}
+
+export interface PGConsentFormHistoryEntry {
+  historyId: number;
+  action: string;
+  actionAt: string;
+  actionBy: string;
+}
+
+/**
+ * Per-student consent-form response. Distinct from `PGRecipient` (announcement
+ * recipient) because announcements track read/unread while consent forms track
+ * YES/NO/pending + respondedAt.
+ */
+export interface PGConsentFormRecipient {
+  studentId: string;
+  studentName: string;
+  classLabel: string;
+  response: 'YES' | 'NO' | null;
+  respondedAt: string | null;
+}
+
+export interface PGConsentFormStats {
+  totalCount: number;
+  yesCount: number;
+  noCount: number;
+  /** Derived: `totalCount - yesCount - noCount`. */
+  pendingCount: number;
+}
+
+export type PGConsentFormStatus = 'open' | 'closed' | 'posting' | 'scheduled' | 'draft';
+
+export const PG_CONSENT_FORM_STATUS_BADGE: Record<
+  PGConsentFormStatus,
+  { label: string; variant: 'success' | 'info' | 'secondary' }
+> = {
+  open: { label: 'Open', variant: 'success' },
+  closed: { label: 'Closed', variant: 'secondary' },
+  posting: { label: 'Posting', variant: 'info' },
+  scheduled: { label: 'Scheduled', variant: 'info' },
+  draft: { label: 'Draft', variant: 'secondary' },
+};
+
+/**
+ * Consent-form variant of `PGPost`. Carries everything a form needs on the
+ * read-side: response type (Acknowledge or Yes/No), due date, reminder, event
+ * details, custom questions, per-student responses, history.
+ */
+export interface PGConsentFormPost {
+  kind: 'form';
+  id: string;
+  title: string;
+  description: string;
+  richTextContent?: Record<string, unknown> | null;
+  status: PGConsentFormStatus;
+  /** Sub-type of consent form — the user-facing "response type" picker choice. */
+  responseType: 'acknowledge' | 'yes-no';
+  ownership: PGOwnership;
+  role?: 'owner' | 'viewer';
+  recipients: PGConsentFormRecipient[];
+  stats: PGConsentFormStats;
+  postedAt?: string;
+  scheduledAt?: string;
+  createdAt?: string;
+  createdBy: string;
+  staffInCharge?: string;
+  staffOwnerIds?: number[];
+  targets?: PGAnnouncementTarget[];
+  enquiryEmail?: string;
+  shortcuts?: PGShortcut[];
+  questions: FormQuestion[];
+  consentByDate: string;
+  reminder: ReminderConfig;
+  event?: PGEvent;
+  history: PGConsentFormHistoryEntry[];
+}
+
+/**
+ * A post in the TW UI — either an announcement or a consent form. Pick the
+ * endpoint, render shape, and payload mapper by narrowing on `kind`.
+ */
+export type PGPost = PGAnnouncement | PGConsentFormPost;
+
+// ─── Branded IDs + type guards ────────────────────────────────────────────────
+
+/**
+ * Branded post ID types. `ConsentFormId` carries the `cf_` prefix PG uses in
+ * its list envelope. `parsePostId` is the single entry point where a raw URL
+ * string becomes a typed `PostId`; downstream code cannot call
+ * `loadConsentFormDetail(announcementId)` by accident.
+ */
+export type AnnouncementId = string & { readonly __brand: 'AnnouncementId' };
+export type ConsentFormId = `cf_${string}` & { readonly __brand: 'ConsentFormId' };
+export type PostId = AnnouncementId | ConsentFormId;
+
+export function isConsentFormId(id: PostId): id is ConsentFormId {
+  return id.startsWith('cf_');
+}
+
+/**
+ * Parse a raw URL segment into a typed `PostId`. Returns `null` for anything
+ * that isn't a numeric announcement ID or a `cf_<digits>` consent-form ID —
+ * callers treat that as a 404.
+ */
+export function parsePostId(raw: string): PostId | null {
+  if (/^cf_\d+$/.test(raw)) return raw as ConsentFormId;
+  if (/^\d+$/.test(raw)) return raw as AnnouncementId;
+  return null;
+}
+
+/**
+ * Derive a `PostKind` from an already-parsed `PostId`. Preferred over raw
+ * regex matching at call sites.
+ */
+export function postKindFromId(id: PostId): 'announcement' | 'form' {
+  return isConsentFormId(id) ? 'form' : 'announcement';
 }

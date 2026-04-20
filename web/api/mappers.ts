@@ -32,6 +32,7 @@ export function mapAnnouncementSummary(
     : 0;
 
   return {
+    kind: 'announcement',
     id: String(api.postId),
     title: api.title,
     description: '',
@@ -84,6 +85,7 @@ export function mapAnnouncementDetail(detail: PGApiAnnouncementDetail): PGAnnoun
       : null;
 
   return {
+    kind: 'announcement',
     id: String(detail.announcementId),
     title: detail.title,
     description: extractTextFromTiptap(detail.richTextContent),
