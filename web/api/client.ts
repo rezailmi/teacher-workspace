@@ -32,6 +32,7 @@ import type {
   PGApiCreateConsentFormDraftPayload,
   PGApiCreateConsentFormPayload,
   PGApiCreateDraftPayload,
+  PGApiCustomGroupsList,
   PGApiDuplicatePayload,
   PGApiGroupsAssigned,
   PGApiScheduleConsentFormDraftPayload,
@@ -364,6 +365,10 @@ export function fetchSchoolStudents() {
 
 export function fetchGroupsAssigned() {
   return fetchApi<PGApiGroupsAssigned>('/groups/assigned');
+}
+
+export function fetchCustomGroups() {
+  return fetchApi<PGApiCustomGroupsList>('/groups/custom');
 }
 
 export function fetchClassDetail(classId: number) {

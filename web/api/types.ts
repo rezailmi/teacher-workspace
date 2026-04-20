@@ -297,10 +297,14 @@ export interface PGApiSchoolStudent {
   cca: unknown[];
 }
 
+// Per `pg-audit-findings.md` §Groups: PG's `/school/groups` actually returns
+// `{ class: PGApiSchoolClass[] }` (singular `class`, using the same selector-
+// shaped entries as `fetchSchoolClasses` consumes). The previous `{classes,
+// levels, ccas}` shape was type-level drift — no call site ever received that
+// data. Level and CCA tabs source from `/groups/assigned` instead (see
+// `PGApiGroupsAssigned`).
 export interface PGApiSchoolGroups {
-  classes: { classId: number; className: string; level: string; year: number }[];
-  levels: { levelId: number; levelName: string; year: number }[];
-  ccas: { ccaId: number; ccaName: string }[];
+  class: PGApiSchoolClass[];
 }
 
 export interface PGApiGroupsAssignedClass {
@@ -321,6 +325,20 @@ export interface PGApiGroupsAssignedCcaGroup {
 export interface PGApiGroupsAssigned {
   classes: PGApiGroupsAssignedClass[];
   ccaGroups: PGApiGroupsAssignedCcaGroup[];
+}
+
+export interface PGApiCustomGroupSummary {
+  customGroupId: number;
+  name: string;
+  studentCount: number;
+  createdBy: number;
+  createdByName: string;
+  isShared: boolean;
+  createdAt: string;
+}
+
+export interface PGApiCustomGroupsList {
+  customGroups: PGApiCustomGroupSummary[];
 }
 
 export interface PGApiClassDetail {

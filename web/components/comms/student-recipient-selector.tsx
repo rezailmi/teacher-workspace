@@ -1,4 +1,9 @@
-import type { PGApiSchoolClass, PGApiSchoolStudent } from '~/api/types';
+import type {
+  PGApiCustomGroupSummary,
+  PGApiGroupsAssigned,
+  PGApiSchoolClass,
+  PGApiSchoolStudent,
+} from '~/api/types';
 
 import { EntitySelector } from './entity-selector';
 import type { EntityItem, EntityScope, SearchResults, SelectedEntity } from './entity-selector';
@@ -10,6 +15,15 @@ interface StudentRecipientSelectorProps {
   onChange: (recipients: SelectedEntity[]) => void;
   classes: PGApiSchoolClass[];
   students: PGApiSchoolStudent[];
+  /**
+   * Level + CCA scopes source from `/groups/assigned` — the `classes` entries
+   * carry `level` strings, and `ccaGroups` supplies the CCA tab. Optional so
+   * existing callers that don't yet wire this loader keep compiling; unwired
+   * callers get empty Level/CCA tabs (the prior behaviour).
+   */
+  groupsAssigned?: PGApiGroupsAssigned;
+  /** Custom Groups scope — from `/groups/custom`. Read-only in this slice. */
+  customGroups?: PGApiCustomGroupSummary[];
 }
 
 // Classes from /school/groups use labels like "P6 BEST (2026)"; students'
@@ -23,6 +37,8 @@ export function StudentRecipientSelector({
   onChange,
   classes,
   students,
+  groupsAssigned,
+  customGroups,
 }: StudentRecipientSelectorProps) {
   const byClassName = new Map<string, PGApiSchoolStudent[]>();
   for (const s of students) {
@@ -47,6 +63,48 @@ export function StudentRecipientSelector({
     };
   });
 
+  // Level entries come from /groups/assigned.classes' distinct `level` strings.
+  // PG doesn't return level IDs directly; derive a stable numeric ID per level
+  // so the selector can track selection, and roll up student counts across
+  // every assigned class sharing the level. If PG later exposes a proper
+  // /levels endpoint this block collapses to a direct map.
+  const levelItems: EntityItem[] = (() => {
+    if (!groupsAssigned?.classes.length) return [];
+    const byLevel = new Map<string, { count: number; firstClassId: number }>();
+    for (const c of groupsAssigned.classes) {
+      const existing = byLevel.get(c.level);
+      if (existing) existing.count += c.studentCount;
+      else byLevel.set(c.level, { count: c.studentCount, firstClassId: c.classId });
+    }
+    return Array.from(byLevel.entries()).map(([level, meta]) => ({
+      // Level ID = the first class ID that maps to this level. Stable per
+      // dataset + uniquely identifies the level in the outbound `levelIds`.
+      id: meta.firstClassId.toString(),
+      label: level,
+      type: 'group' as const,
+      count: meta.count,
+      groupType: 'level' as const,
+    }));
+  })();
+
+  const ccaItems: EntityItem[] =
+    groupsAssigned?.ccaGroups.map((g) => ({
+      id: g.ccaId.toString(),
+      label: g.ccaDescription,
+      type: 'group',
+      count: g.studentCount,
+      groupType: 'cca',
+    })) ?? [];
+
+  const customGroupItems: EntityItem[] =
+    customGroups?.map((g) => ({
+      id: g.customGroupId.toString(),
+      label: g.name,
+      type: 'group',
+      count: g.studentCount,
+      groupType: 'custom',
+    })) ?? [];
+
   const individualItems: EntityItem[] = students.map((s) => ({
     id: s.studentId.toString(),
     label: s.studentName,
@@ -55,22 +113,19 @@ export function StudentRecipientSelector({
     count: 1,
   }));
 
-  // Level / CCA / Teaching Group / My Groups will populate when those
-  // endpoints are wired. Leaving the tabs in place so the UX matches the
-  // prototype and we can fill them incrementally.
   const scopes: EntityScope[] = [
     { id: 'class', label: 'Class', items: classItems },
-    { id: 'level', label: 'Level/School', items: [] },
-    { id: 'cca', label: 'CCA', items: [] },
-    { id: 'teaching', label: 'Teaching Group', items: [] },
-    { id: 'my-groups', label: 'My Groups', items: [] },
+    { id: 'level', label: 'Level', items: levelItems },
+    { id: 'cca', label: 'CCA', items: ccaItems },
+    { id: 'custom', label: 'Custom Groups', items: customGroupItems },
   ];
 
   function searchFn(query: string): SearchResults {
     const q = query.toLowerCase();
-    if (!q) return { groups: classItems, individuals: individualItems };
+    const allGroups = [...classItems, ...levelItems, ...ccaItems, ...customGroupItems];
+    if (!q) return { groups: allGroups, individuals: individualItems };
     return {
-      groups: classItems.filter((g) => g.label.toLowerCase().includes(q)),
+      groups: allGroups.filter((g) => g.label.toLowerCase().includes(q)),
       individuals: individualItems
         .filter(
           (s) =>

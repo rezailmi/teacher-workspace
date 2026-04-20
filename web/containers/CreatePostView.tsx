@@ -8,6 +8,8 @@ import {
   createConsentForm,
   createConsentFormDraft,
   createDraft,
+  fetchCustomGroups,
+  fetchGroupsAssigned,
   fetchSchoolClasses,
   fetchSchoolStaff,
   fetchSchoolStudents,
@@ -24,6 +26,8 @@ import type {
   PGApiCreateConsentFormDraftPayload,
   PGApiCreateConsentFormPayload,
   PGApiCreateDraftPayload,
+  PGApiCustomGroupSummary,
+  PGApiGroupsAssigned,
   PGApiSchoolClass,
   PGApiSchoolStaff,
   PGApiSchoolStudent,
@@ -78,6 +82,10 @@ interface CreatePostLoaderData {
   staff: PGApiSchoolStaff[];
   students: PGApiSchoolStudent[];
   session: PGApiSession;
+  /** Source data for the Level + CCA tabs on the recipient selector. */
+  groupsAssigned: PGApiGroupsAssigned;
+  /** Source data for the Custom Groups tab on the recipient selector. */
+  customGroups: PGApiCustomGroupSummary[];
 }
 
 /**
@@ -110,14 +118,25 @@ export async function loader({
 }: LoaderFunctionArgs): Promise<CreatePostLoaderData> {
   const url = new URL(request.url);
   const kindParam = url.searchParams.get('kind');
-  const [detail, classes, staff, students, session] = await Promise.all([
-    params.id ? loadPostByKind(params.id, kindParam) : Promise.resolve(null),
-    fetchSchoolClasses(),
-    fetchSchoolStaff(),
-    fetchSchoolStudents(),
-    fetchSession(),
-  ]);
-  return { detail, classes, staff, students, session };
+  const [detail, classes, staff, students, session, groupsAssigned, customGroupsList] =
+    await Promise.all([
+      params.id ? loadPostByKind(params.id, kindParam) : Promise.resolve(null),
+      fetchSchoolClasses(),
+      fetchSchoolStaff(),
+      fetchSchoolStudents(),
+      fetchSession(),
+      fetchGroupsAssigned(),
+      fetchCustomGroups(),
+    ]);
+  return {
+    detail,
+    classes,
+    staff,
+    students,
+    session,
+    groupsAssigned,
+    customGroups: customGroupsList.customGroups,
+  };
 }
 
 // ─── Form state types ────────────────────────────────────────────────────────
@@ -468,7 +487,8 @@ function postToFormState(
 
 function CreatePostViewInner({ editId }: { editId?: string }) {
   const navigate = useNavigate();
-  const { detail, classes, staff, students, session } = useLoaderData<CreatePostLoaderData>();
+  const { detail, classes, staff, students, session, groupsAssigned, customGroups } =
+    useLoaderData<CreatePostLoaderData>();
   const [showSendDialog, setShowSendDialog] = useState(false);
   const [showScheduleDialog, setShowScheduleDialog] = useState(false);
   // Preview defaults to visible on desktop, hidden on mobile. Once the user
@@ -695,6 +715,8 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
                   }
                   classes={classes}
                   students={students}
+                  groupsAssigned={groupsAssigned}
+                  customGroups={customGroups}
                 />
               </div>
 
