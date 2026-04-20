@@ -21,15 +21,26 @@ import { extractTextFromTiptap, textToTiptapDoc } from '~/helpers/tiptap';
 import type {
   PGApiAnnouncementDetail,
   PGApiAnnouncementStatus,
+  PGApiAnnouncementStudent,
   PGApiAnnouncementSummary,
   PGApiConsentFormDetail,
   PGApiConsentFormStatus,
+  PGApiConsentFormStudent,
   PGApiConsentFormSummary,
   PGApiCreateAnnouncementPayload,
   PGApiCreateConsentFormDraftPayload,
   PGApiCreateConsentFormPayload,
   PGApiReminderType,
 } from './types';
+
+/** Shared recipient fields both detail mappers carry verbatim. */
+function buildRecipientBase(s: PGApiAnnouncementStudent | PGApiConsentFormStudent) {
+  return {
+    studentId: String(s.studentId),
+    studentName: s.studentName,
+    classLabel: s.className,
+  };
+}
 
 /**
  * Map a list-endpoint summary to a PGAnnouncementPost.
@@ -80,11 +91,9 @@ export function mapAnnouncementDetail(detail: PGApiAnnouncementDetail): PGAnnoun
   const readCount = detail.students.filter((s) => s.isRead).length;
 
   const recipients: PGRecipient[] = detail.students.map((s) => ({
-    studentId: String(s.studentId),
-    studentName: s.studentName,
+    ...buildRecipientBase(s),
     readStatus: s.isRead ? ('read' as const) : ('unread' as const),
     respondedAt: undefined,
-    classLabel: s.className,
   }));
 
   // Preserve the raw Tiptap JSON so the edit-mode editor can hydrate with full
@@ -222,9 +231,7 @@ export function mapConsentFormDetail(detail: PGApiConsentFormDetail): PGConsentF
   const noCount = detail.students.filter((s) => s.response === 'NO').length;
 
   const recipients: PGConsentFormRecipient[] = detail.students.map((s) => ({
-    studentId: String(s.studentId),
-    studentName: s.studentName,
-    classLabel: s.className,
+    ...buildRecipientBase(s),
     response: s.response,
     respondedAt: s.respondedAt,
   }));

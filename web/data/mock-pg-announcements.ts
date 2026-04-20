@@ -256,3 +256,26 @@ export function parsePostId(raw: string): PostId | null {
 export function postKindFromId(id: PostId): 'announcement' | 'form' {
   return isConsentFormId(id) ? 'form' : 'announcement';
 }
+
+/**
+ * Build the canonical route URL for a post — detail or edit. Centralised here
+ * so every caller stamps the same `?kind=` query string without manual
+ * ternaries.
+ */
+export function postHref(post: PGPost, opts?: { edit?: boolean }): string {
+  const base = opts?.edit ? `/posts/${post.id}/edit` : `/posts/${post.id}`;
+  return `${base}?kind=${post.kind}`;
+}
+
+/**
+ * Validate that the URL's `rawId` segment and `?kind=` query agree. Returns
+ * the typed `PostId` when they match, `null` when the URL is self-contradictory
+ * (e.g. `cf_123?kind=announcement`) — callers treat `null` as a 404.
+ */
+export function validatePostRoute(rawId: string, kindParam: string | null): PostId | null {
+  const parsed = parsePostId(rawId);
+  if (!parsed) return null;
+  if (kindParam === 'form' && !isConsentFormId(parsed)) return null;
+  if (kindParam === 'announcement' && isConsentFormId(parsed)) return null;
+  return parsed;
+}
