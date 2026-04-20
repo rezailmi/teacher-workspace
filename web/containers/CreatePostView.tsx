@@ -270,12 +270,34 @@ const TARGET_TYPE_TO_GROUP_TYPE: Record<PGAnnouncementTarget['type'], SelectedEn
     level: 'level',
   };
 
-function targetsToSelectedRecipients(targets: PGAnnouncementTarget[]): SelectedEntity[] {
+// Class labels in /school/groups carry a year suffix (`P6 BEST (2026)`); student
+// `className` drops it. Strip to match — same shape used in StudentRecipientSelector.
+function stripClassYear(label: string): string {
+  return label.replace(/ \(\d{4}\)$/, '');
+}
+
+function targetsToSelectedRecipients(
+  targets: PGAnnouncementTarget[],
+  classes: PGApiSchoolClass[],
+  students: PGApiSchoolStudent[],
+): SelectedEntity[] {
+  // Build class-id → roster size lookup so class chips show real counts on
+  // edit-mode hydration. Other target types (group/cca/level) don't yet have
+  // roster data wired through the loader, so they fall back to 0.
+  const classRosterById = new Map<number, number>();
+  const studentsByClass = new Map<string, number>();
+  for (const s of students) {
+    studentsByClass.set(s.className, (studentsByClass.get(s.className) ?? 0) + 1);
+  }
+  for (const c of classes) {
+    classRosterById.set(c.value, studentsByClass.get(stripClassYear(c.label)) ?? 0);
+  }
+
   return targets.map((t) => ({
     id: t.id.toString(),
     label: t.label,
     type: 'group',
-    count: 0,
+    count: t.type === 'class' ? (classRosterById.get(t.id) ?? 0) : 0,
     groupType: TARGET_TYPE_TO_GROUP_TYPE[t.type],
   }));
 }
@@ -308,6 +330,8 @@ function ownerIdsToSelectedStaff(
 function announcementToFormState(
   announcement: PGAnnouncement,
   staff: PGApiSchoolStaff[],
+  classes: PGApiSchoolClass[],
+  students: PGApiSchoolStudent[],
 ): PostFormState {
   return {
     title: announcement.title,
@@ -316,7 +340,7 @@ function announcementToFormState(
     // fall back to a minimal doc wrapping the plain-text description so
     // edit mode always gets a valid initialContent for Tiptap.
     descriptionDoc: announcement.richTextContent ?? textToTiptapDoc(announcement.description),
-    selectedRecipients: targetsToSelectedRecipients(announcement.targets ?? []),
+    selectedRecipients: targetsToSelectedRecipients(announcement.targets ?? [], classes, students),
     responseType: announcement.responseType,
     questions: announcement.questions ?? [],
 
@@ -362,7 +386,7 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
     return 'post';
   });
 
-  const editData = detail ? announcementToFormState(detail, staff) : null;
+  const editData = detail ? announcementToFormState(detail, staff, classes, students) : null;
 
   const [state, dispatch] = useReducer(formReducer, editData ?? INITIAL_STATE);
 
