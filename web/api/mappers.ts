@@ -1,10 +1,15 @@
 import type {
   PGAnnouncement,
   PGAnnouncementTarget,
+  PGConsentFormHistoryEntry,
+  PGConsentFormPost,
+  PGConsentFormRecipient,
+  PGConsentFormStatus,
   PGOwnership,
   PGRecipient,
   PGStatus,
   PGTargetType,
+  ReminderConfig,
   ResponseType,
 } from '~/data/mock-pg-announcements';
 
@@ -12,8 +17,13 @@ import type {
   PGApiAnnouncementDetail,
   PGApiAnnouncementStatus,
   PGApiAnnouncementSummary,
+  PGApiConsentFormDetail,
+  PGApiConsentFormStatus,
   PGApiConsentFormSummary,
   PGApiCreateAnnouncementPayload,
+  PGApiCreateConsentFormDraftPayload,
+  PGApiCreateConsentFormPayload,
+  PGApiReminderType,
 } from './types';
 
 /**
@@ -127,12 +137,162 @@ function toPGTargetType(raw: string): PGTargetType | null {
 
 /**
  * Map a consent form summary from the API to a list item with ownership.
+ * @deprecated Use `mapConsentFormSummaryToPost` for the unified Posts list.
  */
 export function mapConsentFormSummary(
   api: PGApiConsentFormSummary,
   ownership: 'mine' | 'shared',
 ): PGApiConsentFormSummary & { ownership: 'mine' | 'shared' } {
   return { ...api, ownership };
+}
+
+const PG_CONSENT_FORM_STATUS_MAP: Record<PGApiConsentFormStatus, PGConsentFormStatus> = {
+  OPEN: 'open',
+  CLOSED: 'closed',
+  DRAFT: 'draft',
+  POSTING: 'posting',
+  SCHEDULED: 'scheduled',
+};
+
+function toPGConsentFormStatus(raw: PGApiConsentFormStatus): PGConsentFormStatus {
+  return PG_CONSENT_FORM_STATUS_MAP[raw] ?? 'draft';
+}
+
+/**
+ * The summary endpoint doesn't carry `responseType` or any form-only fields
+ * beyond `consentByDate`; they get defaulted here and overwritten by the
+ * detail mapper when the user opens a specific form.
+ */
+export function mapConsentFormSummaryToPost(
+  api: PGApiConsentFormSummary,
+  ownership: PGOwnership,
+): PGConsentFormPost {
+  const status = toPGConsentFormStatus(api.status);
+  const totalCount = api.respondedMetrics?.totalStudents ?? 0;
+  const respondedCount = api.respondedMetrics
+    ? Math.round(api.respondedMetrics.respondedPerStudent * totalCount)
+    : 0;
+
+  return {
+    kind: 'form',
+    id: api.id,
+    title: api.title,
+    description: '',
+    status,
+    // Summary endpoint is silent on response sub-type; detail fetch will set this.
+    responseType: 'yes-no',
+    ownership,
+    recipients: [],
+    stats: {
+      totalCount,
+      yesCount: 0,
+      noCount: 0,
+      pendingCount: Math.max(totalCount - respondedCount, 0),
+    },
+    createdAt: api.date,
+    createdBy: api.createdByName,
+    consentByDate: api.consentByDate ?? '',
+    reminder: { type: 'NONE' },
+    questions: [],
+    history: [],
+    // Route the single `date` field to the correct timestamp by status.
+    ...((status === 'open' || status === 'closed') && { postedAt: api.date }),
+    ...(status === 'scheduled' && { scheduledAt: api.date }),
+  };
+}
+
+const CONSENT_FORM_RESPONSE_TYPE_MAP: Record<string, PGConsentFormPost['responseType']> = {
+  ACKNOWLEDGE: 'acknowledge',
+  ACKNOWLEDGEMENT: 'acknowledge',
+  YES_NO: 'yes-no',
+};
+
+function mapConsentFormResponseType(raw: string): PGConsentFormPost['responseType'] {
+  return CONSENT_FORM_RESPONSE_TYPE_MAP[raw] ?? 'yes-no';
+}
+
+function mapReminder(type: PGApiReminderType, date: string | null): ReminderConfig {
+  if (type === 'NONE' || !date) return { type: 'NONE' };
+  return { type, date };
+}
+
+/**
+ * Map a consent-form detail response into the unified `PGConsentFormPost`
+ * shape the TW UI consumes.
+ */
+export function mapConsentFormDetail(detail: PGApiConsentFormDetail): PGConsentFormPost {
+  const status = toPGConsentFormStatus(detail.status);
+  const totalCount = detail.students.length;
+  const yesCount = detail.students.filter((s) => s.response === 'YES').length;
+  const noCount = detail.students.filter((s) => s.response === 'NO').length;
+
+  const recipients: PGConsentFormRecipient[] = detail.students.map((s) => ({
+    studentId: String(s.studentId),
+    studentName: s.studentName,
+    classLabel: s.className,
+    response: s.response,
+    respondedAt: s.respondedAt,
+  }));
+
+  const richTextContent =
+    detail.richTextContent && typeof detail.richTextContent === 'object'
+      ? (detail.richTextContent as Record<string, unknown>)
+      : null;
+
+  const event =
+    detail.eventStartDate && detail.eventEndDate
+      ? {
+          start: detail.eventStartDate,
+          end: detail.eventEndDate,
+          ...(detail.venue && { venue: detail.venue }),
+        }
+      : undefined;
+
+  const questions = detail.customQuestions.map<PGConsentFormPost['questions'][number]>((q) =>
+    q.type === 'MCQ'
+      ? {
+          id: String(q.questionId),
+          text: q.text,
+          type: 'mcq',
+          options: (q.options && q.options.length > 0 ? q.options : ['']) as [string, ...string[]],
+        }
+      : {
+          id: String(q.questionId),
+          text: q.text,
+          type: 'free-text',
+        },
+  );
+
+  const history: PGConsentFormHistoryEntry[] = detail.consentFormHistory;
+
+  return {
+    kind: 'form',
+    id: `cf_${detail.consentFormId}`,
+    title: detail.title,
+    description: extractTextFromTiptap(detail.richTextContent),
+    richTextContent,
+    status,
+    responseType: mapConsentFormResponseType(detail.responseType),
+    ownership: 'mine',
+    recipients,
+    stats: {
+      totalCount,
+      yesCount,
+      noCount,
+      pendingCount: Math.max(totalCount - yesCount - noCount, 0),
+    },
+    createdAt: detail.createdAt ?? undefined,
+    createdBy: detail.staffName,
+    postedAt: detail.postedDate ?? undefined,
+    staffInCharge: detail.staffOwners[0]?.staffName,
+    staffOwnerIds: detail.staffOwners.map((s) => s.staffID),
+    enquiryEmail: detail.enquiryEmailAddress,
+    questions,
+    consentByDate: detail.consentByDate ?? '',
+    reminder: mapReminder(detail.addReminderType, detail.reminderDate),
+    event,
+    history,
+  };
 }
 
 /**
@@ -200,32 +360,93 @@ function extractText(node: TiptapNode): string {
 // FE collects recipients grouped (classIds / customGroupIds / ccaIds / levelIds)
 // because that's what the form needs; pgw-web's API takes them as a flat
 // `targets` array. Other field renames mirror the read-side envelope fix.
+//
+// Field-level allowlist is enforced at compile time via `satisfies`: if the
+// wire DTO gains a new required field and the mapper doesn't populate it, the
+// build fails. Unknown fields on the input side don't reach the wire.
+
+interface PGTarget {
+  targetType: PGTargetType;
+  targetId: number;
+}
 
 interface PGWritePayload {
   title: string;
   content: string;
   enquiryEmailAddress: string;
-  targets: { targetType: PGTargetType; targetId: number }[];
+  targets: PGTarget[];
   staffInCharge?: number[];
   webLinkList?: { webLink: string; linkDescription: string }[];
+}
+
+interface PGConsentFormWritePayload extends PGWritePayload {
+  responseType: 'ACKNOWLEDGEMENT' | 'YES_NO';
+  consentByDate: string;
+  addReminderType: PGApiReminderType;
+  reminderDate?: string | null;
+  eventStartDate?: string | null;
+  eventEndDate?: string | null;
+  venue?: string | null;
+  customQuestions?: { questionText: string; questionType: 'TEXT' | 'MCQ'; options?: string[] }[];
+  scheduledSendAt?: string | null;
+}
+
+function buildTargets(r: PGApiCreateAnnouncementPayload['recipients']): PGTarget[] {
+  return [
+    ...r.classIds.map((targetId) => ({ targetType: 'class' as const, targetId })),
+    ...r.customGroupIds.map((targetId) => ({ targetType: 'group' as const, targetId })),
+    ...r.ccaIds.map((targetId) => ({ targetType: 'cca' as const, targetId })),
+    ...r.levelIds.map((targetId) => ({ targetType: 'level' as const, targetId })),
+  ];
 }
 
 export function toPGCreatePayload(p: PGApiCreateAnnouncementPayload): PGWritePayload {
   if (!p.enquiryEmailAddress) {
     throw new Error('enquiryEmailAddress is required');
   }
-  const targets: PGWritePayload['targets'] = [
-    ...p.recipients.classIds.map((targetId) => ({ targetType: 'class' as const, targetId })),
-    ...p.recipients.customGroupIds.map((targetId) => ({ targetType: 'group' as const, targetId })),
-    ...p.recipients.ccaIds.map((targetId) => ({ targetType: 'cca' as const, targetId })),
-    ...p.recipients.levelIds.map((targetId) => ({ targetType: 'level' as const, targetId })),
-  ];
   return {
     title: p.title,
     content: p.richTextContent,
     enquiryEmailAddress: p.enquiryEmailAddress,
-    targets,
+    targets: buildTargets(p.recipients),
     staffInCharge: p.staffOwnerIds,
     webLinkList: p.websiteLinks?.map((l) => ({ webLink: l.url, linkDescription: l.title })),
-  };
+  } satisfies PGWritePayload;
+}
+
+export function toPGConsentFormCreatePayload(
+  p: PGApiCreateConsentFormPayload,
+): PGConsentFormWritePayload {
+  if (!p.enquiryEmailAddress) {
+    throw new Error('enquiryEmailAddress is required');
+  }
+  return {
+    title: p.title,
+    content: p.richTextContent,
+    enquiryEmailAddress: p.enquiryEmailAddress,
+    targets: buildTargets(p.recipients),
+    staffInCharge: p.staffOwnerIds,
+    webLinkList: p.websiteLinks?.map((l) => ({ webLink: l.url, linkDescription: l.title })),
+    responseType: p.responseType,
+    consentByDate: p.consentByDate,
+    addReminderType: p.addReminderType,
+    reminderDate: p.reminderDate,
+    eventStartDate: p.eventStartDate,
+    eventEndDate: p.eventEndDate,
+    venue: p.venue,
+    customQuestions: p.customQuestions?.map((q) => ({
+      questionText: q.text,
+      questionType: q.type === 'MCQ' ? 'MCQ' : 'TEXT',
+      ...(q.options && { options: q.options }),
+    })),
+  } satisfies PGConsentFormWritePayload;
+}
+
+export function toPGConsentFormDraftPayload(
+  p: PGApiCreateConsentFormDraftPayload,
+): PGConsentFormWritePayload {
+  return {
+    ...toPGConsentFormCreatePayload(p),
+    scheduledSendAt: p.scheduledSendAt,
+  } satisfies PGConsentFormWritePayload;
 }

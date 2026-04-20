@@ -1,4 +1,8 @@
-import type { PGAnnouncement } from '~/data/mock-pg-announcements';
+import type {
+  ConsentFormId,
+  PGAnnouncement,
+  PGConsentFormPost,
+} from '~/data/mock-pg-announcements';
 import { notify } from '~/lib/notify';
 
 import detailFixture from '../../server/internal/pg/fixtures/announcement_detail.json';
@@ -9,8 +13,12 @@ import { PGError, PGNotFoundError, PGSessionExpiredError, PGValidationError } fr
 import {
   mapAnnouncementDetail,
   mapAnnouncementSummary,
+  mapConsentFormDetail,
   mapConsentFormSummary,
+  mapConsentFormSummaryToPost,
   mergeAndDedup,
+  toPGConsentFormCreatePayload,
+  toPGConsentFormDraftPayload,
   toPGCreatePayload,
 } from './mappers';
 import type {
@@ -21,9 +29,12 @@ import type {
   PGApiConsentFormList,
   PGApiConsentFormSummary,
   PGApiCreateAnnouncementPayload,
+  PGApiCreateConsentFormDraftPayload,
+  PGApiCreateConsentFormPayload,
   PGApiCreateDraftPayload,
   PGApiDuplicatePayload,
   PGApiGroupsAssigned,
+  PGApiScheduleConsentFormDraftPayload,
   PGApiScheduleDraftPayload,
   PGApiSchoolClass,
   PGApiSchoolGroups,
@@ -242,30 +253,56 @@ function fetchSharedConsentForms() {
   );
 }
 
-export function fetchConsentFormDetail(formId: string) {
-  return fetchApi<PGApiConsentFormDetail>(`/consentForms/${formId}`);
+export function fetchConsentFormDetail(formId: ConsentFormId) {
+  // pgw strips the `cf_` prefix when addressing the detail endpoint.
+  const numericId = formId.slice(3);
+  return fetchApi<PGApiConsentFormDetail>(`/consentForms/${numericId}`);
 }
 
 // ─── Write ──────────────────────────────────────────────────────────────────
 
-export function createConsentForm(payload: unknown) {
-  return mutateApi<{ consentFormId: number }>('POST', '/consentForms', payload);
+/** Create and immediately send a consent form. */
+export function createConsentForm(payload: PGApiCreateConsentFormPayload) {
+  return mutateApi<{ consentFormId: number }>(
+    'POST',
+    '/consentForms',
+    toPGConsentFormCreatePayload(payload),
+  );
 }
 
-export function createConsentFormDraft(payload: unknown) {
-  return mutateApi<{ consentFormDraftId: number }>('POST', '/consentForms/drafts', payload);
+/** Save a consent form as draft (optionally with a scheduled send-at). */
+export function createConsentFormDraft(payload: PGApiCreateConsentFormDraftPayload) {
+  return mutateApi<{ consentFormDraftId: number }>(
+    'POST',
+    '/consentForms/drafts',
+    toPGConsentFormDraftPayload(payload),
+  );
 }
 
-export function updateConsentFormDraft(draftId: number, payload: unknown) {
-  return mutateApi<void>('PUT', `/consentForms/drafts/${draftId}`, payload);
+/** Update an existing consent-form draft. */
+export function updateConsentFormDraft(
+  draftId: number,
+  payload: PGApiCreateConsentFormDraftPayload,
+) {
+  return mutateApi<void>(
+    'PUT',
+    `/consentForms/drafts/${draftId}`,
+    toPGConsentFormDraftPayload(payload),
+  );
+}
+
+/** Schedule an existing consent-form draft. */
+export function scheduleConsentFormDraft(payload: PGApiScheduleConsentFormDraftPayload) {
+  return mutateApi<void>('POST', '/consentForms/drafts/schedule', payload);
 }
 
 export function updateConsentFormDueDate(formId: number, payload: { consentByDate: string }) {
   return mutateApi<void>('PUT', `/consentForms/${formId}/updateDueDate`, payload);
 }
 
-export function deleteConsentForm(formId: string) {
-  return deleteApi(`/consentForms/${formId}`);
+export function deleteConsentForm(formId: ConsentFormId) {
+  const numericId = formId.slice(3);
+  return deleteApi(`/consentForms/${numericId}`);
 }
 
 export function deleteConsentFormDraft(draftId: number) {
@@ -274,13 +311,32 @@ export function deleteConsentFormDraft(draftId: number) {
 
 // ─── Composed loaders ───────────────────────────────────────────────────────
 
+/**
+ * @deprecated Use `loadConsentPostsList` — returns the unified `PGConsentFormPost[]`
+ * that `PostsView` merges with announcements.
+ */
 export type ConsentFormListItem = PGApiConsentFormSummary & { ownership: 'mine' | 'shared' };
 
+/** @deprecated Use `loadConsentPostsList`. */
 export async function loadConsentFormsList(): Promise<ConsentFormListItem[]> {
   const [own, shared] = await Promise.all([fetchConsentForms(), fetchSharedConsentForms()]);
   const mappedOwn = own.posts.map((p) => mapConsentFormSummary(p, 'mine'));
   const mappedShared = shared.posts.map((p) => mapConsentFormSummary(p, 'shared'));
   return mergeAndDedup(mappedOwn, mappedShared);
+}
+
+/** Consent-form list loader that returns the unified `PGConsentFormPost[]` shape. */
+export async function loadConsentPostsList(): Promise<PGConsentFormPost[]> {
+  const [own, shared] = await Promise.all([fetchConsentForms(), fetchSharedConsentForms()]);
+  const mappedOwn = own.posts.map((p) => mapConsentFormSummaryToPost(p, 'mine'));
+  const mappedShared = shared.posts.map((p) => mapConsentFormSummaryToPost(p, 'shared'));
+  return mergeAndDedup(mappedOwn, mappedShared);
+}
+
+/** Consent-form detail loader that returns the unified `PGConsentFormPost` shape. */
+export async function loadConsentPostDetail(formId: ConsentFormId): Promise<PGConsentFormPost> {
+  const detail = await fetchConsentFormDetail(formId);
+  return mapConsentFormDetail(detail);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
