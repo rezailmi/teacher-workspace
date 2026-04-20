@@ -10,6 +10,7 @@ import {
   fetchSchoolStaff,
   fetchSchoolStudents,
   fetchSession,
+  loadConsentPostDetail,
   loadPostDetail,
   updateDraft,
 } from '~/api/client';
@@ -48,13 +49,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '~/components/ui';
-import type {
-  FormQuestion,
-  PGAnnouncement,
-  PGAnnouncementTarget,
-  PGEvent,
-  ReminderConfig,
-  ResponseType,
+import {
+  isConsentFormId,
+  parsePostId,
+  type FormQuestion,
+  type PGAnnouncementTarget,
+  type PGEvent,
+  type PGPost,
+  type ReminderConfig,
+  type ResponseType,
 } from '~/data/mock-pg-announcements';
 import { notify } from '~/lib/notify';
 import { cn } from '~/lib/utils';
@@ -62,16 +65,45 @@ import { cn } from '~/lib/utils';
 // ─── Route loader ───────────────────────────────────────────────────────────
 
 interface CreatePostLoaderData {
-  detail: PGAnnouncement | null;
+  detail: PGPost | null;
   classes: PGApiSchoolClass[];
   staff: PGApiSchoolStaff[];
   students: PGApiSchoolStudent[];
   session: PGApiSession;
 }
 
-export async function loader({ params }: LoaderFunctionArgs): Promise<CreatePostLoaderData> {
+/**
+ * Resolve the edit-mode post by kind. The URL search param `?kind=form` is
+ * the primary routing signal (set when the PostsView navigates to edit); the
+ * fallback parses the raw `:id` segment — `cf_` prefix routes to the
+ * consent-form loader, bare numerics route to the announcement loader. An
+ * unparseable ID resolves to `null`, which `CreatePostViewInner` redirects to
+ * `/posts` (see the `Navigate` guard below).
+ */
+async function loadPostByKind(rawId: string, kindParam: string | null): Promise<PGPost | null> {
+  if (kindParam === 'form') {
+    const parsed = parsePostId(rawId);
+    if (!parsed || !isConsentFormId(parsed)) return null;
+    return loadConsentPostDetail(parsed);
+  }
+  if (kindParam === 'announcement') {
+    return loadPostDetail(rawId);
+  }
+  // No explicit kind in the URL — fall back to ID-shape probing so that
+  // direct pastes of `/posts/cf_123/edit` still route to the right loader.
+  const parsed = parsePostId(rawId);
+  if (!parsed) return null;
+  return isConsentFormId(parsed) ? loadConsentPostDetail(parsed) : loadPostDetail(rawId);
+}
+
+export async function loader({
+  params,
+  request,
+}: LoaderFunctionArgs): Promise<CreatePostLoaderData> {
+  const url = new URL(request.url);
+  const kindParam = url.searchParams.get('kind');
   const [detail, classes, staff, students, session] = await Promise.all([
-    params.id ? loadPostDetail(params.id) : Promise.resolve(null),
+    params.id ? loadPostByKind(params.id, kindParam) : Promise.resolve(null),
     fetchSchoolClasses(),
     fetchSchoolStaff(),
     fetchSchoolStudents(),
@@ -83,6 +115,14 @@ export async function loader({ params }: LoaderFunctionArgs): Promise<CreatePost
 // ─── Form state types ────────────────────────────────────────────────────────
 
 interface PostFormState {
+  /**
+   * Discriminant mirrored from `PGPost.kind`. In create mode it tracks the
+   * `PostTypePicker` choice (`'announcement'` for "Post", `'form'` for
+   * "Post with Responses"). In edit mode it's seeded from the loader's
+   * returned post. Routes the submit path at `handleSendConfirm` /
+   * `handleScheduleConfirm`.
+   */
+  kind: 'announcement' | 'form';
   title: string;
   /** Plain-text derivation of `descriptionDoc`, kept for preview + counter. */
   description: string;
@@ -125,6 +165,10 @@ type PostFormAction =
   | { type: 'SET_VENUE'; payload: string };
 
 const INITIAL_STATE: PostFormState = {
+  // Default matches the type-picker's default selection ("Post"). The picker
+  // flips this to 'form' via handleTypeSelect when the user picks
+  // "Post with Responses".
+  kind: 'announcement',
   title: '',
   description: '',
   descriptionDoc: null,
@@ -359,32 +403,85 @@ function ownerIdsToSelectedStaff(
     : [];
 }
 
-function announcementToFormState(
-  announcement: PGAnnouncement,
+/**
+ * Convert a `PGConsentFormPost.event` (ISO timestamps from PG) back to the
+ * `YYYY-MM-DDTHH:MM` naive-local shape `<input type="datetime-local">`
+ * expects. PG's events are anchored in SGT so we render in that zone.
+ */
+function sgtIsoToLocalDateTime(iso: string): string {
+  const d = new Date(iso);
+  // `sv-SE` locale with `Asia/Singapore` TZ yields `YYYY-MM-DD HH:MM:SS`
+  // in SGT; slice off the seconds and swap the space for `T` to match
+  // the datetime-local format.
+  const sgt = d.toLocaleString('sv-SE', {
+    timeZone: 'Asia/Singapore',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+  return sgt.replace(' ', 'T');
+}
+
+/**
+ * Convert a `consentByDate` / `reminderDate` ISO timestamp back to the
+ * bare `YYYY-MM-DD` shape `<input type="date">` expects, anchored in SGT.
+ */
+function sgtIsoToLocalDate(iso: string): string {
+  const d = new Date(iso);
+  // sv-SE formats dates as `YYYY-MM-DD` without locale prefixes.
+  return d.toLocaleDateString('sv-SE', { timeZone: 'Asia/Singapore' });
+}
+
+function postToFormState(
+  post: PGPost,
   staff: PGApiSchoolStaff[],
   classes: PGApiSchoolClass[],
   students: PGApiSchoolStudent[],
 ): PostFormState {
-  return {
-    title: announcement.title,
-    description: announcement.description,
+  const common = {
+    title: post.title,
+    description: post.description,
     // Prefer the raw Tiptap JSON when the detail response carried it;
     // fall back to a minimal doc wrapping the plain-text description so
     // edit mode always gets a valid initialContent for Tiptap.
-    descriptionDoc: announcement.richTextContent ?? textToTiptapDoc(announcement.description),
-    selectedRecipients: targetsToSelectedRecipients(announcement.targets ?? [], classes, students),
-    responseType: announcement.responseType,
-    questions: announcement.questions ?? [],
+    descriptionDoc: post.richTextContent ?? textToTiptapDoc(post.description),
+    selectedRecipients: targetsToSelectedRecipients(post.targets ?? [], classes, students),
+    selectedStaff: ownerIdsToSelectedStaff(post.staffOwnerIds, staff, post.staffInCharge),
+    enquiryEmail: post.enquiryEmail ?? '',
+  };
 
-    selectedStaff: ownerIdsToSelectedStaff(
-      announcement.staffOwnerIds,
-      staff,
-      announcement.staffInCharge,
-    ),
-    enquiryEmail: announcement.enquiryEmail ?? '',
-    dueDate: announcement.dueDate ?? '',
-    // Announcements don't carry reminder/event/venue — consent-form edit-mode
-    // hydration lands in Phase 2 along with the discriminant routing.
+  if (post.kind === 'form') {
+    return {
+      ...common,
+      kind: 'form',
+      responseType: post.responseType,
+      questions: post.questions,
+      dueDate: post.consentByDate ? sgtIsoToLocalDate(post.consentByDate) : '',
+      reminder:
+        post.reminder.type === 'NONE'
+          ? { type: 'NONE' }
+          : { type: post.reminder.type, date: sgtIsoToLocalDate(post.reminder.date) },
+      event: post.event
+        ? {
+            start: sgtIsoToLocalDateTime(post.event.start),
+            end: sgtIsoToLocalDateTime(post.event.end),
+            ...(post.event.venue && { venue: post.event.venue }),
+          }
+        : undefined,
+      venue: post.event?.venue ?? '',
+    };
+  }
+
+  return {
+    ...common,
+    kind: 'announcement',
+    responseType: post.responseType,
+    questions: post.questions ?? [],
+    dueDate: post.dueDate ?? '',
+    // Announcements don't carry reminder/event/venue.
     reminder: { type: 'NONE' },
     event: undefined,
     venue: '',
@@ -417,13 +514,17 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
   // Type picker state — skip in edit mode, infer from loaded data
   const [selectedType, setSelectedType] = useState<PostKind | null>(() => {
     if (!editId) return null;
+    // Consent-form kind always renders the response-variant flow; announcement
+    // kind picks its flow from `responseType` (acknowledge/yes-no only apply
+    // to legacy announcement variants that carried form-like behaviour).
+    if (detail?.kind === 'form') return 'post-with-response';
     if (detail && (detail.responseType === 'acknowledge' || detail.responseType === 'yes-no')) {
       return 'post-with-response';
     }
     return 'post';
   });
 
-  const editData = detail ? announcementToFormState(detail, staff, classes, students) : null;
+  const editData = detail ? postToFormState(detail, staff, classes, students) : null;
 
   const [state, dispatch] = useReducer(formReducer, editData ?? INITIAL_STATE);
 
