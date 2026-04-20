@@ -556,7 +556,10 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
     if (typeof window === 'undefined') return true;
     return window.matchMedia('(min-width: 1024px)').matches;
   });
-  const [isSaving, setIsSaving] = useState(false);
+  // `submitted` lives until the browser unmounts us on navigate — that's what
+  // debounces a rapid double-tap on the Post button without a setTimeout race.
+  const [saveState, setSaveState] = useState<'idle' | 'submitting' | 'submitted'>('idle');
+  const isSaving = saveState !== 'idle';
 
   // Enquiry-email options derived from the logged-in staff profile.
   const emailOptions = useMemo(
@@ -622,8 +625,9 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
   }
 
   async function handleScheduleConfirm(scheduledSendAt: string) {
+    if (saveState !== 'idle') return;
     setShowScheduleDialog(false);
-    setIsSaving(true);
+    setSaveState('submitting');
     try {
       if (state.kind === 'form') {
         // Consent-form draft create/update. The `cf_<digits>` brand carries
@@ -647,32 +651,34 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
           await createDraft(draftPayload);
         }
       }
+      setSaveState('submitted');
       notify.success('Post scheduled.');
       navigate('/posts');
     } catch (err) {
+      setSaveState('idle');
       if (err instanceof PGValidationError) {
         notify.error(err.message);
       } else if (!(err instanceof PGError)) {
         notify.error('Failed to schedule post. Please try again.');
       }
-    } finally {
-      setIsSaving(false);
     }
   }
 
   async function handleSendConfirm() {
+    if (saveState !== 'idle') return;
     setShowSendDialog(false);
-    setIsSaving(true);
+    setSaveState('submitting');
     try {
       if (state.kind === 'form') {
         await createConsentForm(buildConsentFormPayload(state));
       } else {
         await createAnnouncement(buildAnnouncementPayload(state));
       }
+      setSaveState('submitted');
       notify.success('Post sent.');
-      // Keep isSaving=true until navigation completes to prevent double-submit
-      setTimeout(() => navigate('/posts'), 150);
+      navigate('/posts');
     } catch (err) {
+      setSaveState('idle');
       if (err instanceof PGValidationError) {
         notify.error(err.message);
       } else if (err instanceof Error && !(err instanceof PGError)) {
@@ -682,7 +688,6 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
       } else if (!(err instanceof PGError)) {
         notify.error('Failed to send post. Please try again.');
       }
-      setIsSaving(false);
     }
   }
 
