@@ -2,8 +2,8 @@ import { Mail, Plus, Upload } from 'lucide-react';
 import React, { useState } from 'react';
 import { toast } from 'sonner';
 
-import { AnnouncementCard } from '~/components/posts/AnnouncementCard';
 import { AttachmentSection } from '~/components/posts/AttachmentSection';
+import { PostCard } from '~/components/posts/PostCard';
 import { PostTypePicker, type PostKind } from '~/components/posts/PostTypePicker';
 import { ReadRate } from '~/components/posts/ReadRate';
 import { ReadTrackingCards } from '~/components/posts/ReadTrackingCards';
@@ -36,7 +36,7 @@ import {
   TabsList,
   TabsTrigger,
 } from '~/components/ui';
-import type { ResponseType } from '~/data/mock-pg-announcements';
+import type { PGAnnouncement, ResponseType } from '~/data/mock-pg-announcements';
 import { cn } from '~/lib/utils';
 
 const DEMO_CLASSES = [
@@ -50,6 +50,22 @@ const DEMO_STATS = {
   responseCount: 19,
   yesCount: 15,
   noCount: 4,
+};
+
+const DEMO_POST_CARD_ANNOUNCEMENT: PGAnnouncement = {
+  kind: 'announcement',
+  id: 'demo',
+  title: 'Term 2 Parent-Teacher Meeting',
+  description:
+    'Dear parents, the term 2 PTM will be held on Saturday, 19 April. Please book a slot via Parents Gateway.',
+  status: 'posted',
+  responseType: 'view-only',
+  ownership: 'mine',
+  recipients: [],
+  stats: DEMO_STATS,
+  createdBy: 'Ms Lee',
+  enquiryEmail: 'ptm@school.edu.sg',
+  staffInCharge: 'Ms Lee',
 };
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -534,14 +550,8 @@ const ComponentsView: React.FC = () => {
           </div>
         </Subsection>
 
-        <Subsection label="AnnouncementCard">
-          <AnnouncementCard
-            className="max-w-sm"
-            title="Term 2 Parent-Teacher Meeting"
-            description="Dear parents, the term 2 PTM will be held on Saturday, 19 April. Please book a slot via Parents Gateway."
-            enquiryEmail="ptm@school.edu.sg"
-            staffInCharge="Ms Lee"
-          />
+        <Subsection label="PostCard">
+          <PostCard className="max-w-sm" post={DEMO_POST_CARD_ANNOUNCEMENT} />
         </Subsection>
 
         <Subsection label="AttachmentSection">

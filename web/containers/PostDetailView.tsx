@@ -4,7 +4,7 @@ import type { LoaderFunctionArgs } from 'react-router';
 import { isRouteErrorResponse, Link, useLoaderData, useRouteError } from 'react-router';
 
 import { loadPostDetail } from '~/api/client';
-import { AnnouncementCard } from '~/components/posts/AnnouncementCard';
+import { PostCard } from '~/components/posts/PostCard';
 import { ReadTrackingCards } from '~/components/posts/ReadTrackingCards';
 import { RecipientReadTable } from '~/components/posts/RecipientReadTable';
 import { Badge, Button } from '~/components/ui';
@@ -115,12 +115,7 @@ const PostDetailView: React.FC = () => {
 
         {/* Right column (1/3) */}
         <div className="lg:sticky lg:top-6 lg:self-start">
-          <AnnouncementCard
-            title={announcement.title}
-            description={announcement.description}
-            enquiryEmail={announcement.enquiryEmail}
-            staffInCharge={announcement.staffInCharge}
-          />
+          <PostCard post={announcement} />
         </div>
       </div>
     </div>
