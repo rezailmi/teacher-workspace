@@ -546,7 +546,9 @@ const FE_TO_PG_CONSENT_RESPONSE_TYPE: Record<
   'yes-no': 'YES_NO',
 };
 
-function buildAnnouncementPayload(state: BuildPostPayloadInput): PGApiCreateAnnouncementPayload {
+export function buildAnnouncementPayload(
+  state: BuildPostPayloadInput,
+): PGApiCreateAnnouncementPayload {
   const doc = state.descriptionDoc ?? textToTiptapDoc(state.description);
   return {
     title: state.title,
@@ -559,7 +561,9 @@ function buildAnnouncementPayload(state: BuildPostPayloadInput): PGApiCreateAnno
   } satisfies PGApiCreateAnnouncementPayload;
 }
 
-function buildConsentFormPayload(state: BuildPostPayloadInput): PGApiCreateConsentFormPayload {
+export function buildConsentFormPayload(
+  state: BuildPostPayloadInput,
+): PGApiCreateConsentFormPayload {
   const doc = state.descriptionDoc ?? textToTiptapDoc(state.description);
   if (state.responseType === 'view-only') {
     // Consent forms never carry `view-only`; the container's type-picker
@@ -612,18 +616,6 @@ function buildConsentFormPayload(state: BuildPostPayloadInput): PGApiCreateConse
     websiteLinks: pruneWebsiteLinks(state.websiteLinks),
     shortcutLink: state.shortcuts.length > 0 ? state.shortcuts : undefined,
   } satisfies PGApiCreateConsentFormPayload;
-}
-
-/**
- * Dispatcher: narrows on `state.kind` and returns the correct create payload
- * shape. Callers pair this with `createAnnouncement` (kind==='announcement')
- * or `createConsentForm` (kind==='form'); the draft/schedule variants layer
- * `scheduledSendAt` on top.
- */
-export function buildPostPayload(
-  state: BuildPostPayloadInput,
-): PGApiCreateAnnouncementPayload | PGApiCreateConsentFormPayload {
-  return state.kind === 'form' ? buildConsentFormPayload(state) : buildAnnouncementPayload(state);
 }
 
 export type { BuildPostPayloadInput };

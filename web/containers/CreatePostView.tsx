@@ -21,13 +21,9 @@ import {
   updateDraft,
 } from '~/api/client';
 import { PGError, PGValidationError } from '~/api/errors';
-import { buildPostPayload } from '~/api/mappers';
+import { buildAnnouncementPayload, buildConsentFormPayload } from '~/api/mappers';
 import type {
   PGApiConfig,
-  PGApiCreateAnnouncementPayload,
-  PGApiCreateConsentFormDraftPayload,
-  PGApiCreateConsentFormPayload,
-  PGApiCreateDraftPayload,
   PGApiCustomGroupSummary,
   PGApiGroupsAssigned,
   PGApiSchoolClass,
@@ -640,22 +636,18 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
   async function handleScheduleConfirm(scheduledSendAt: string) {
     setShowScheduleDialog(false);
     setIsSaving(true);
-    const basePayload = buildPostPayload(state);
     try {
       if (state.kind === 'form') {
         // Consent-form draft create/update. The `cf_<digits>` brand carries
         // through from the loader; strip the prefix for the mutation URL.
-        const draftPayload = {
-          ...basePayload,
-          scheduledSendAt,
-        } as PGApiCreateConsentFormDraftPayload;
+        const draftPayload = { ...buildConsentFormPayload(state), scheduledSendAt };
         if (isEditing && editId?.startsWith('cf_')) {
           await updateConsentFormDraft(Number(editId.slice(3)), draftPayload);
         } else {
           await createConsentFormDraft(draftPayload);
         }
       } else {
-        const draftPayload = { ...basePayload, scheduledSendAt } as PGApiCreateDraftPayload;
+        const draftPayload = { ...buildAnnouncementPayload(state), scheduledSendAt };
         if (isEditing && editId) {
           // Editing an existing draft: keep the same draft, just push the new
           // `scheduledSendAt` with the other field updates.
@@ -683,12 +675,11 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
   async function handleSendConfirm() {
     setShowSendDialog(false);
     setIsSaving(true);
-    const payload = buildPostPayload(state);
     try {
       if (state.kind === 'form') {
-        await createConsentForm(payload as PGApiCreateConsentFormPayload);
+        await createConsentForm(buildConsentFormPayload(state));
       } else {
-        await createAnnouncement(payload as PGApiCreateAnnouncementPayload);
+        await createAnnouncement(buildAnnouncementPayload(state));
       }
       notify.success('Post sent.');
       // Keep isSaving=true until navigation completes to prevent double-submit
