@@ -186,7 +186,15 @@ export function getConfigs(): Promise<PGApiConfig> {
   const now = Date.now();
   if (!configsPromise || now - configsLoadedAt > CONFIGS_STALE_MS) {
     configsLoadedAt = now;
-    configsPromise = fetchApiRoot<PGApiConfig>('/configs').catch(() => EMPTY_CONFIG);
+    configsPromise = fetchApiRoot<PGApiConfig>('/configs').catch(() => {
+      // Drop the negative result out of the cache on the next tick so the
+      // following route entry re-fetches instead of waiting out the 15-min
+      // TTL. Without this a single transient failure grounded the Schedule
+      // and Duplicate UI for the rest of the session.
+      configsLoadedAt = 0;
+      configsPromise = null;
+      return EMPTY_CONFIG;
+    });
   }
   return configsPromise;
 }
