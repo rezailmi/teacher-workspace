@@ -20,13 +20,12 @@ export function StaffSelector({ value, onChange, staff }: StaffSelectorProps) {
     count: 1,
   }));
 
-  // Level / School staff-group tabs stay empty until pgw-web exposes
-  // department/level-team membership.
-  const scopes: EntityScope[] = [
-    { id: 'individual', label: 'Individual', items: individualItems },
-    { id: 'level', label: 'Level', items: [] },
-    { id: 'school', label: 'School', items: [] },
-  ];
+  // Staff-only scopes: PG doesn't currently expose level-team / school-team
+  // membership via the proxied endpoints, so those tabs would always be empty.
+  // Leaving them mounted with `items: []` makes the UI look broken — drop them
+  // entirely until pgw-web surfaces the data. See plan R8: "DO NOT leave them
+  // as empty-item-array populated tabs that look functional but return nothing".
+  const scopes: EntityScope[] = [{ id: 'individual', label: 'Individual', items: individualItems }];
 
   function searchFn(query: string): SearchResults {
     const q = query.toLowerCase();
