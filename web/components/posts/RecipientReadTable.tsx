@@ -11,21 +11,28 @@ import {
   TableHeader,
   TableRow,
 } from '~/components/ui';
-import type { PGRecipient, ResponseType } from '~/data/mock-pg-announcements';
+import type {
+  PGConsentFormRecipient,
+  PGRecipient,
+  ResponseType,
+} from '~/data/mock-pg-announcements';
 import { formatDate } from '~/helpers/dateTime';
 
-interface RecipientReadTableProps {
-  recipients: PGRecipient[];
-  responseType: ResponseType;
-}
+type RecipientReadTableProps =
+  | {
+      kind?: 'announcement';
+      recipients: PGRecipient[];
+      responseType: ResponseType;
+    }
+  | {
+      kind: 'form';
+      recipients: PGConsentFormRecipient[];
+      responseType: 'acknowledge' | 'yes-no';
+    };
 
-export function RecipientReadTable({ recipients, responseType }: RecipientReadTableProps) {
+function Toolbar({ count }: { count: number }) {
   return (
-    <div className="space-y-4">
-      <p className="text-xs font-medium tracking-widest text-muted-foreground uppercase">
-        Recipient read status
-      </p>
-
+    <>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="relative max-w-sm flex-1">
           <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -51,85 +58,159 @@ export function RecipientReadTable({ recipients, responseType }: RecipientReadTa
         </div>
       </div>
 
-      <p className="text-sm text-muted-foreground">{recipients.length} recipients</p>
+      <p className="text-sm text-muted-foreground">{count} recipients</p>
+    </>
+  );
+}
 
-      <div className="overflow-x-auto rounded-xl border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Student</TableHead>
-              <TableHead>Class</TableHead>
-              <TableHead>Read Status</TableHead>
-              <TableHead>Read At</TableHead>
-              {responseType === 'acknowledge' && (
-                <>
-                  <TableHead>Acknowledged</TableHead>
-                  <TableHead>Acknowledged At</TableHead>
-                </>
+function AnnouncementTable({
+  recipients,
+  responseType,
+}: {
+  recipients: PGRecipient[];
+  responseType: ResponseType;
+}) {
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Student</TableHead>
+          <TableHead>Class</TableHead>
+          <TableHead>Read Status</TableHead>
+          <TableHead>Read At</TableHead>
+          {responseType === 'acknowledge' && (
+            <>
+              <TableHead>Acknowledged</TableHead>
+              <TableHead>Acknowledged At</TableHead>
+            </>
+          )}
+          {responseType === 'yes-no' && (
+            <>
+              <TableHead>Response</TableHead>
+              <TableHead>Responded At</TableHead>
+            </>
+          )}
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {recipients.map((recipient) => (
+          <TableRow key={recipient.studentId}>
+            <TableCell className="font-medium">{recipient.studentName}</TableCell>
+            <TableCell className="text-muted-foreground">{recipient.classLabel}</TableCell>
+            <TableCell>
+              {recipient.readStatus === 'read' ? (
+                <span className="inline-flex items-center gap-1.5 text-sm font-medium text-success-foreground">
+                  <Check className="h-4 w-4" strokeWidth={2.25} />
+                  Read
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 text-sm font-medium text-warning-foreground">
+                  <Clock className="h-4 w-4" strokeWidth={2.25} />
+                  Unread
+                </span>
               )}
-              {responseType === 'yes-no' && (
-                <>
-                  <TableHead>Response</TableHead>
-                  <TableHead>Responded At</TableHead>
-                </>
-              )}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {recipients.map((recipient) => (
-              <TableRow key={recipient.studentId}>
-                <TableCell className="font-medium">{recipient.studentName}</TableCell>
-                <TableCell className="text-muted-foreground">{recipient.classLabel}</TableCell>
+            </TableCell>
+            <TableCell className="text-muted-foreground">
+              {recipient.readStatus === 'read' ? formatDate(recipient.respondedAt) : '\u2014'}
+            </TableCell>
+            {responseType === 'acknowledge' && (
+              <>
                 <TableCell>
-                  {recipient.readStatus === 'read' ? (
-                    <span className="inline-flex items-center gap-1.5 text-sm font-medium text-success-foreground">
-                      <Check className="h-4 w-4" strokeWidth={2.25} />
-                      Read
-                    </span>
+                  {recipient.acknowledgedAt ? (
+                    <Check className="h-4 w-4 text-success-foreground" />
                   ) : (
-                    <span className="inline-flex items-center gap-1.5 text-sm font-medium text-warning-foreground">
-                      <Clock className="h-4 w-4" strokeWidth={2.25} />
-                      Unread
-                    </span>
+                    <X className="h-4 w-4 text-destructive" />
                   )}
                 </TableCell>
                 <TableCell className="text-muted-foreground">
-                  {recipient.readStatus === 'read' ? formatDate(recipient.respondedAt) : '\u2014'}
+                  {formatDate(recipient.acknowledgedAt)}
                 </TableCell>
-                {responseType === 'acknowledge' && (
-                  <>
-                    <TableCell>
-                      {recipient.acknowledgedAt ? (
-                        <Check className="h-4 w-4 text-success-foreground" />
-                      ) : (
-                        <X className="h-4 w-4 text-destructive" />
-                      )}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {formatDate(recipient.acknowledgedAt)}
-                    </TableCell>
-                  </>
-                )}
-                {responseType === 'yes-no' && (
-                  <>
-                    <TableCell>
-                      {recipient.formResponse === 'yes' ? (
-                        <Badge variant="success">Yes</Badge>
-                      ) : recipient.formResponse === 'no' ? (
-                        <Badge variant="destructive">No</Badge>
-                      ) : (
-                        <span className="text-muted-foreground">{'\u2014'}</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {formatDate(recipient.respondedAt)}
-                    </TableCell>
-                  </>
-                )}
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+              </>
+            )}
+            {responseType === 'yes-no' && (
+              <>
+                <TableCell>
+                  {recipient.formResponse === 'yes' ? (
+                    <Badge variant="success">Yes</Badge>
+                  ) : recipient.formResponse === 'no' ? (
+                    <Badge variant="destructive">No</Badge>
+                  ) : (
+                    <span className="text-muted-foreground">{'\u2014'}</span>
+                  )}
+                </TableCell>
+                <TableCell className="text-muted-foreground">
+                  {formatDate(recipient.respondedAt)}
+                </TableCell>
+              </>
+            )}
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  );
+}
+
+function ConsentFormTable({
+  recipients,
+  responseType,
+}: {
+  recipients: PGConsentFormRecipient[];
+  responseType: 'acknowledge' | 'yes-no';
+}) {
+  const responseLabel = responseType === 'acknowledge' ? 'Acknowledged' : 'Response';
+
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Student</TableHead>
+          <TableHead>Class</TableHead>
+          <TableHead>{responseLabel}</TableHead>
+          <TableHead>Responded At</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {recipients.map((recipient) => (
+          <TableRow key={recipient.studentId}>
+            <TableCell className="font-medium">{recipient.studentName}</TableCell>
+            <TableCell className="text-muted-foreground">{recipient.classLabel}</TableCell>
+            <TableCell>
+              {recipient.response === 'YES' ? (
+                <Badge variant="success">{responseType === 'acknowledge' ? 'Yes' : 'Yes'}</Badge>
+              ) : recipient.response === 'NO' ? (
+                <Badge variant="destructive">No</Badge>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground">
+                  <Clock className="h-4 w-4" strokeWidth={2.25} />
+                  Pending
+                </span>
+              )}
+            </TableCell>
+            <TableCell className="text-muted-foreground">
+              {recipient.respondedAt ? formatDate(recipient.respondedAt) : '\u2014'}
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  );
+}
+
+export function RecipientReadTable(props: RecipientReadTableProps) {
+  return (
+    <div className="space-y-4">
+      <p className="text-xs font-medium tracking-widest text-muted-foreground uppercase">
+        {props.kind === 'form' ? 'Consent form responses' : 'Recipient read status'}
+      </p>
+
+      <Toolbar count={props.recipients.length} />
+
+      <div className="overflow-x-auto rounded-xl border">
+        {props.kind === 'form' ? (
+          <ConsentFormTable recipients={props.recipients} responseType={props.responseType} />
+        ) : (
+          <AnnouncementTable recipients={props.recipients} responseType={props.responseType} />
+        )}
       </div>
     </div>
   );

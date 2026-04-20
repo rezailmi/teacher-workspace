@@ -1,13 +1,16 @@
-import { MessageSquareText, Users } from 'lucide-react';
+import { Check, Clock, MessageSquareText, Users, X } from 'lucide-react';
 import { memo } from 'react';
 
 import { Card, CardContent, Progress } from '~/components/ui';
-import type { PGAnnouncementStats, ResponseType } from '~/data/mock-pg-announcements';
+import type {
+  PGAnnouncementStats,
+  PGConsentFormStats,
+  ResponseType,
+} from '~/data/mock-pg-announcements';
 
-interface ReadTrackingCardsProps {
-  responseType: ResponseType;
-  stats: PGAnnouncementStats;
-}
+type ReadTrackingCardsProps =
+  | { kind?: 'announcement'; responseType: ResponseType; stats: PGAnnouncementStats }
+  | { kind: 'form'; responseType: 'acknowledge' | 'yes-no'; stats: PGConsentFormStats };
 
 interface StatCardProps {
   label: string;
@@ -15,9 +18,28 @@ interface StatCardProps {
   total: number;
   icon: React.ReactNode;
   subline?: React.ReactNode;
+  /** Compact variant hides the progress bar — used when several cards share a row. */
+  variant?: 'default' | 'compact';
+  /** Tone drives the icon circle color so each stat reads at a glance. */
+  tone?: 'primary' | 'success' | 'destructive' | 'muted';
 }
 
-const StatCard = memo(function StatCard({ label, count, total, icon, subline }: StatCardProps) {
+const TONE_CLASS: Record<NonNullable<StatCardProps['tone']>, string> = {
+  primary: 'bg-primary/10 text-primary',
+  success: 'bg-success/10 text-success-foreground',
+  destructive: 'bg-destructive/10 text-destructive',
+  muted: 'bg-muted text-muted-foreground',
+};
+
+const StatCard = memo(function StatCard({
+  label,
+  count,
+  total,
+  icon,
+  subline,
+  variant = 'default',
+  tone = 'primary',
+}: StatCardProps) {
   const percent = total > 0 ? (count / total) * 100 : 0;
 
   return (
@@ -35,23 +57,33 @@ const StatCard = memo(function StatCard({ label, count, total, icon, subline }: 
             {subline}
           </div>
 
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+          <div
+            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${TONE_CLASS[tone]}`}
+          >
             {icon}
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <Progress value={percent} className="flex-1" aria-label={`${label} progress`} />
-          <span className="shrink-0 text-sm text-muted-foreground tabular-nums">
-            {count} / {total}
-          </span>
-        </div>
+        {variant === 'default' && (
+          <div className="flex items-center gap-3">
+            <Progress value={percent} className="flex-1" aria-label={`${label} progress`} />
+            <span className="shrink-0 text-sm text-muted-foreground tabular-nums">
+              {count} / {total}
+            </span>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
 });
 
-export function ReadTrackingCards({ responseType, stats }: ReadTrackingCardsProps) {
+function AnnouncementCards({
+  responseType,
+  stats,
+}: {
+  responseType: ResponseType;
+  stats: PGAnnouncementStats;
+}) {
   const { totalCount, readCount, responseCount, yesCount, noCount } = stats;
   const unreadCount = Math.max(totalCount - readCount, 0);
 
@@ -78,7 +110,7 @@ export function ReadTrackingCards({ responseType, stats }: ReadTrackingCardsProp
   const responseSubline =
     responseType === 'yes-no' && totalCount > 0 ? (
       <span className="text-sm text-muted-foreground">
-        <span className="font-medium text-foreground">{yesCount}</span> yes ·{' '}
+        <span className="font-medium text-foreground">{yesCount}</span> yes {'\u00b7'}{' '}
         <span className="font-medium text-foreground">{noCount}</span> no
       </span>
     ) : null;
@@ -95,4 +127,83 @@ export function ReadTrackingCards({ responseType, stats }: ReadTrackingCardsProp
       />
     </div>
   );
+}
+
+function ConsentFormCards({
+  responseType,
+  stats,
+}: {
+  responseType: 'acknowledge' | 'yes-no';
+  stats: PGConsentFormStats;
+}) {
+  const { totalCount, yesCount, noCount, pendingCount } = stats;
+
+  const totalCard = (
+    <StatCard
+      label="Total"
+      count={totalCount}
+      total={totalCount}
+      icon={<Users className="h-5 w-5" />}
+      tone="primary"
+    />
+  );
+
+  const yesCard = (
+    <StatCard
+      label={responseType === 'acknowledge' ? 'Acknowledged' : 'Yes'}
+      count={yesCount}
+      total={totalCount}
+      icon={<Check className="h-5 w-5" strokeWidth={2.25} />}
+      tone="success"
+      variant="compact"
+    />
+  );
+
+  const pendingCard = (
+    <StatCard
+      label="Pending"
+      count={pendingCount}
+      total={totalCount}
+      icon={<Clock className="h-5 w-5" strokeWidth={2.25} />}
+      tone="muted"
+      variant="compact"
+    />
+  );
+
+  if (responseType === 'acknowledge') {
+    return (
+      <div className="grid gap-4 md:grid-cols-3">
+        {totalCard}
+        {yesCard}
+        {pendingCard}
+      </div>
+    );
+  }
+
+  const noCard = (
+    <StatCard
+      label="No"
+      count={noCount}
+      total={totalCount}
+      icon={<X className="h-5 w-5" strokeWidth={2.25} />}
+      tone="destructive"
+      variant="compact"
+    />
+  );
+
+  return (
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {totalCard}
+      {yesCard}
+      {pendingCard}
+      {noCard}
+    </div>
+  );
+}
+
+export function ReadTrackingCards(props: ReadTrackingCardsProps) {
+  if (props.kind === 'form') {
+    return <ConsentFormCards responseType={props.responseType} stats={props.stats} />;
+  }
+  return <AnnouncementCards responseType={props.responseType} stats={props.stats} />;
 }
