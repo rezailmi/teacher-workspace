@@ -3,7 +3,7 @@
 // ─── Shared sub-shapes ──────────────────────────────────────────────────────
 
 export type PGApiAnnouncementStatus = 'POSTED' | 'SCHEDULED' | 'DRAFT' | 'POSTING';
-export type PGApiConsentFormStatus = 'OPEN' | 'CLOSED' | 'DRAFT' | 'POSTING';
+export type PGApiConsentFormStatus = 'OPEN' | 'CLOSED' | 'DRAFT' | 'POSTING' | 'SCHEDULED';
 export type PGApiResponseType = 'VIEW_ONLY' | 'ACKNOWLEDGE' | 'YES_NO';
 
 export interface PGApiStaffOwner {
@@ -199,6 +199,8 @@ export interface PGApiConsentFormSummary {
   eventReminderDate?: string | null;
 }
 
+export type PGApiReminderType = 'NONE' | 'ONE_TIME' | 'DAILY';
+
 export interface PGApiConsentFormDetail {
   consentFormId: number;
   title: string;
@@ -207,7 +209,7 @@ export interface PGApiConsentFormDetail {
   eventStartDate: string | null;
   eventEndDate: string | null;
   consentByDate: string | null;
-  addReminderType: string;
+  addReminderType: PGApiReminderType;
   reminderDate: string | null;
   postedDate: string | null;
   venue: string | null;
@@ -223,6 +225,44 @@ export interface PGApiConsentFormDetail {
   students: PGApiConsentFormStudent[];
   status: PGApiConsentFormStatus;
   consentFormHistory: PGApiConsentFormHistoryEntry[];
+}
+
+// ─── Consent form write payloads ────────────────────────────────────────────
+// TW-internal input shape the form collects; the mapper renames into the wire
+// DTO that pgw-web actually accepts (see `mappers.ts`).
+
+export interface PGApiCreateConsentFormPayload {
+  title: string;
+  richTextContent: string;
+  enquiryEmailAddress?: string;
+  responseType: 'ACKNOWLEDGEMENT' | 'YES_NO';
+  consentByDate: string;
+  addReminderType: PGApiReminderType;
+  reminderDate?: string | null;
+  eventStartDate?: string | null;
+  eventEndDate?: string | null;
+  venue?: string | null;
+  recipients: {
+    classIds: number[];
+    customGroupIds: number[];
+    ccaIds: number[];
+    levelIds: number[];
+  };
+  staffOwnerIds?: number[];
+  customQuestions?: PGApiCustomQuestion[];
+  shortcutLink?: PGApiShortcutLink[];
+  websiteLinks?: PGApiWebsiteLink[];
+  attachments?: PGApiAttachment[];
+  images?: PGApiImage[];
+}
+
+export interface PGApiCreateConsentFormDraftPayload extends PGApiCreateConsentFormPayload {
+  scheduledSendAt?: string | null;
+}
+
+export interface PGApiScheduleConsentFormDraftPayload {
+  consentFormDraftId: number;
+  scheduledSendAt: string;
 }
 
 // ─── School Data (for selectors) ────────────────────────────────────────────
