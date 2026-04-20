@@ -49,6 +49,7 @@ import { ResponseTypeSelector } from '~/components/posts/ResponseTypeSelector';
 import { RichTextEditor } from '~/components/posts/RichTextEditor';
 import { SchedulePickerDialog } from '~/components/posts/SchedulePickerDialog';
 import { SendConfirmationDialog } from '~/components/posts/SendConfirmationDialog';
+import { ShortcutsSection } from '~/components/posts/ShortcutsSection';
 import { SplitPostButton } from '~/components/posts/SplitPostButton';
 import { VenueSection } from '~/components/posts/VenueSection';
 import { MAX_WEBSITE_LINKS, WebsiteLinksSection } from '~/components/posts/WebsiteLinksSection';
@@ -568,6 +569,11 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
   // treat as off (silent fallback) so the UI never promises behaviour PG has
   // turned off for the school.
   const scheduleEnabled = configs.flags.schedule_announcement_form_post?.enabled === true;
+  // Per-shortcut flag gates. `absence_submission` maps to the Declare-travels
+  // shortcut per the plan; the Edit-contact shortcut has no documented flag
+  // yet, so we treat it as always available until PG names one.
+  const declareTravelsEnabled = configs.flags.absence_submission?.enabled === true;
+  const editContactEnabled = true;
   const [showSendDialog, setShowSendDialog] = useState(false);
   const [showScheduleDialog, setShowScheduleDialog] = useState(false);
   // Preview defaults to visible on desktop, hidden on mobile. Once the user
@@ -892,6 +898,15 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
 
               {/* Website links — available on both kinds. */}
               <WebsiteLinksSection value={state.websiteLinks} dispatch={dispatch} />
+
+              {/* Shortcuts — per-key flag-gated. Renders null when both
+                  shortcuts are gated off, so there's no empty subsection. */}
+              <ShortcutsSection
+                value={state.shortcuts}
+                onToggle={(key, enabled) => dispatch({ type: 'TOGGLE_SHORTCUT', key, enabled })}
+                declareTravelsEnabled={declareTravelsEnabled}
+                editContactEnabled={editContactEnabled}
+              />
             </CardContent>
           </Card>
 
