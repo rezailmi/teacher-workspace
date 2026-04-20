@@ -13,7 +13,7 @@ function PostTypePicker({ onSelect }: PostTypePickerProps) {
       <div className="mt-8 grid max-w-2xl grid-cols-1 gap-4 sm:grid-cols-2">
         <button
           type="button"
-          className="cursor-pointer rounded-xl border p-6 text-left transition-colors hover:border-blue-6 hover:bg-blue-2/50"
+          className="cursor-pointer rounded-xl border p-6 text-left focus-standard transition-colors hover:border-primary hover:bg-primary/5"
           onClick={() => onSelect('post')}
         >
           <div className="h-[100px] space-y-2.5">
@@ -31,13 +31,13 @@ function PostTypePicker({ onSelect }: PostTypePickerProps) {
 
         <button
           type="button"
-          className="cursor-pointer rounded-xl border p-6 text-left transition-colors hover:border-blue-6 hover:bg-blue-2/50"
+          className="cursor-pointer rounded-xl border p-6 text-left focus-standard transition-colors hover:border-primary hover:bg-primary/5"
           onClick={() => onSelect('post-with-response')}
         >
           <div className="h-[100px] space-y-2.5">
             <div className="h-2 w-3/4 rounded bg-accent" />
             <div className="h-2 w-full rounded bg-accent" />
-            <div className="mt-3 h-2.5 w-1/2 rounded bg-blue-6" />
+            <div className="mt-3 h-2.5 w-1/2 rounded bg-primary/40" />
             <div className="h-2 w-2/3 rounded bg-accent" />
           </div>
 

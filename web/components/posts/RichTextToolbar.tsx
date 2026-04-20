@@ -134,7 +134,8 @@ function RichTextToolbar({ editor, className }: RichTextToolbarProps) {
   return (
     <div
       className={cn(
-        'flex flex-wrap items-center gap-0.5 rounded-t-xl border bg-slate-2 px-2 py-1.5',
+        // `bg-sidebar` is the token alias for slate-2 — used here for a chrome surface outside <Sidebar/>.
+        'flex flex-wrap items-center gap-0.5 rounded-t-xl border bg-sidebar px-2 py-1.5',
         className,
       )}
     >
