@@ -58,7 +58,6 @@ export function RecipientReadTable({ recipients, responseType }: RecipientReadTa
           <TableHeader>
             <TableRow>
               <TableHead>Student</TableHead>
-              <TableHead>Index No.</TableHead>
               <TableHead>Class</TableHead>
               <TableHead>Read Status</TableHead>
               <TableHead>Read At</TableHead>
@@ -80,9 +79,6 @@ export function RecipientReadTable({ recipients, responseType }: RecipientReadTa
             {recipients.map((recipient) => (
               <TableRow key={recipient.studentId}>
                 <TableCell className="font-medium">{recipient.studentName}</TableCell>
-                <TableCell className="text-muted-foreground tabular-nums">
-                  {recipient.indexNo}
-                </TableCell>
                 <TableCell className="text-muted-foreground">{recipient.classLabel}</TableCell>
                 <TableCell>
                   {recipient.readStatus === 'read' ? (

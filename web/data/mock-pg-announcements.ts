@@ -41,15 +41,15 @@ export type FormQuestion =
 export interface PGRecipient {
   studentId: string;
   studentName: string;
-  classId: string;
-  parentName: string;
+  classLabel: string;
   readStatus: 'read' | 'unread';
   respondedAt?: string;
+  /**
+   * Per-student yes/no answer on a Consent-Form-kind post. Populated by
+   * `mapAnnouncementDetail` only when the post's `kind === 'form'`; left
+   * undefined for announcement recipients.
+   */
   formResponse?: 'yes' | 'no';
-  classLabel: string;
-  indexNo: string;
-  parentRelationship: string;
-  pgStatus: 'onboarded' | 'not_onboarded';
   acknowledgedAt?: string;
   questionAnswers?: Record<string, string>;
 }

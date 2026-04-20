@@ -67,14 +67,9 @@ export function mapAnnouncementDetail(detail: PGApiAnnouncementDetail): PGAnnoun
   const recipients: PGRecipient[] = detail.students.map((s) => ({
     studentId: String(s.studentId),
     studentName: s.studentName,
-    classId: s.className,
-    parentName: '',
     readStatus: s.isRead ? ('read' as const) : ('unread' as const),
     respondedAt: undefined,
     classLabel: s.className,
-    indexNo: '',
-    parentRelationship: '',
-    pgStatus: 'onboarded' as const,
   }));
 
   // Preserve the raw Tiptap JSON so the edit-mode editor can hydrate with full
