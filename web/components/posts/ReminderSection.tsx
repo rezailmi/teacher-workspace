@@ -1,5 +1,3 @@
-import { useRef } from 'react';
-
 import {
   Collapsible,
   CollapsiblePanel,
@@ -36,36 +34,28 @@ interface ReminderSectionProps {
 }
 
 function ReminderSection({ value, onChange }: ReminderSectionProps) {
-  // Persist the picked date across radio toggles. If the user switches to
-  // None and back to One-time, the previously chosen date re-appears rather
-  // than resetting to empty. Ref — not state — because the visible value
-  // already tracks `value.date`; this stash is only read on radio change.
-  const stashedDateRef = useRef<string>(value.type === 'NONE' ? '' : value.date);
-
-  // Keep stash in sync whenever the user edits the date while a narrow
-  // (ONE_TIME / DAILY) branch is active.
-  if (value.type !== 'NONE' && value.date !== stashedDateRef.current) {
-    stashedDateRef.current = value.date;
-  }
+  // Stash the picked date on the NONE branch so ONE_TIME/DAILY toggles
+  // restore it. Living in state (not a ref) means it survives remounts and
+  // shows up in devtools.
+  const lastDate = value.type === 'NONE' ? (value.lastDate ?? '') : value.date;
 
   function handleRadioChange(next: ReminderRadioValue) {
     if (next === 'NONE') {
-      onChange({ type: 'NONE' });
+      onChange({ type: 'NONE', lastDate: value.type === 'NONE' ? value.lastDate : value.date });
       return;
     }
-    const date = stashedDateRef.current;
-    onChange({ type: next, date });
+    onChange({ type: next, date: lastDate });
   }
 
   function handleDateChange(nextDate: string) {
     if (value.type === 'NONE') return;
-    stashedDateRef.current = nextDate;
     onChange({ type: value.type, date: nextDate });
   }
 
   const showPicker = value.type === 'ONE_TIME' || value.type === 'DAILY';
   const pickerLabel = value.type === 'DAILY' ? 'Starting (SGT)' : 'Date (SGT)';
-  const displayDate = value.type === 'NONE' ? stashedDateRef.current : value.date;
+  // Empty display on NONE so the hidden picker doesn't flash a stale date.
+  const displayDate = value.type === 'NONE' ? '' : value.date;
 
   return (
     <div className="space-y-3">

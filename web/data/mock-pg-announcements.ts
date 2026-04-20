@@ -125,9 +125,14 @@ export interface PGAnnouncementPost {
  * Reminder schedule on a consent form. Encoded as a 3-branch nested union so
  * `date` is present exactly when the branch needs it — never `type + optional
  * date`, which creates invalid nominal states (e.g. `NONE` with a date).
+ *
+ * The NONE branch carries an optional `lastDate` stash so the picker can
+ * restore the user's previous date when they toggle NONE → ONE_TIME/DAILY.
+ * It's not sent to PG — the outbound mapper only reads `date` on the active
+ * branches.
  */
 export type ReminderConfig =
-  | { type: 'NONE' }
+  | { type: 'NONE'; lastDate?: string }
   | { type: 'ONE_TIME'; date: string }
   | { type: 'DAILY'; date: string };
 
