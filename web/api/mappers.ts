@@ -499,7 +499,12 @@ interface BuildPostPayloadInput {
   enquiryEmail: string;
   selectedRecipients: {
     id: string;
-    groupType: 'class' | 'custom' | 'cca' | 'level' | 'individual';
+    /** Widened to `string` (via the full `SelectedEntity.groupType` domain)
+     * so this input type is assignable from the container's reducer state.
+     * `groupRecipients` routes `class` / `custom` / `cca` / `level`; all
+     * other group types (e.g. `staff-group`, `school`) are dropped — the FE
+     * payload doesn't yet accept them. */
+    groupType?: string;
   }[];
   selectedStaff: { id: string }[];
   responseType: ResponseType;

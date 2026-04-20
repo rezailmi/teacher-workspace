@@ -5,6 +5,8 @@ import { Link, Navigate, useLoaderData, useNavigate, useParams } from 'react-rou
 
 import {
   createAnnouncement,
+  createConsentForm,
+  createConsentFormDraft,
   createDraft,
   fetchSchoolClasses,
   fetchSchoolStaff,
@@ -12,10 +14,16 @@ import {
   fetchSession,
   loadConsentPostDetail,
   loadPostDetail,
+  updateConsentFormDraft,
   updateDraft,
 } from '~/api/client';
 import { PGError, PGValidationError } from '~/api/errors';
+import { buildPostPayload } from '~/api/mappers';
 import type {
+  PGApiCreateAnnouncementPayload,
+  PGApiCreateConsentFormDraftPayload,
+  PGApiCreateConsentFormPayload,
+  PGApiCreateDraftPayload,
   PGApiSchoolClass,
   PGApiSchoolStaff,
   PGApiSchoolStudent,
@@ -149,6 +157,7 @@ interface PostFormState {
 }
 
 type PostFormAction =
+  | { type: 'SET_KIND'; payload: 'announcement' | 'form' }
   | { type: 'SET_TITLE'; payload: string }
   | { type: 'SET_DESCRIPTION_DOC'; payload: { doc: Record<string, unknown>; text: string } }
   | { type: 'SET_RESPONSE_TYPE'; payload: ResponseType }
@@ -186,6 +195,9 @@ const INITIAL_STATE: PostFormState = {
 
 function formReducer(state: PostFormState, action: PostFormAction): PostFormState {
   switch (action.type) {
+    case 'SET_KIND':
+      return { ...state, kind: action.payload };
+
     case 'SET_TITLE':
       return { ...state, title: action.payload };
 
@@ -285,42 +297,6 @@ function formReducer(state: PostFormState, action: PostFormAction): PostFormStat
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-
-// Convert flat SelectedEntity[] from the recipient selector into the grouped
-// shape `toPGCreatePayload` expects. Individual-student selections aren't
-// yet supported by the FE payload — tracked as a follow-up.
-function groupRecipients(recipients: SelectedEntity[]): {
-  classIds: number[];
-  customGroupIds: number[];
-  ccaIds: number[];
-  levelIds: number[];
-} {
-  const out = {
-    classIds: [] as number[],
-    customGroupIds: [] as number[],
-    ccaIds: [] as number[],
-    levelIds: [] as number[],
-  };
-  for (const r of recipients) {
-    const id = Number(r.id);
-    if (Number.isNaN(id)) continue;
-    switch (r.groupType) {
-      case 'class':
-        out.classIds.push(id);
-        break;
-      case 'custom':
-        out.customGroupIds.push(id);
-        break;
-      case 'cca':
-        out.ccaIds.push(id);
-        break;
-      case 'level':
-        out.levelIds.push(id);
-        break;
-    }
-  }
-  return out;
-}
 
 // Wraps plain text in the minimal valid Tiptap doc shape so an editor
 // initialized with it renders the text as a single paragraph.
@@ -560,38 +536,42 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
 
   function handleTypeSelect(type: PostKind) {
     setSelectedType(type);
+    const kind: PostFormState['kind'] = type === 'post-with-response' ? 'form' : 'announcement';
+    dispatch({ type: 'SET_KIND', payload: kind });
     if (type === 'post-with-response') {
       dispatch({ type: 'SET_RESPONSE_TYPE', payload: 'acknowledge' });
     }
   }
 
-  function buildPayload() {
-    // Prefer the live Tiptap JSON; wrap plain-text fallback in a minimal doc
-    // so pgw always receives a valid Tiptap tree rather than a raw string.
-    const doc = state.descriptionDoc ?? textToTiptapDoc(state.description);
-    return {
-      title: state.title,
-      richTextContent: JSON.stringify(doc),
-      enquiryEmailAddress: state.enquiryEmail,
-      recipients: groupRecipients(state.selectedRecipients),
-      staffOwnerIds: state.selectedStaff.map((s) => Number(s.id)),
-    };
-  }
-
   async function handleScheduleConfirm(scheduledSendAt: string) {
     setShowScheduleDialog(false);
     setIsSaving(true);
-    const payload = { ...buildPayload(), scheduledSendAt };
+    const basePayload = buildPostPayload(state);
     try {
-      if (isEditing && editId) {
-        // Editing an existing draft: keep the same draft, just push the new
-        // `scheduledSendAt` with the other field updates.
-        await updateDraft(Number(editId), payload);
+      if (state.kind === 'form') {
+        // Consent-form draft create/update. The `cf_<digits>` brand carries
+        // through from the loader; strip the prefix for the mutation URL.
+        const draftPayload = {
+          ...basePayload,
+          scheduledSendAt,
+        } as PGApiCreateConsentFormDraftPayload;
+        if (isEditing && editId?.startsWith('cf_')) {
+          await updateConsentFormDraft(Number(editId.slice(3)), draftPayload);
+        } else {
+          await createConsentFormDraft(draftPayload);
+        }
       } else {
-        // New post → schedule in a single round-trip. `scheduleDraft` (which
-        // targets a pre-saved draft) is deferred; we don't need it for this
-        // flow.
-        await createDraft(payload);
+        const draftPayload = { ...basePayload, scheduledSendAt } as PGApiCreateDraftPayload;
+        if (isEditing && editId) {
+          // Editing an existing draft: keep the same draft, just push the new
+          // `scheduledSendAt` with the other field updates.
+          await updateDraft(Number(editId), draftPayload);
+        } else {
+          // New post → schedule in a single round-trip. `scheduleDraft` (which
+          // targets a pre-saved draft) is deferred; we don't need it for this
+          // flow.
+          await createDraft(draftPayload);
+        }
       }
       notify.success('Post scheduled.');
       navigate('/posts');
@@ -609,9 +589,13 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
   async function handleSendConfirm() {
     setShowSendDialog(false);
     setIsSaving(true);
-    const payload = buildPayload();
+    const payload = buildPostPayload(state);
     try {
-      await createAnnouncement(payload);
+      if (state.kind === 'form') {
+        await createConsentForm(payload as PGApiCreateConsentFormPayload);
+      } else {
+        await createAnnouncement(payload as PGApiCreateAnnouncementPayload);
+      }
       notify.success('Post sent.');
       // Keep isSaving=true until navigation completes to prevent double-submit
       setTimeout(() => navigate('/posts'), 150);
