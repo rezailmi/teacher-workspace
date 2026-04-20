@@ -654,6 +654,12 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
               {showPreview ? 'Hide Preview' : 'Show Preview'}
             </Button>
 
+            {/* TODO(phase-9): gate the Schedule menu entry on
+                `configs.flags.schedule_announcement_form_post.enabled` once
+                `getConfigs()` lands. Until then the split button exposes
+                Schedule for both kinds; the consent-form path round-trips
+                via `POST /consentForms/drafts` with `scheduledSendAt` set
+                (see `handleScheduleConfirm`). */}
             <SplitPostButton
               disabled={!isFormValid || isSaving}
               onPost={() => setShowSendDialog(true)}
