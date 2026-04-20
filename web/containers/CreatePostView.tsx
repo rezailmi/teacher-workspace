@@ -48,6 +48,8 @@ import type {
   FormQuestion,
   PGAnnouncement,
   PGAnnouncementTarget,
+  PGEvent,
+  ReminderConfig,
   ResponseType,
 } from '~/data/mock-pg-announcements';
 import { notify } from '~/lib/notify';
@@ -89,6 +91,17 @@ interface PostFormState {
   selectedStaff: SelectedEntity[];
   enquiryEmail: string;
   dueDate: string;
+  /**
+   * Consent-form reminder schedule. Defaults to `{ type: 'NONE' }`; the
+   * reducer preserves a previously-picked date on the union narrows
+   * (ONE_TIME / DAILY) so a user toggling None ↔ One-time ↔ Daily doesn't
+   * lose their date. Only routed outbound when `kind === 'form'`.
+   */
+  reminder: ReminderConfig;
+  /** Event details (start/end/venue) on a consent form. */
+  event?: PGEvent;
+  /** Venue on a consent form. Kept as a separate field from `event.venue` so the user can type a venue before/without setting start/end. */
+  venue?: string;
 }
 
 type PostFormAction =
@@ -102,7 +115,10 @@ type PostFormAction =
   | { type: 'MOVE_QUESTION'; id: string; direction: 'up' | 'down' }
   | { type: 'SET_STAFF'; payload: SelectedEntity[] }
   | { type: 'SET_EMAIL'; payload: string }
-  | { type: 'SET_DUE_DATE'; payload: string };
+  | { type: 'SET_DUE_DATE'; payload: string }
+  | { type: 'SET_REMINDER'; payload: ReminderConfig }
+  | { type: 'SET_EVENT'; payload: PGEvent | undefined }
+  | { type: 'SET_VENUE'; payload: string };
 
 const INITIAL_STATE: PostFormState = {
   title: '',
@@ -115,6 +131,9 @@ const INITIAL_STATE: PostFormState = {
   selectedStaff: [],
   enquiryEmail: '',
   dueDate: '',
+  reminder: { type: 'NONE' },
+  event: undefined,
+  venue: '',
 };
 
 function formReducer(state: PostFormState, action: PostFormAction): PostFormState {
@@ -202,6 +221,15 @@ function formReducer(state: PostFormState, action: PostFormAction): PostFormStat
 
     case 'SET_DUE_DATE':
       return { ...state, dueDate: action.payload };
+
+    case 'SET_REMINDER':
+      return { ...state, reminder: action.payload };
+
+    case 'SET_EVENT':
+      return { ...state, event: action.payload };
+
+    case 'SET_VENUE':
+      return { ...state, venue: action.payload };
 
     default:
       return state;
@@ -351,6 +379,11 @@ function announcementToFormState(
     ),
     enquiryEmail: announcement.enquiryEmail ?? '',
     dueDate: announcement.dueDate ?? '',
+    // Announcements don't carry reminder/event/venue — consent-form edit-mode
+    // hydration lands in Phase 2 along with the discriminant routing.
+    reminder: { type: 'NONE' },
+    event: undefined,
+    venue: '',
   };
 }
 
