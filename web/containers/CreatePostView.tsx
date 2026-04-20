@@ -76,6 +76,7 @@ import {
   type ReminderConfig,
   type ResponseType,
 } from '~/data/mock-pg-announcements';
+import { textToTiptapDoc } from '~/helpers/tiptap';
 import { notify } from '~/lib/notify';
 import { cn } from '~/lib/utils';
 
@@ -382,20 +383,6 @@ function formReducer(state: PostFormState, action: PostFormAction): PostFormStat
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-
-// Wraps plain text in the minimal valid Tiptap doc shape so an editor
-// initialized with it renders the text as a single paragraph.
-function textToTiptapDoc(text: string): Record<string, unknown> {
-  return {
-    type: 'doc',
-    content: text
-      ? text.split('\n').map((line) => ({
-          type: 'paragraph',
-          content: line ? [{ type: 'text', text: line }] : [],
-        }))
-      : [{ type: 'paragraph' }],
-  };
-}
 
 // PG's lowercase targetType (`group`) maps to the FE EntitySelector's
 // `groupType: 'custom'`; the others are 1:1. Mirror of `groupRecipients`.

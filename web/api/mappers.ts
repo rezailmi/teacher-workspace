@@ -14,6 +14,7 @@ import type {
   ReminderConfig,
   ResponseType,
 } from '~/data/mock-pg-announcements';
+import { extractTextFromTiptap, textToTiptapDoc } from '~/helpers/tiptap';
 
 import type {
   PGApiAnnouncementDetail,
@@ -136,17 +137,6 @@ const PG_TARGET_TYPE_MAP: Record<string, PGTargetType> = {
 
 function toPGTargetType(raw: string): PGTargetType | null {
   return PG_TARGET_TYPE_MAP[raw.toLowerCase()] ?? null;
-}
-
-/**
- * Map a consent form summary from the API to a list item with ownership.
- * @deprecated Use `mapConsentFormSummaryToPost` for the unified Posts list.
- */
-export function mapConsentFormSummary(
-  api: PGApiConsentFormSummary,
-  ownership: 'mine' | 'shared',
-): PGApiConsentFormSummary & { ownership: 'mine' | 'shared' } {
-  return { ...api, ownership };
 }
 
 const PG_CONSENT_FORM_STATUS_MAP: Record<PGApiConsentFormStatus, PGConsentFormStatus> = {
@@ -330,36 +320,6 @@ function toPGStatus(raw: PGApiAnnouncementStatus): PGStatus {
   return PG_STATUS_MAP[raw] ?? 'draft';
 }
 
-/**
- * Extract plain text from a Tiptap doc.
- * PG sends it as a parsed object; legacy fixtures may send a JSON string.
- */
-function extractTextFromTiptap(rich: Record<string, unknown> | string | null | undefined): string {
-  if (rich == null) return '';
-  if (typeof rich === 'string') {
-    try {
-      return extractText(JSON.parse(rich) as TiptapNode).trim();
-    } catch {
-      return rich.trim();
-    }
-  }
-  return extractText(rich).trim();
-}
-
-interface TiptapNode {
-  type?: string;
-  content?: TiptapNode[];
-  text?: string;
-}
-
-function extractText(node: TiptapNode): string {
-  if (typeof node.text === 'string') return node.text;
-  if (!Array.isArray(node.content)) return '';
-
-  const parts = node.content.map(extractText);
-  return node.type === 'doc' ? parts.join('\n') : parts.join('');
-}
-
 // ─── Outbound: FE payload → pgw-web schema ──────────────────────────────────
 // FE collects recipients grouped (classIds / customGroupIds / ccaIds / levelIds)
 // because that's what the form needs; pgw-web's API takes them as a flat
@@ -528,21 +488,6 @@ interface BuildPostPayloadInput {
   websiteLinks: { url: string; title: string }[];
   /** PG shortcut keys the teacher ticked. Forwarded as `shortcutLink[]`. */
   shortcuts: string[];
-}
-
-// Wraps plain text in a minimal valid Tiptap doc shape. Duplicated from
-// `CreatePostView.tsx` so the mapper can produce a valid `richTextContent`
-// without importing from the container layer.
-function textToTiptapDoc(text: string): Record<string, unknown> {
-  return {
-    type: 'doc',
-    content: text
-      ? text.split('\n').map((line) => ({
-          type: 'paragraph',
-          content: line ? [{ type: 'text', text: line }] : [],
-        }))
-      : [{ type: 'paragraph' }],
-  };
 }
 
 /**

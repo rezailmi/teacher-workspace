@@ -267,11 +267,6 @@ export interface PGApiCreateConsentFormDraftPayload extends PGApiCreateConsentFo
   scheduledSendAt?: string | null;
 }
 
-export interface PGApiScheduleConsentFormDraftPayload {
-  consentFormDraftId: number;
-  scheduledSendAt: string;
-}
-
 // ─── School Data (for selectors) ────────────────────────────────────────────
 
 export interface PGApiSchoolStaff {
@@ -302,16 +297,6 @@ export interface PGApiSchoolStudent {
   levelCode: string;
   levelDescription: string;
   cca: unknown[];
-}
-
-// Per `pg-audit-findings.md` §Groups: PG's `/school/groups` actually returns
-// `{ class: PGApiSchoolClass[] }` (singular `class`, using the same selector-
-// shaped entries as `fetchSchoolClasses` consumes). The previous `{classes,
-// levels, ccas}` shape was type-level drift — no call site ever received that
-// data. Level and CCA tabs source from `/groups/assigned` instead (see
-// `PGApiGroupsAssigned`).
-export interface PGApiSchoolGroups {
-  class: PGApiSchoolClass[];
 }
 
 export interface PGApiGroupsAssignedClass {

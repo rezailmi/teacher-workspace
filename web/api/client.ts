@@ -14,7 +14,6 @@ import {
   mapAnnouncementDetail,
   mapAnnouncementSummary,
   mapConsentFormDetail,
-  mapConsentFormSummary,
   mapConsentFormSummaryToPost,
   mergeAndDedup,
   toPGConsentFormCreatePayload,
@@ -28,7 +27,6 @@ import type {
   PGApiConfig,
   PGApiConsentFormDetail,
   PGApiConsentFormList,
-  PGApiConsentFormSummary,
   PGApiCreateAnnouncementPayload,
   PGApiCreateConsentFormDraftPayload,
   PGApiCreateConsentFormPayload,
@@ -36,10 +34,8 @@ import type {
   PGApiCustomGroupsList,
   PGApiDuplicatePayload,
   PGApiGroupsAssigned,
-  PGApiScheduleConsentFormDraftPayload,
   PGApiScheduleDraftPayload,
   PGApiSchoolClass,
-  PGApiSchoolGroups,
   PGApiSchoolStaffList,
   PGApiSchoolStudent,
   PGApiSession,
@@ -335,11 +331,6 @@ export function updateConsentFormDraft(
   );
 }
 
-/** Schedule an existing consent-form draft. */
-export function scheduleConsentFormDraft(payload: PGApiScheduleConsentFormDraftPayload) {
-  return mutateApi<void>('POST', '/consentForms/drafts/schedule', payload);
-}
-
 export function updateConsentFormDueDate(formId: number, payload: { consentByDate: string }) {
   return mutateApi<void>('PUT', `/consentForms/${formId}/updateDueDate`, payload);
 }
@@ -354,20 +345,6 @@ export function deleteConsentFormDraft(draftId: number) {
 }
 
 // ─── Composed loaders ───────────────────────────────────────────────────────
-
-/**
- * @deprecated Use `loadConsentPostsList` — returns the unified `PGConsentFormPost[]`
- * that `PostsView` merges with announcements.
- */
-export type ConsentFormListItem = PGApiConsentFormSummary & { ownership: 'mine' | 'shared' };
-
-/** @deprecated Use `loadConsentPostsList`. */
-export async function loadConsentFormsList(): Promise<ConsentFormListItem[]> {
-  const [own, shared] = await Promise.all([fetchConsentForms(), fetchSharedConsentForms()]);
-  const mappedOwn = own.posts.map((p) => mapConsentFormSummary(p, 'mine'));
-  const mappedShared = shared.posts.map((p) => mapConsentFormSummary(p, 'shared'));
-  return mergeAndDedup(mappedOwn, mappedShared);
-}
 
 /** Consent-form list loader that returns the unified `PGConsentFormPost[]` shape. */
 export async function loadConsentPostsList(): Promise<PGConsentFormPost[]> {
@@ -389,10 +366,6 @@ export async function loadConsentPostDetail(formId: ConsentFormId): Promise<PGCo
 
 export function fetchSchoolStaff() {
   return fetchApi<PGApiSchoolStaffList>('/school/staff');
-}
-
-export function fetchSchoolGroups() {
-  return fetchApi<PGApiSchoolGroups>('/school/groups');
 }
 
 // Real pgw-web returns `body.class` (singular) as an array of PGApiSchoolClass.
