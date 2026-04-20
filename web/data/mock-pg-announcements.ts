@@ -54,6 +54,14 @@ export interface PGRecipient {
   questionAnswers?: Record<string, string>;
 }
 
+export type PGTargetType = 'class' | 'group' | 'cca' | 'level';
+
+export interface PGAnnouncementTarget {
+  type: PGTargetType;
+  id: number;
+  label: string;
+}
+
 export interface PGAnnouncementStats {
   totalCount: number;
   readCount: number;
@@ -83,6 +91,10 @@ export interface PGAnnouncement {
   createdAt?: string;
   createdBy: string;
   staffInCharge?: string;
+  /** Numeric staff IDs returned by `staffOwners[].staffID`; used to rehydrate the staff selector in edit mode. */
+  staffOwnerIds?: number[];
+  /** Recipient targets returned by `target[]`; used to rehydrate the recipient selector in edit mode. */
+  targets?: PGAnnouncementTarget[];
   enquiryEmail?: string;
   shortcuts?: PGShortcut[];
   questions?: FormQuestion[];

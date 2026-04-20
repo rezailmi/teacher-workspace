@@ -44,7 +44,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '~/components/ui';
-import type { FormQuestion, PGAnnouncement, ResponseType } from '~/data/mock-pg-announcements';
+import type {
+  FormQuestion,
+  PGAnnouncement,
+  PGAnnouncementTarget,
+  ResponseType,
+} from '~/data/mock-pg-announcements';
 import { notify } from '~/lib/notify';
 import { cn } from '~/lib/utils';
 
@@ -255,13 +260,55 @@ function textToTiptapDoc(text: string): Record<string, unknown> {
   };
 }
 
+// PG's lowercase targetType (`group`) maps to the FE EntitySelector's
+// `groupType: 'custom'`; the others are 1:1. Mirror of `groupRecipients`.
+const TARGET_TYPE_TO_GROUP_TYPE: Record<PGAnnouncementTarget['type'], SelectedEntity['groupType']> =
+  {
+    class: 'class',
+    group: 'custom',
+    cca: 'cca',
+    level: 'level',
+  };
+
+function targetsToSelectedRecipients(targets: PGAnnouncementTarget[]): SelectedEntity[] {
+  return targets.map((t) => ({
+    id: t.id.toString(),
+    label: t.label,
+    type: 'group',
+    count: 0,
+    groupType: TARGET_TYPE_TO_GROUP_TYPE[t.type],
+  }));
+}
+
+function ownerIdsToSelectedStaff(
+  ownerIds: number[] | undefined,
+  staff: PGApiSchoolStaff[],
+  fallbackName: string | undefined,
+): SelectedEntity[] {
+  if (ownerIds && ownerIds.length > 0) {
+    const byId = new Map(staff.map((s) => [s.staffId, s]));
+    return ownerIds
+      .map((id) => byId.get(id))
+      .filter((s): s is PGApiSchoolStaff => s !== undefined)
+      .map((s) => ({
+        id: s.staffId.toString(),
+        label: s.name,
+        type: 'individual',
+        count: 1,
+      }));
+  }
+  // Fallback: detail response only carried `staffName`. Match by name so
+  // legacy/summary-only payloads still hydrate the staff selector.
+  const match = staff.find((s) => s.name === fallbackName);
+  return match
+    ? [{ id: match.staffId.toString(), label: match.name, type: 'individual', count: 1 }]
+    : [];
+}
+
 function announcementToFormState(
   announcement: PGAnnouncement,
   staff: PGApiSchoolStaff[],
 ): PostFormState {
-  // TODO: back-translate announcement.recipients and staffInCharge into
-  // SelectedEntity[] when edit mode is revisited.
-  const staffMatch = staff.find((s) => s.name === announcement.staffInCharge);
   return {
     title: announcement.title,
     description: announcement.description,
@@ -269,20 +316,15 @@ function announcementToFormState(
     // fall back to a minimal doc wrapping the plain-text description so
     // edit mode always gets a valid initialContent for Tiptap.
     descriptionDoc: announcement.richTextContent ?? textToTiptapDoc(announcement.description),
-    selectedRecipients: [],
+    selectedRecipients: targetsToSelectedRecipients(announcement.targets ?? []),
     responseType: announcement.responseType,
     questions: announcement.questions ?? [],
 
-    selectedStaff: staffMatch
-      ? [
-          {
-            id: staffMatch.staffId.toString(),
-            label: staffMatch.name,
-            type: 'individual',
-            count: 1,
-          },
-        ]
-      : [],
+    selectedStaff: ownerIdsToSelectedStaff(
+      announcement.staffOwnerIds,
+      staff,
+      announcement.staffInCharge,
+    ),
     enquiryEmail: announcement.enquiryEmail ?? '',
     dueDate: announcement.dueDate ?? '',
   };

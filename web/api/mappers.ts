@@ -1,8 +1,10 @@
 import type {
   PGAnnouncement,
+  PGAnnouncementTarget,
   PGOwnership,
   PGRecipient,
   PGStatus,
+  PGTargetType,
   ResponseType,
 } from '~/data/mock-pg-announcements';
 
@@ -102,8 +104,28 @@ export function mapAnnouncementDetail(detail: PGApiAnnouncementDetail): PGAnnoun
     postedAt: detail.postedDate ?? undefined,
     scheduledAt: detail.scheduledSendAt ?? undefined,
     staffInCharge: detail.staffOwners[0]?.staffName,
+    staffOwnerIds: detail.staffOwners.map((s) => s.staffID),
+    targets: detail.target
+      .map<PGAnnouncementTarget | null>((t) => {
+        const type = toPGTargetType(t.targetType);
+        return type ? { type, id: t.targetId, label: t.targetName } : null;
+      })
+      .filter((t): t is PGAnnouncementTarget => t !== null),
     enquiryEmail: detail.enquiryEmailAddress,
   };
+}
+
+// Inbound `targetType` is sent lowercase by pgw-web (`class` | `group` | `cca` | `level`);
+// normalize defensively in case future payloads upcase it.
+const PG_TARGET_TYPE_MAP: Record<string, PGTargetType> = {
+  class: 'class',
+  group: 'group',
+  cca: 'cca',
+  level: 'level',
+};
+
+function toPGTargetType(raw: string): PGTargetType | null {
+  return PG_TARGET_TYPE_MAP[raw.toLowerCase()] ?? null;
 }
 
 /**
@@ -181,8 +203,6 @@ function extractText(node: TiptapNode): string {
 // FE collects recipients grouped (classIds / customGroupIds / ccaIds / levelIds)
 // because that's what the form needs; pgw-web's API takes them as a flat
 // `targets` array. Other field renames mirror the read-side envelope fix.
-
-type PGTargetType = 'class' | 'group' | 'cca' | 'level';
 
 interface PGWritePayload {
   title: string;

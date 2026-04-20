@@ -38,7 +38,20 @@
     "images": [],
     "shortcutLink": [],
     "websiteLinks": [],
-    "target": [],
+    "target": [
+      {
+        "announcementId": 1,
+        "announcementTargetId": 11,
+        "createdAt": "2026-03-09T08:00:00.000Z",
+        "isDeleted": false,
+        "targetAcadYear": 2026,
+        "targetId": 101,
+        "targetName": "4A (2026)",
+        "targetSchool": "Greenridge Secondary",
+        "targetType": "class",
+        "updatedAt": "2026-03-09T08:00:00.000Z"
+      }
+    ],
     "staffOwners": [{ "staffID": 1013, "staffName": "TAN GUANG SHIN" }],
     "students": [
       { "studentId": 1, "studentName": "TAN XIAO MING", "className": "4A", "isRead": true },
