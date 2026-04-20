@@ -1,9 +1,17 @@
-import { ArrowDown, ArrowUp, ChevronLeft, MoreHorizontal, User } from 'lucide-react';
+import {
+  ArrowDown,
+  ArrowUp,
+  CalendarClock,
+  ChevronLeft,
+  MapPin,
+  MoreHorizontal,
+  User,
+} from 'lucide-react';
 import React, { useMemo } from 'react';
 
 import { Button } from '~/components/ui';
 import type { PostFormState } from '~/containers/CreatePostView';
-import { formatDateTime } from '~/helpers/dateTime';
+import { formatDateTime, formatLocalDate, formatLocalDateTimeRange } from '~/helpers/dateTime';
 
 interface PostPreviewProps {
   formState: PostFormState;
@@ -16,13 +24,25 @@ const PostPreview = React.memo(function PostPreview({
   currentUserName = 'Daniel Tan',
   defaultEnquiryEmail = 'enquiry@school.edu.sg',
 }: PostPreviewProps) {
-  const { title, description, responseType, questions, enquiryEmail } = formState;
+  const { kind, title, description, responseType, questions, enquiryEmail } = formState;
   // Freeze the preview timestamp to the moment the component mounts so
   // `React.memo` short-circuits re-renders when form state is unchanged.
   const timestamp = useMemo(() => formatDateTime(new Date().toISOString(), { case: 'upper' }), []);
   const hasContent = Boolean(title || description);
   const dimmedWhenEmpty = hasContent ? 'text-foreground' : 'text-muted-foreground/60';
   const enquiryContact = enquiryEmail || defaultEnquiryEmail;
+
+  const isForm = kind === 'form';
+  const titlePlaceholder = isForm ? 'Consent form title' : 'Announcement title';
+  const descriptionPlaceholder = isForm
+    ? 'Your consent form details will appear here.'
+    : 'Your announcement details will appear here.';
+
+  const eventRange = isForm
+    ? formatLocalDateTimeRange(formState.event?.start, formState.event?.end)
+    : undefined;
+  const venue = isForm ? formState.venue?.trim() || undefined : undefined;
+  const dueDateLabel = isForm ? formatLocalDate(formState.dueDate) : undefined;
 
   return (
     <div className="overflow-hidden rounded-3xl border-2 border-foreground bg-white">
@@ -39,7 +59,7 @@ const PostPreview = React.memo(function PostPreview({
       <div className="flex min-h-[340px] flex-col px-5 pb-5">
         <div className="space-y-1">
           <p className={`text-lg leading-tight font-semibold ${dimmedWhenEmpty}`}>
-            {title || 'Announcement title'}
+            {title || titlePlaceholder}
           </p>
           <p className="text-[11px] text-muted-foreground">
             {timestamp} · {currentUserName.toUpperCase()}
@@ -51,6 +71,26 @@ const PostPreview = React.memo(function PostPreview({
           STUDENT NAME
         </div>
 
+        {isForm && (eventRange || venue) && (
+          <div className="mt-4 space-y-1.5 rounded-lg bg-muted/50 px-3 py-2.5 text-sm text-foreground">
+            {eventRange && (
+              <div className="flex items-start gap-2">
+                <CalendarClock
+                  className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground"
+                  strokeWidth={2}
+                />
+                <span>{eventRange}</span>
+              </div>
+            )}
+            {venue && (
+              <div className="flex items-start gap-2">
+                <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" strokeWidth={2} />
+                <span>{venue}</span>
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="mt-5 space-y-2">
           <p className="text-[11px] font-medium tracking-widest text-muted-foreground uppercase">
             Details
@@ -58,9 +98,7 @@ const PostPreview = React.memo(function PostPreview({
           {description ? (
             <p className="text-sm whitespace-pre-wrap text-foreground">{description}</p>
           ) : (
-            <p className="text-sm text-muted-foreground/60">
-              Your announcement details will appear here.
-            </p>
+            <p className="text-sm text-muted-foreground/60">{descriptionPlaceholder}</p>
           )}
         </div>
 
@@ -75,17 +113,17 @@ const PostPreview = React.memo(function PostPreview({
                   {i + 1}. {q.text || 'Untitled question'}
                 </p>
                 {q.type === 'mcq' && (
-                  <ul className="ml-4 space-y-0.5">
-                    {q.options.map((opt, j) => (
-                      <li key={j} className="text-sm text-muted-foreground">
-                        {String.fromCharCode(65 + j)}. {opt || 'Empty option'}
-                      </li>
-                    ))}
-                  </ul>
+                  <p className="text-xs text-muted-foreground">Multiple choice</p>
                 )}
               </div>
             ))}
           </div>
+        )}
+
+        {isForm && dueDateLabel && (
+          <p className="mt-4 text-[11px] font-medium text-muted-foreground">
+            Respond by {dueDateLabel}
+          </p>
         )}
 
         {responseType === 'acknowledge' && (

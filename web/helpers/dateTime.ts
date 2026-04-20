@@ -53,6 +53,83 @@ export function formatDateTime(
   return opts.case === 'upper' ? result.toUpperCase() : result;
 }
 
+/**
+ * Parse a naive-local `YYYY-MM-DDTHH:MM` string (the shape emitted by
+ * `<input type="datetime-local">`) without timezone interpretation. Returns
+ * `undefined` for missing or malformed inputs.
+ */
+function parseLocalDateTime(local: string | undefined): Date | undefined {
+  if (!local) return undefined;
+  const [datePart, timePart] = local.split('T');
+  if (!datePart || !timePart) return undefined;
+  const [y, mo, d] = datePart.split('-').map(Number);
+  const [h, mi] = timePart.split(':').map(Number);
+  if ([y, mo, d, h, mi].some((n) => !Number.isFinite(n))) return undefined;
+  const dt = new Date(y, (mo ?? 1) - 1, d, h, mi);
+  return Number.isNaN(dt.getTime()) ? undefined : dt;
+}
+
+/** Parse a naive-local `YYYY-MM-DD` string (the shape from `<input type="date">`). */
+function parseLocalDate(local: string | undefined): Date | undefined {
+  if (!local) return undefined;
+  const [y, mo, d] = local.split('-').map(Number);
+  if (![y, mo, d].every((n) => Number.isFinite(n))) return undefined;
+  const dt = new Date(y, (mo ?? 1) - 1, d);
+  return Number.isNaN(dt.getTime()) ? undefined : dt;
+}
+
+function formatDatePart(date: Date, opts: { weekday?: boolean } = {}): string {
+  const day = date.getDate();
+  const month = date.toLocaleDateString('en-GB', { month: 'short' });
+  const year = date.getFullYear();
+  const base = `${day} ${month} ${year}`;
+  if (!opts.weekday) return base;
+  const wd = date.toLocaleDateString('en-GB', { weekday: 'short' });
+  return `${wd}, ${base}`;
+}
+
+function formatTimePart(date: Date): string {
+  let hour = date.getHours();
+  const minute = date.getMinutes().toString().padStart(2, '0');
+  const ampm = hour >= 12 ? 'pm' : 'am';
+  hour = hour % 12 || 12;
+  return `${hour}:${minute} ${ampm}`;
+}
+
+/**
+ * Format a naive-local `YYYY-MM-DD` string as `"30 Mar 2026"`. Returns
+ * `undefined` for missing/malformed inputs.
+ */
+export function formatLocalDate(local: string | undefined): string | undefined {
+  const d = parseLocalDate(local);
+  return d ? formatDatePart(d) : undefined;
+}
+
+/**
+ * Format a naive-local datetime range (`YYYY-MM-DDTHH:MM` pair) for display.
+ * Same-day ranges collapse to `"Mon, 1 Apr 2026 · 12:00 pm – 5:00 pm"`;
+ * cross-day ranges render the start weekday/date/time and end weekday/date/time
+ * separately. If `end` is missing, only the start is rendered.
+ */
+export function formatLocalDateTimeRange(
+  start: string | undefined,
+  end: string | undefined,
+): string | undefined {
+  const s = parseLocalDateTime(start);
+  if (!s) return undefined;
+  const e = parseLocalDateTime(end);
+  const sameDay =
+    e !== undefined &&
+    s.getFullYear() === e.getFullYear() &&
+    s.getMonth() === e.getMonth() &&
+    s.getDate() === e.getDate();
+  if (!e) return `${formatDatePart(s, { weekday: true })} \u00b7 ${formatTimePart(s)}`;
+  if (sameDay) {
+    return `${formatDatePart(s, { weekday: true })} \u00b7 ${formatTimePart(s)} \u2013 ${formatTimePart(e)}`;
+  }
+  return `${formatDatePart(s, { weekday: true })}, ${formatTimePart(s)} \u2013 ${formatDatePart(e, { weekday: true })}, ${formatTimePart(e)}`;
+}
+
 export function isLowReadRate(
   postedAt: string | undefined,
   readCount: number,
