@@ -69,6 +69,7 @@ func (h *Handler) registerMock(mux *http.ServeMux) {
 	// Consent forms — write
 	mux.HandleFunc("POST /api/web/2/staff/consentForms", jsonStub(http.StatusCreated, `{"consentFormId":301}`))
 	mux.HandleFunc("POST /api/web/2/staff/consentForms/drafts", jsonStub(http.StatusCreated, `{"consentFormDraftId":401}`))
+	mux.HandleFunc("POST /api/web/2/staff/consentForms/drafts/schedule", jsonStub(http.StatusOK, `{}`))
 	// Dispatched: Go ServeMux panics on `drafts/{id}` vs `{id}/updateDueDate`.
 	mux.HandleFunc("PUT /api/web/2/staff/consentForms/{first}/{second}", func(w http.ResponseWriter, r *http.Request) {
 		first, second := r.PathValue("first"), r.PathValue("second")
