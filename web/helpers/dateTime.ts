@@ -1,4 +1,4 @@
-import type { PGAnnouncement } from '~/data/mock-pg-announcements';
+import type { PGPost } from '~/data/mock-pg-announcements';
 
 /**
  * Get the day period based on the current hour.
@@ -140,8 +140,22 @@ export function isLowReadRate(
   return hoursElapsed >= 48 && readCount / total < 0.5;
 }
 
-export function getRelevantDate(announcement: PGAnnouncement): string | undefined {
-  if (announcement.status === 'posted') return announcement.postedAt;
-  if (announcement.status === 'scheduled') return announcement.scheduledAt;
-  return announcement.createdAt;
+/**
+ * The list's sort/display date for a `PGPost`, keyed off `kind` × `status`:
+ *
+ * - announcement + `posted` → `postedAt`
+ * - announcement + `scheduled` → `scheduledAt`
+ * - form + `open` / `closed` → `postedAt`
+ * - form + `scheduled` → `scheduledAt`
+ * - otherwise (draft / posting) → `createdAt`
+ */
+export function getRelevantDate(post: PGPost): string | undefined {
+  if (post.kind === 'announcement') {
+    if (post.status === 'posted') return post.postedAt;
+    if (post.status === 'scheduled') return post.scheduledAt;
+    return post.createdAt;
+  }
+  if (post.status === 'open' || post.status === 'closed') return post.postedAt;
+  if (post.status === 'scheduled') return post.scheduledAt;
+  return post.createdAt;
 }

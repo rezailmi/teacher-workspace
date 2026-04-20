@@ -23,3 +23,31 @@ export function ReadRate({ readCount, totalCount, className }: ReadRateProps) {
     </div>
   );
 }
+
+interface RespondedRateProps {
+  respondedCount: number;
+  totalCount: number;
+  className?: string;
+}
+
+/**
+ * Parallel to `ReadRate` for consent-form rows: "X / Y responded" with the
+ * same progress-bar + count visual so the list column reads uniformly across
+ * kinds.
+ */
+export function RespondedRate({ respondedCount, totalCount, className }: RespondedRateProps) {
+  if (totalCount === 0) {
+    return <span className="text-sm text-muted-foreground">{'\u2014'}</span>;
+  }
+
+  const percent = (respondedCount / totalCount) * 100;
+
+  return (
+    <div className={cn('flex w-[140px] items-center gap-2', className)}>
+      <Progress value={percent} className="flex-1" aria-label="Response progress" />
+      <span className="shrink-0 text-sm text-muted-foreground tabular-nums">
+        {respondedCount} / {totalCount} responded
+      </span>
+    </div>
+  );
+}

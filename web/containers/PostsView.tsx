@@ -8,12 +8,18 @@ import {
   Trash2,
   Users,
 } from 'lucide-react';
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { Link, useLoaderData, useNavigate, useRevalidator } from 'react-router';
 
-import { deleteAnnouncement, duplicateAnnouncement, loadPostsList } from '~/api/client';
+import {
+  deleteAnnouncement,
+  deleteConsentForm,
+  duplicateAnnouncement,
+  loadConsentPostsList,
+  loadPostsList,
+} from '~/api/client';
 import { PGError } from '~/api/errors';
-import { ReadRate } from '~/components/posts/ReadRate';
+import { ReadRate, RespondedRate } from '~/components/posts/ReadRate';
 import {
   Badge,
   Button,
@@ -33,48 +39,117 @@ import {
   TabsList,
   TabsTrigger,
 } from '~/components/ui';
-import { PG_STATUS_BADGE, requiresResponse } from '~/data/mock-pg-announcements';
-import type { PGAnnouncement } from '~/data/mock-pg-announcements';
+import {
+  PG_CONSENT_FORM_STATUS_BADGE,
+  PG_STATUS_BADGE,
+  isConsentFormId,
+  parsePostId,
+} from '~/data/mock-pg-announcements';
+import type { ConsentFormId, PGPost } from '~/data/mock-pg-announcements';
 import { formatDate, getRelevantDate, isLowReadRate } from '~/helpers/dateTime';
 import { notify } from '~/lib/notify';
 
 type PostTab = 'view-only' | 'with-responses';
 
+// Row augmented with `_date` and `_dateTs` so sorts/renders don't allocate
+// a new `Date` per keystroke. Precomputed once in the loader.
+type PostRowData = PGPost & { _date: string | undefined; _dateTs: number };
+
 // ─── Route loader ───────────────────────────────────────────────────────────
 
-export async function loader() {
-  return loadPostsList();
+const withDateTs = (p: PGPost): PostRowData => {
+  const date = getRelevantDate(p);
+  return { ...p, _date: date, _dateTs: date ? new Date(date).getTime() : 0 };
+};
+
+export async function loader(): Promise<PostRowData[]> {
+  const [announcements, forms] = await Promise.all([loadPostsList(), loadConsentPostsList()]);
+  return [...announcements, ...forms].map(withDateTs);
+}
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
+function postHref(p: PGPost): string {
+  return `/posts/${p.id}?kind=${p.kind === 'form' ? 'form' : 'announcement'}`;
+}
+
+// Tie-break: when two rows share the same timestamp, announcements render
+// before forms, then lexical ID order — keeps sort output stable across
+// re-renders regardless of the underlying `Array.sort` implementation.
+function comparePosts(a: PostRowData, b: PostRowData): number {
+  if (a._dateTs !== b._dateTs) return b._dateTs - a._dateTs;
+  if (a.kind !== b.kind) return a.kind === 'announcement' ? -1 : 1;
+  return a.id.localeCompare(b.id);
 }
 
 // ─── Component ──────────────────────────────────────────────────────────────
 
 const PostsView: React.FC = () => {
-  const navigate = useNavigate();
-  const announcements = useLoaderData<PGAnnouncement[]>();
+  const posts = useLoaderData<PostRowData[]>();
   const revalidator = useRevalidator();
   const [tab, setTab] = useState<PostTab>('view-only');
   const [searchQuery, setSearchQuery] = useState('');
 
   const filtered = useMemo(() => {
-    return announcements
-      .filter((a) => {
-        if (tab === 'view-only' && requiresResponse(a.responseType)) return false;
-        if (tab === 'with-responses' && !requiresResponse(a.responseType)) return false;
-
-        if (searchQuery) {
-          const q = searchQuery.toLowerCase();
-          return a.title.toLowerCase().includes(q);
-        }
+    const q = searchQuery.toLowerCase();
+    return posts
+      .filter((p) => {
+        if (tab === 'view-only' && p.kind === 'form') return false;
+        if (tab === 'with-responses' && p.kind !== 'form') return false;
+        if (q && !p.title.toLowerCase().includes(q)) return false;
         return true;
       })
-      .map((a) => {
-        const date = getRelevantDate(a);
-        return { ...a, _date: date, _dateTs: new Date(date ?? 0).getTime() };
-      })
-      .sort((a, b) => b._dateTs - a._dateTs);
-  }, [announcements, searchQuery, tab]);
+      .slice()
+      .sort(comparePosts);
+  }, [posts, searchQuery, tab]);
 
   const showResponseColumn = tab === 'with-responses';
+
+  const handleDuplicate = useCallback(
+    (row: PostRowData) => {
+      if (row.kind !== 'announcement') return;
+      duplicateAnnouncement({ postId: Number(row.id) })
+        .then(() => {
+          revalidator.revalidate();
+          notify.success('Post duplicated.');
+        })
+        .catch((err: unknown) => {
+          // Known PG errors are toasted globally;
+          // only fall back for unknown/network failures.
+          if (!(err instanceof PGError)) {
+            notify.error('Failed to duplicate post.');
+          }
+        });
+    },
+    [revalidator],
+  );
+
+  const handleDelete = useCallback(
+    async (row: PostRowData) => {
+      if (!confirm('Delete this post?')) return;
+      try {
+        if (row.kind === 'form') {
+          const parsed = parsePostId(row.id);
+          if (parsed && isConsentFormId(parsed)) {
+            await deleteConsentForm(parsed);
+          } else {
+            // Defensive: consent-form row without a `cf_*` ID shouldn't happen,
+            // but fall back to the raw string cast rather than silently skipping.
+            await deleteConsentForm(row.id as ConsentFormId);
+          }
+        } else {
+          await deleteAnnouncement(row.id);
+        }
+        revalidator.revalidate();
+        notify.success('Post deleted.');
+      } catch (err) {
+        if (!(err instanceof PGError)) {
+          notify.error('Failed to delete post.');
+        }
+      }
+    },
+    [revalidator],
+  );
 
   return (
     <div className="flex flex-col">
@@ -175,147 +250,14 @@ const PostsView: React.FC = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.map((announcement) => {
-                  const { totalCount, readCount } = announcement.stats;
-                  const showLowRead = isLowReadRate(announcement.postedAt, readCount, totalCount);
-                  const relevantDate = announcement._date;
-                  const isShared = announcement.ownership === 'shared';
-
-                  return (
-                    <TableRow
-                      key={announcement.id}
-                      className="cursor-pointer"
-                      onClick={() => navigate(`/posts/${announcement.id}`)}
-                    >
-                      {/* Title + description stacked */}
-                      <TableCell className="overflow-hidden pl-6 align-top whitespace-normal">
-                        <div className="min-w-0 py-1">
-                          <div className="flex items-center gap-1.5">
-                            <span className="truncate font-medium">{announcement.title}</span>
-                            {showLowRead && (
-                              <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-warning-foreground" />
-                            )}
-                          </div>
-                          {announcement.description && (
-                            <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                              {announcement.description}
-                            </p>
-                          )}
-                        </div>
-                      </TableCell>
-
-                      {/* Date */}
-                      <TableCell className="text-sm text-muted-foreground">
-                        <span
-                          className={
-                            announcement.status === 'scheduled'
-                              ? 'text-warning-foreground'
-                              : undefined
-                          }
-                        >
-                          {formatDate(relevantDate)}
-                        </span>
-                      </TableCell>
-
-                      {/* Status */}
-                      <TableCell>
-                        <Badge variant={PG_STATUS_BADGE[announcement.status].variant}>
-                          {PG_STATUS_BADGE[announcement.status].label}
-                        </Badge>
-                      </TableCell>
-
-                      {/* Owner */}
-                      <TableCell>
-                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                          {isShared ? (
-                            <>
-                              <Users className="h-3.5 w-3.5 shrink-0" />
-                              <span>Shared</span>
-                            </>
-                          ) : (
-                            <span>Mine</span>
-                          )}
-                        </div>
-                      </TableCell>
-
-                      {/* Read / Response */}
-                      <TableCell className="pr-6">
-                        {announcement.status !== 'posted' ? (
-                          <span className="text-sm text-muted-foreground">{'\u2014'}</span>
-                        ) : (
-                          <ReadRate readCount={readCount} totalCount={totalCount} />
-                        )}
-                      </TableCell>
-
-                      {/* Actions */}
-                      <TableCell className="w-[48px] pr-2 text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger
-                            render={
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                                aria-label="More actions"
-                                onClick={(e) => e.stopPropagation()}
-                              />
-                            }
-                          >
-                            <MoreHorizontal className="h-4 w-4" />
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                duplicateAnnouncement({
-                                  postId: Number(announcement.id),
-                                })
-                                  .then(() => {
-                                    revalidator.revalidate();
-                                    notify.success('Post duplicated.');
-                                  })
-                                  .catch((err: unknown) => {
-                                    // Known PG errors are toasted globally;
-                                    // only fall back for unknown/network failures.
-                                    if (!(err instanceof PGError)) {
-                                      notify.error('Failed to duplicate post.');
-                                    }
-                                  });
-                              }}
-                            >
-                              <Copy className="mr-2 h-4 w-4" />
-                              Duplicate
-                            </DropdownMenuItem>
-                            {!isShared && (
-                              <>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                  className="text-destructive focus:text-destructive"
-                                  onClick={async (e) => {
-                                    e.stopPropagation();
-                                    if (!confirm('Delete this post?')) return;
-                                    try {
-                                      await deleteAnnouncement(announcement.id);
-                                      revalidator.revalidate();
-                                      notify.success('Post deleted.');
-                                    } catch (err) {
-                                      if (!(err instanceof PGError)) {
-                                        notify.error('Failed to delete post.');
-                                      }
-                                    }
-                                  }}
-                                >
-                                  <Trash2 className="mr-2 h-4 w-4" />
-                                  Delete
-                                </DropdownMenuItem>
-                              </>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
+                {filtered.map((row) => (
+                  <PostRow
+                    key={row.id}
+                    row={row}
+                    onDuplicate={handleDuplicate}
+                    onDelete={handleDelete}
+                  />
+                ))}
               </TableBody>
             </Table>
           )}
@@ -323,6 +265,170 @@ const PostsView: React.FC = () => {
       </div>
     </div>
   );
+};
+
+// ─── Row ────────────────────────────────────────────────────────────────────
+
+interface PostRowProps {
+  row: PostRowData;
+  onDuplicate: (row: PostRowData) => void;
+  onDelete: (row: PostRowData) => void;
+}
+
+const PostRowInner: React.FC<PostRowProps> = ({ row, onDuplicate, onDelete }) => {
+  const navigate = useNavigate();
+  const isShared = row.ownership === 'shared';
+
+  const statusBadge =
+    row.kind === 'form' ? PG_CONSENT_FORM_STATUS_BADGE[row.status] : PG_STATUS_BADGE[row.status];
+
+  const showLowRead =
+    row.kind === 'announcement' &&
+    row.status === 'posted' &&
+    isLowReadRate(row.postedAt, row.stats.readCount, row.stats.totalCount);
+
+  return (
+    <TableRow className="cursor-pointer" onClick={() => navigate(postHref(row))}>
+      {/* Title + description stacked */}
+      <TableCell className="overflow-hidden pl-6 align-top whitespace-normal">
+        <div className="min-w-0 py-1">
+          <div className="flex items-center gap-1.5">
+            <span className="truncate font-medium">{row.title}</span>
+            {showLowRead && (
+              <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-warning-foreground" />
+            )}
+          </div>
+          {row.description && (
+            <p className="mt-0.5 truncate text-xs text-muted-foreground">{row.description}</p>
+          )}
+        </div>
+      </TableCell>
+
+      {/* Date */}
+      <TableCell className="text-sm text-muted-foreground">
+        <span className={row.status === 'scheduled' ? 'text-warning-foreground' : undefined}>
+          {formatDate(row._date)}
+        </span>
+      </TableCell>
+
+      {/* Status */}
+      <TableCell>
+        <Badge variant={statusBadge.variant}>{statusBadge.label}</Badge>
+      </TableCell>
+
+      {/* Owner */}
+      <TableCell>
+        <div className="flex items-center gap-1 text-sm text-muted-foreground">
+          {isShared ? (
+            <>
+              <Users className="h-3.5 w-3.5 shrink-0" />
+              <span>Shared</span>
+            </>
+          ) : (
+            <span>Mine</span>
+          )}
+        </div>
+      </TableCell>
+
+      {/* Read / Response */}
+      <TableCell className="pr-6">
+        <PostRowResponseCell row={row} />
+      </TableCell>
+
+      {/* Actions */}
+      <TableCell className="w-[48px] pr-2 text-right">
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                aria-label="More actions"
+                onClick={(e) => e.stopPropagation()}
+              />
+            }
+          >
+            <MoreHorizontal className="h-4 w-4" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {row.kind === 'announcement' && (
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDuplicate(row);
+                }}
+              >
+                <Copy className="mr-2 h-4 w-4" />
+                Duplicate
+              </DropdownMenuItem>
+            )}
+            {!isShared && (
+              <>
+                {row.kind === 'announcement' && <DropdownMenuSeparator />}
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void onDelete(row);
+                  }}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete
+                </DropdownMenuItem>
+              </>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </TableCell>
+    </TableRow>
+  );
+};
+
+/**
+ * Row memoisation key: (id, status, kind, ownership) + the kind-specific
+ * counts that actually drive rendering. Skipping equal re-renders removes
+ * the per-keystroke ~100-row refresh the search input caused.
+ */
+const PostRow = React.memo(PostRowInner, (prev, next) => {
+  if (prev.onDuplicate !== next.onDuplicate || prev.onDelete !== next.onDelete) return false;
+  const a = prev.row;
+  const b = next.row;
+  if (a.id !== b.id) return false;
+  if (a.status !== b.status) return false;
+  if (a.kind !== b.kind) return false;
+  if (a.ownership !== b.ownership) return false;
+  if (a.title !== b.title) return false;
+  if (a.description !== b.description) return false;
+  if (a._date !== b._date) return false;
+  if (a.stats.totalCount !== b.stats.totalCount) return false;
+  if (a.kind === 'announcement' && b.kind === 'announcement') {
+    if (a.stats.readCount !== b.stats.readCount) return false;
+    if (a.postedAt !== b.postedAt) return false;
+  }
+  if (a.kind === 'form' && b.kind === 'form') {
+    if (a.stats.yesCount !== b.stats.yesCount) return false;
+    if (a.stats.noCount !== b.stats.noCount) return false;
+    if (a.stats.pendingCount !== b.stats.pendingCount) return false;
+  }
+  return true;
+});
+
+// ─── Response cell ──────────────────────────────────────────────────────────
+
+const PostRowResponseCell: React.FC<{ row: PostRowData }> = ({ row }) => {
+  if (row.kind === 'announcement') {
+    if (row.status !== 'posted') {
+      return <span className="text-sm text-muted-foreground">{'\u2014'}</span>;
+    }
+    return <ReadRate readCount={row.stats.readCount} totalCount={row.stats.totalCount} />;
+  }
+
+  if (row.status !== 'open' && row.status !== 'closed') {
+    return <span className="text-sm text-muted-foreground">{'\u2014'}</span>;
+  }
+  const respondedCount = row.stats.totalCount - row.stats.pendingCount;
+  return <RespondedRate respondedCount={respondedCount} totalCount={row.stats.totalCount} />;
 };
 
 export { PostsView as Component };
