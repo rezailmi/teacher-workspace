@@ -1,9 +1,7 @@
-import { Check, Clock, Columns3, Download, Search, SlidersHorizontal, X } from 'lucide-react';
+import { Check, Clock, X } from 'lucide-react';
 
 import {
   Badge,
-  Button,
-  Input,
   Table,
   TableBody,
   TableCell,
@@ -31,36 +29,7 @@ type RecipientReadTableProps =
     };
 
 function Toolbar({ count }: { count: number }) {
-  return (
-    <>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="relative max-w-sm flex-1">
-          <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search student or parent..."
-            className="pl-9"
-            aria-label="Search student or parent"
-          />
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="secondary" size="sm" disabled>
-            <SlidersHorizontal className="h-4 w-4" />
-            Filter
-          </Button>
-          <Button variant="secondary" size="sm" disabled>
-            <Columns3 className="h-4 w-4" />
-            Columns
-          </Button>
-          <Button variant="secondary" size="sm" disabled>
-            <Download className="h-4 w-4" />
-            Export
-          </Button>
-        </div>
-      </div>
-
-      <p className="text-sm text-muted-foreground">{count} recipients</p>
-    </>
-  );
+  return <p className="text-sm text-muted-foreground">{count} recipients</p>;
 }
 
 function AnnouncementTable({

@@ -27,12 +27,8 @@ interface ShortcutItem {
 interface ShortcutsSectionProps {
   /** Currently-enabled shortcut keys. */
   value: string[];
-  /**
-   * Called with the next full list of enabled keys. Simple `{value, onChange}`
-   * shape — the container owns the reducer and fans out to a `TOGGLE_SHORTCUT`
-   * dispatch internally.
-   */
-  onToggle: (key: string, enabled: boolean) => void;
+  /** Called with the next full list of enabled keys — mirrors the other sections. */
+  onChange: (next: string[]) => void;
   /** PG flag: `absence_submission` gates the Declare-travels shortcut. */
   declareTravelsEnabled: boolean;
   /**
@@ -45,7 +41,7 @@ interface ShortcutsSectionProps {
 
 function ShortcutsSection({
   value,
-  onToggle,
+  onChange,
   declareTravelsEnabled,
   editContactEnabled,
 }: ShortcutsSectionProps) {
@@ -95,7 +91,11 @@ function ShortcutsSection({
               <Checkbox
                 id={inputId}
                 checked={checked}
-                onCheckedChange={(next) => onToggle(item.key, next === true)}
+                onCheckedChange={(next) => {
+                  const enabled = next === true;
+                  if (enabled && !checked) onChange([...value, item.key]);
+                  else if (!enabled && checked) onChange(value.filter((k) => k !== item.key));
+                }}
                 className="mt-0.5"
               />
               <div>

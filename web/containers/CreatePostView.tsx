@@ -207,7 +207,7 @@ type PostFormAction =
   | { type: 'ADD_WEBSITE_LINK' }
   | { type: 'REMOVE_WEBSITE_LINK'; index: number }
   | { type: 'UPDATE_WEBSITE_LINK'; index: number; field: 'url' | 'title'; value: string }
-  | { type: 'TOGGLE_SHORTCUT'; key: string; enabled: boolean };
+  | { type: 'SET_SHORTCUTS'; payload: string[] };
 
 const INITIAL_STATE: PostFormState = {
   // Default matches the type-picker's default selection ("Post"). The picker
@@ -352,16 +352,8 @@ function formReducer(state: PostFormState, action: PostFormAction): PostFormStat
         ),
       };
 
-    case 'TOGGLE_SHORTCUT': {
-      const already = state.shortcuts.includes(action.key);
-      if (action.enabled && !already) {
-        return { ...state, shortcuts: [...state.shortcuts, action.key] };
-      }
-      if (!action.enabled && already) {
-        return { ...state, shortcuts: state.shortcuts.filter((s) => s !== action.key) };
-      }
-      return state;
-    }
+    case 'SET_SHORTCUTS':
+      return { ...state, shortcuts: action.payload };
 
     default:
       return state;
@@ -876,7 +868,7 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
                   shortcuts are gated off, so there's no empty subsection. */}
               <ShortcutsSection
                 value={state.shortcuts}
-                onToggle={(key, enabled) => dispatch({ type: 'TOGGLE_SHORTCUT', key, enabled })}
+                onChange={(next) => dispatch({ type: 'SET_SHORTCUTS', payload: next })}
                 declareTravelsEnabled={declareTravelsEnabled}
                 editContactEnabled={editContactEnabled}
               />
