@@ -14,6 +14,7 @@ import {
   fetchSchoolStaff,
   fetchSchoolStudents,
   fetchSession,
+  getConfigs,
   loadConsentPostDetail,
   loadPostDetail,
   updateConsentFormDraft,
@@ -22,6 +23,7 @@ import {
 import { PGError, PGValidationError } from '~/api/errors';
 import { buildPostPayload } from '~/api/mappers';
 import type {
+  PGApiConfig,
   PGApiCreateAnnouncementPayload,
   PGApiCreateConsentFormDraftPayload,
   PGApiCreateConsentFormPayload,
@@ -86,6 +88,12 @@ interface CreatePostLoaderData {
   groupsAssigned: PGApiGroupsAssigned;
   /** Source data for the Custom Groups tab on the recipient selector. */
   customGroups: PGApiCustomGroupSummary[];
+  /**
+   * PG feature-flag payload. Read via the module-scope cache in
+   * `~/api/client` so repeated route entries cost one RTT per 15 min. Gates
+   * schedule-send and per-shortcut UI; missing flags render as off.
+   */
+  configs: PGApiConfig;
 }
 
 /**
@@ -118,7 +126,7 @@ export async function loader({
 }: LoaderFunctionArgs): Promise<CreatePostLoaderData> {
   const url = new URL(request.url);
   const kindParam = url.searchParams.get('kind');
-  const [detail, classes, staff, students, session, groupsAssigned, customGroupsList] =
+  const [detail, classes, staff, students, session, groupsAssigned, customGroupsList, configs] =
     await Promise.all([
       params.id ? loadPostByKind(params.id, kindParam) : Promise.resolve(null),
       fetchSchoolClasses(),
@@ -127,6 +135,7 @@ export async function loader({
       fetchSession(),
       fetchGroupsAssigned(),
       fetchCustomGroups(),
+      getConfigs(),
     ]);
   return {
     detail,
@@ -136,6 +145,7 @@ export async function loader({
     session,
     groupsAssigned,
     customGroups: customGroupsList.customGroups,
+    configs,
   };
 }
 
@@ -487,8 +497,12 @@ function postToFormState(
 
 function CreatePostViewInner({ editId }: { editId?: string }) {
   const navigate = useNavigate();
-  const { detail, classes, staff, students, session, groupsAssigned, customGroups } =
+  const { detail, classes, staff, students, session, groupsAssigned, customGroups, configs } =
     useLoaderData<CreatePostLoaderData>();
+  // Gate the Schedule side of the split button on PG's flag. Missing flag ⇒
+  // treat as off (silent fallback) so the UI never promises behaviour PG has
+  // turned off for the school.
+  const scheduleEnabled = configs.flags.schedule_announcement_form_post?.enabled === true;
   const [showSendDialog, setShowSendDialog] = useState(false);
   const [showScheduleDialog, setShowScheduleDialog] = useState(false);
   // Preview defaults to visible on desktop, hidden on mobile. Once the user
@@ -674,16 +688,16 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
               {showPreview ? 'Hide Preview' : 'Show Preview'}
             </Button>
 
-            {/* TODO(phase-9): gate the Schedule menu entry on
-                `configs.flags.schedule_announcement_form_post.enabled` once
-                `getConfigs()` lands. Until then the split button exposes
-                Schedule for both kinds; the consent-form path round-trips
+            {/* Schedule action is gated on PG's `schedule_announcement_form_post`
+                flag. When disabled, `onSchedule` is left undefined so the
+                dropdown's "Schedule for later" entry still renders but
+                becomes a no-op — the consent-form path already round-trips
                 via `POST /consentForms/drafts` with `scheduledSendAt` set
                 (see `handleScheduleConfirm`). */}
             <SplitPostButton
               disabled={!isFormValid || isSaving}
               onPost={() => setShowSendDialog(true)}
-              onSchedule={() => setShowScheduleDialog(true)}
+              onSchedule={scheduleEnabled ? () => setShowScheduleDialog(true) : undefined}
             />
           </div>
         </div>

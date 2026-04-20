@@ -15,10 +15,12 @@ import {
   deleteAnnouncement,
   deleteConsentForm,
   duplicateAnnouncement,
+  getConfigs,
   loadConsentPostsList,
   loadPostsList,
 } from '~/api/client';
 import { PGError } from '~/api/errors';
+import type { PGApiConfig } from '~/api/types';
 import { ReadRate, RespondedRate } from '~/components/posts/ReadRate';
 import {
   Badge,
@@ -55,6 +57,12 @@ type PostTab = 'view-only' | 'with-responses';
 // a new `Date` per keystroke. Precomputed once in the loader.
 type PostRowData = PGPost & { _date: string | undefined; _dateTs: number };
 
+interface PostsLoaderData {
+  rows: PostRowData[];
+  /** PG feature flags; gates row-level actions (e.g. duplicate). */
+  configs: PGApiConfig;
+}
+
 // ─── Route loader ───────────────────────────────────────────────────────────
 
 const withDateTs = (p: PGPost): PostRowData => {
@@ -62,9 +70,13 @@ const withDateTs = (p: PGPost): PostRowData => {
   return { ...p, _date: date, _dateTs: date ? new Date(date).getTime() : 0 };
 };
 
-export async function loader(): Promise<PostRowData[]> {
-  const [announcements, forms] = await Promise.all([loadPostsList(), loadConsentPostsList()]);
-  return [...announcements, ...forms].map(withDateTs);
+export async function loader(): Promise<PostsLoaderData> {
+  const [announcements, forms, configs] = await Promise.all([
+    loadPostsList(),
+    loadConsentPostsList(),
+    getConfigs(),
+  ]);
+  return { rows: [...announcements, ...forms].map(withDateTs), configs };
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -85,10 +97,14 @@ function comparePosts(a: PostRowData, b: PostRowData): number {
 // ─── Component ──────────────────────────────────────────────────────────────
 
 const PostsView: React.FC = () => {
-  const posts = useLoaderData<PostRowData[]>();
+  const { rows: posts, configs } = useLoaderData<PostsLoaderData>();
   const revalidator = useRevalidator();
   const [tab, setTab] = useState<PostTab>('view-only');
   const [searchQuery, setSearchQuery] = useState('');
+  // `duplicate_announcement_form_post` gates the Duplicate row action — the
+  // endpoint is still safe to call, but hiding the affordance matches the
+  // PG UI when schools have the feature off.
+  const duplicateEnabled = configs.flags.duplicate_announcement_form_post?.enabled === true;
 
   const filtered = useMemo(() => {
     const q = searchQuery.toLowerCase();
@@ -254,6 +270,7 @@ const PostsView: React.FC = () => {
                   <PostRow
                     key={row.id}
                     row={row}
+                    duplicateEnabled={duplicateEnabled}
                     onDuplicate={handleDuplicate}
                     onDelete={handleDelete}
                   />
@@ -271,13 +288,16 @@ const PostsView: React.FC = () => {
 
 interface PostRowProps {
   row: PostRowData;
+  /** When false, the Duplicate dropdown item is hidden (announcement rows only). */
+  duplicateEnabled: boolean;
   onDuplicate: (row: PostRowData) => void;
   onDelete: (row: PostRowData) => void;
 }
 
-const PostRowInner: React.FC<PostRowProps> = ({ row, onDuplicate, onDelete }) => {
+const PostRowInner: React.FC<PostRowProps> = ({ row, duplicateEnabled, onDuplicate, onDelete }) => {
   const navigate = useNavigate();
   const isShared = row.ownership === 'shared';
+  const showDuplicate = row.kind === 'announcement' && duplicateEnabled;
 
   const statusBadge =
     row.kind === 'form' ? PG_CONSENT_FORM_STATUS_BADGE[row.status] : PG_STATUS_BADGE[row.status];
@@ -352,7 +372,7 @@ const PostRowInner: React.FC<PostRowProps> = ({ row, onDuplicate, onDelete }) =>
             <MoreHorizontal className="h-4 w-4" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            {row.kind === 'announcement' && (
+            {showDuplicate && (
               <DropdownMenuItem
                 onClick={(e) => {
                   e.stopPropagation();
@@ -365,7 +385,7 @@ const PostRowInner: React.FC<PostRowProps> = ({ row, onDuplicate, onDelete }) =>
             )}
             {!isShared && (
               <>
-                {row.kind === 'announcement' && <DropdownMenuSeparator />}
+                {showDuplicate && <DropdownMenuSeparator />}
                 <DropdownMenuItem
                   className="text-destructive focus:text-destructive"
                   onClick={(e) => {
@@ -392,6 +412,7 @@ const PostRowInner: React.FC<PostRowProps> = ({ row, onDuplicate, onDelete }) =>
  */
 const PostRow = React.memo(PostRowInner, (prev, next) => {
   if (prev.onDuplicate !== next.onDuplicate || prev.onDelete !== next.onDelete) return false;
+  if (prev.duplicateEnabled !== next.duplicateEnabled) return false;
   const a = prev.row;
   const b = next.row;
   if (a.id !== b.id) return false;
