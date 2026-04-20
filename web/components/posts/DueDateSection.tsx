@@ -10,7 +10,7 @@ function DueDateSection({ value, onChange, required = false }: DueDateSectionPro
   return (
     <div className="space-y-1.5">
       <Label htmlFor="due-date">
-        Due Date
+        Due Date (SGT)
         {required && <span className="text-destructive"> *</span>}
       </Label>
       <p className="text-sm text-muted-foreground">

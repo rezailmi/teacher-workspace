@@ -445,6 +445,11 @@ export function toPGConsentFormDraftPayload(
  * local time) into an ISO-8601 anchored to Asia/Singapore (+08:00). Mirrors
  * `SchedulePickerDialog.toSgtIso` — the naive string is interpreted as SGT
  * rather than the browser's local TZ, which matches teacher expectations.
+ *
+ * Constraint: callers must surface this SGT-anchor assumption to the user
+ * (the datetime inputs carry an "(SGT)" suffix). A teacher on a non-SGT
+ * browser typing "09:00" will have it stamped as `09:00+08:00` — numerically
+ * lossless on round-trip, but they should know they're picking SGT time.
  */
 function localDateTimeToSgtIso(localDateTime: string): string {
   const [datePart, timePart] = localDateTime.split('T');

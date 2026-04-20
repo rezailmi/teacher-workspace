@@ -64,7 +64,7 @@ function ReminderSection({ value, onChange }: ReminderSectionProps) {
   }
 
   const showPicker = value.type === 'ONE_TIME' || value.type === 'DAILY';
-  const pickerLabel = value.type === 'DAILY' ? 'Starting' : 'Date';
+  const pickerLabel = value.type === 'DAILY' ? 'Starting (SGT)' : 'Date (SGT)';
   const displayDate = value.type === 'NONE' ? stashedDateRef.current : value.date;
 
   return (

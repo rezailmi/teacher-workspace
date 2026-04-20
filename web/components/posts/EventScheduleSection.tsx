@@ -14,21 +14,27 @@ interface EventScheduleSectionProps {
 // format so Phase 2's mapper can convert to PG's ISO-with-offset at the
 // boundary (matching `SchedulePickerDialog.toSgtIso`).
 
-/** Returns `date + hoursToAdd` in the same `YYYY-MM-DDTHH:MM` local-string shape. */
-function addHoursToLocal(iso: string, hoursToAdd: number): string {
-  // Parse without timezone interpretation — datetime-local strings are naive.
+/**
+ * Add one hour to a `YYYY-MM-DDTHH:MM` naive string via pure integer math —
+ * no `Date` constructor, so the result is immune to the browser's local
+ * DST transitions. Day carry handles the 23:xx → next-day-00:xx boundary;
+ * event windows shorter than a day don't need month carry.
+ */
+function addHourToLocal(iso: string): string {
   const [datePart, timePart] = iso.split('T');
   if (!datePart || !timePart) return iso;
   const [y, mo, d] = datePart.split('-').map(Number);
   const [h, mi] = timePart.split(':').map(Number);
-  const dt = new Date(y, (mo ?? 1) - 1, d, h, mi);
-  dt.setHours(dt.getHours() + hoursToAdd);
-  const yy = dt.getFullYear();
-  const mm = String(dt.getMonth() + 1).padStart(2, '0');
-  const dd = String(dt.getDate()).padStart(2, '0');
-  const hh = String(dt.getHours()).padStart(2, '0');
-  const mmin = String(dt.getMinutes()).padStart(2, '0');
-  return `${yy}-${mm}-${dd}T${hh}:${mmin}`;
+  if ([y, mo, d, h, mi].some((n) => !Number.isFinite(n))) return iso;
+
+  let nextH = (h ?? 0) + 1;
+  let nextD = d ?? 1;
+  if (nextH >= 24) {
+    nextH -= 24;
+    nextD += 1;
+  }
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${y}-${pad(mo ?? 1)}-${pad(nextD)}T${pad(nextH)}:${pad(mi ?? 0)}`;
 }
 
 function EventScheduleSection({ value, onChange }: EventScheduleSectionProps) {
@@ -49,7 +55,7 @@ function EventScheduleSection({ value, onChange }: EventScheduleSectionProps) {
     let nextEnd = end;
     // If start is after current end (or end is empty), auto-adjust end → start + 1h.
     if (!end || next >= end) {
-      nextEnd = addHoursToLocal(next, 1);
+      nextEnd = addHourToLocal(next);
     }
     onChange({ start: next, end: nextEnd, venue: value?.venue });
   }
@@ -62,7 +68,7 @@ function EventScheduleSection({ value, onChange }: EventScheduleSectionProps) {
         return;
       }
       // Snap end back to start + 1h rather than leaving an invalid empty range.
-      onChange({ start, end: addHoursToLocal(start, 1), venue: value?.venue });
+      onChange({ start, end: addHourToLocal(start), venue: value?.venue });
       return;
     }
     onChange({ start: start || next, end: next, venue: value?.venue });
@@ -79,7 +85,7 @@ function EventScheduleSection({ value, onChange }: EventScheduleSectionProps) {
 
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1.5">
-          <Label htmlFor="event-start">Start</Label>
+          <Label htmlFor="event-start">Start (SGT)</Label>
           <Input
             id="event-start"
             type="datetime-local"
@@ -88,7 +94,7 @@ function EventScheduleSection({ value, onChange }: EventScheduleSectionProps) {
           />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="event-end">End</Label>
+          <Label htmlFor="event-end">End (SGT)</Label>
           <Input
             id="event-end"
             type="datetime-local"
