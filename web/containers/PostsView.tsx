@@ -41,13 +41,8 @@ import {
   TabsList,
   TabsTrigger,
 } from '~/components/ui';
-import {
-  PG_CONSENT_FORM_STATUS_BADGE,
-  PG_STATUS_BADGE,
-  isConsentFormId,
-  parsePostId,
-} from '~/data/mock-pg-announcements';
-import type { ConsentFormId, PGPost } from '~/data/mock-pg-announcements';
+import { PG_CONSENT_FORM_STATUS_BADGE, PG_STATUS_BADGE } from '~/data/mock-pg-announcements';
+import type { PGPost } from '~/data/mock-pg-announcements';
 import { formatDate, getRelevantDate, isLowReadRate } from '~/helpers/dateTime';
 import { notify } from '~/lib/notify';
 
@@ -145,14 +140,7 @@ const PostsView: React.FC = () => {
       if (!confirm('Delete this post?')) return;
       try {
         if (row.kind === 'form') {
-          const parsed = parsePostId(row.id);
-          if (parsed && isConsentFormId(parsed)) {
-            await deleteConsentForm(parsed);
-          } else {
-            // Defensive: consent-form row without a `cf_*` ID shouldn't happen,
-            // but fall back to the raw string cast rather than silently skipping.
-            await deleteConsentForm(row.id as ConsentFormId);
-          }
+          await deleteConsentForm(row.id);
         } else {
           await deleteAnnouncement(row.id);
         }

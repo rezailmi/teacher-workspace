@@ -1,6 +1,8 @@
 import type {
+  AnnouncementId,
+  ConsentFormId,
   FormQuestion,
-  PGAnnouncement,
+  PGAnnouncementPost,
   PGAnnouncementTarget,
   PGConsentFormHistoryEntry,
   PGConsentFormPost,
@@ -30,14 +32,14 @@ import type {
 } from './types';
 
 /**
- * Map a list-endpoint summary to a PGAnnouncement.
+ * Map a list-endpoint summary to a PGAnnouncementPost.
  * Fields the API doesn't provide (description, responseType, recipients, response stats)
  * are filled with safe defaults.
  */
 export function mapAnnouncementSummary(
   api: PGApiAnnouncementSummary,
   ownership: PGOwnership,
-): PGAnnouncement {
+): PGAnnouncementPost {
   const status = toPGStatus(api.status);
   const totalCount = api.readMetrics?.totalStudents ?? 0;
   const readCount = api.readMetrics
@@ -46,7 +48,7 @@ export function mapAnnouncementSummary(
 
   return {
     kind: 'announcement',
-    id: String(api.postId),
+    id: String(api.postId) as AnnouncementId,
     title: api.title,
     description: '',
     status,
@@ -72,7 +74,7 @@ export function mapAnnouncementSummary(
  * PG's detail embeds read status on `students[].isRead`; per-student `readAt`
  * is not exposed by PG, so `respondedAt` is left undefined.
  */
-export function mapAnnouncementDetail(detail: PGApiAnnouncementDetail): PGAnnouncement {
+export function mapAnnouncementDetail(detail: PGApiAnnouncementDetail): PGAnnouncementPost {
   const status = toPGStatus(detail.status);
   const totalCount = detail.students.length;
   const readCount = detail.students.filter((s) => s.isRead).length;
@@ -94,7 +96,7 @@ export function mapAnnouncementDetail(detail: PGApiAnnouncementDetail): PGAnnoun
 
   return {
     kind: 'announcement',
-    id: String(detail.announcementId),
+    id: String(detail.announcementId) as AnnouncementId,
     title: detail.title,
     description: extractTextFromTiptap(detail.richTextContent),
     richTextContent,
@@ -168,7 +170,7 @@ export function mapConsentFormSummaryToPost(
 
   return {
     kind: 'form',
-    id: api.id,
+    id: `cf_${api.postId}` as ConsentFormId,
     title: api.title,
     description: '',
     status,
@@ -260,7 +262,7 @@ export function mapConsentFormDetail(detail: PGApiConsentFormDetail): PGConsentF
 
   return {
     kind: 'form',
-    id: `cf_${detail.consentFormId}`,
+    id: `cf_${detail.consentFormId}` as ConsentFormId,
     title: detail.title,
     description: extractTextFromTiptap(detail.richTextContent),
     richTextContent,

@@ -1,6 +1,7 @@
 import type {
+  AnnouncementId,
   ConsentFormId,
-  PGAnnouncement,
+  PGAnnouncementPost,
   PGConsentFormPost,
 } from '~/data/mock-pg-announcements';
 import { notify } from '~/lib/notify';
@@ -210,7 +211,7 @@ function fetchSharedAnnouncements() {
   );
 }
 
-async function fetchAnnouncementDetail(postId: string): Promise<PGApiAnnouncementDetail> {
+async function fetchAnnouncementDetail(postId: AnnouncementId): Promise<PGApiAnnouncementDetail> {
   // pgw-web wraps single-detail responses as `body: [<detail>]`; unwrap the array.
   // Fixture mirrors that shape so mock mode stays in lockstep.
   const arr = await fetchApiSafe<PGApiAnnouncementDetail[]>(
@@ -250,7 +251,7 @@ export function duplicateAnnouncement(payload: PGApiDuplicatePayload) {
 }
 
 /** Delete a posted announcement. */
-export function deleteAnnouncement(postId: string) {
+export function deleteAnnouncement(postId: AnnouncementId) {
   return deleteApi(`/announcements/${postId}`);
 }
 
@@ -261,14 +262,14 @@ export function deleteDraft(draftId: number) {
 
 // ─── Composed loaders ───────────────────────────────────────────────────────
 
-export async function loadPostsList(): Promise<PGAnnouncement[]> {
+export async function loadPostsList(): Promise<PGAnnouncementPost[]> {
   const [own, shared] = await Promise.all([fetchAnnouncements(), fetchSharedAnnouncements()]);
   const mappedOwn = own.map((p) => mapAnnouncementSummary(p, 'mine'));
   const mappedShared = shared.map((p) => mapAnnouncementSummary(p, 'shared'));
   return mergeAndDedup(mappedOwn, mappedShared);
 }
 
-export async function loadPostDetail(postId: string): Promise<PGAnnouncement> {
+export async function loadPostDetail(postId: AnnouncementId): Promise<PGAnnouncementPost> {
   const detail = await fetchAnnouncementDetail(postId);
   return mapAnnouncementDetail(detail);
 }

@@ -1,3 +1,5 @@
+import type { PGApiConsentFormHistoryEntry } from '~/api/types';
+
 export type PGStatus = 'posted' | 'scheduled' | 'draft' | 'posting';
 export type ResponseType = 'view-only' | 'acknowledge' | 'yes-no';
 
@@ -80,13 +82,13 @@ export interface PGAnnouncementStats {
   noCount: number;
 }
 
-export interface PGAnnouncement {
+export interface PGAnnouncementPost {
   /**
    * Discriminant for the `PGPost` union. `'announcement'` routes to
    * `/announcements`; `'form'` (on `PGConsentFormPost`) routes to `/consentForms`.
    */
   kind: 'announcement';
-  id: string;
+  id: AnnouncementId;
   title: string;
   /** Plain-text derivation of `richTextContent`; kept for list/preview display. */
   description: string;
@@ -140,12 +142,7 @@ export interface PGEvent {
   venue?: string;
 }
 
-export interface PGConsentFormHistoryEntry {
-  historyId: number;
-  action: string;
-  actionAt: string;
-  actionBy: string;
-}
+export type PGConsentFormHistoryEntry = PGApiConsentFormHistoryEntry;
 
 /**
  * Per-student consent-form response. Distinct from `PGRecipient` (announcement
@@ -188,7 +185,7 @@ export const PG_CONSENT_FORM_STATUS_BADGE: Record<
  */
 export interface PGConsentFormPost {
   kind: 'form';
-  id: string;
+  id: ConsentFormId;
   title: string;
   description: string;
   richTextContent?: Record<string, unknown> | null;
@@ -220,7 +217,10 @@ export interface PGConsentFormPost {
  * A post in the TW UI — either an announcement or a consent form. Pick the
  * endpoint, render shape, and payload mapper by narrowing on `kind`.
  */
-export type PGPost = PGAnnouncement | PGConsentFormPost;
+export type PGPost = PGAnnouncementPost | PGConsentFormPost;
+
+/** @deprecated Use `PGAnnouncementPost`. */
+export type PGAnnouncement = PGAnnouncementPost;
 
 // ─── Branded IDs + type guards ────────────────────────────────────────────────
 

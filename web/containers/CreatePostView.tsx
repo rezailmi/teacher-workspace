@@ -115,13 +115,15 @@ async function loadPostByKind(rawId: string, kindParam: string | null): Promise<
     return loadConsentPostDetail(parsed);
   }
   if (kindParam === 'announcement') {
-    return loadPostDetail(rawId);
+    const parsed = parsePostId(rawId);
+    if (!parsed || isConsentFormId(parsed)) return null;
+    return loadPostDetail(parsed);
   }
   // No explicit kind in the URL — fall back to ID-shape probing so that
   // direct pastes of `/posts/cf_123/edit` still route to the right loader.
   const parsed = parsePostId(rawId);
   if (!parsed) return null;
-  return isConsentFormId(parsed) ? loadConsentPostDetail(parsed) : loadPostDetail(rawId);
+  return isConsentFormId(parsed) ? loadConsentPostDetail(parsed) : loadPostDetail(parsed);
 }
 
 export async function loader({

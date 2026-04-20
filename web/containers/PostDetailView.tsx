@@ -14,7 +14,7 @@ import {
   parsePostId,
   PG_CONSENT_FORM_STATUS_BADGE,
   PG_STATUS_BADGE,
-  type PGAnnouncement,
+  type PGAnnouncementPost,
   type PGConsentFormPost,
   type PGPost,
 } from '~/data/mock-pg-announcements';
@@ -49,13 +49,17 @@ export async function loader({ params, request }: LoaderFunctionArgs): Promise<P
     return loadConsentPostDetail(parsed);
   }
   if (kindParam === 'announcement') {
-    return loadPostDetail(id);
+    const parsed = parsePostId(id);
+    if (!parsed || isConsentFormId(parsed)) {
+      throw new Response('Not Found', { status: 404 });
+    }
+    return loadPostDetail(parsed);
   }
 
   // Fallback: infer kind from the ID shape.
   const parsed = parsePostId(id);
   if (!parsed) throw new Response('Not Found', { status: 404 });
-  return isConsentFormId(parsed) ? loadConsentPostDetail(parsed) : loadPostDetail(id);
+  return isConsentFormId(parsed) ? loadConsentPostDetail(parsed) : loadPostDetail(parsed);
 }
 
 // ─── Error boundary ─────────────────────────────────────────────────────────
@@ -124,7 +128,7 @@ function DetailHeader({ post }: { post: PGPost }) {
   );
 }
 
-function AnnouncementDetail({ post }: { post: PGAnnouncement }) {
+function AnnouncementDetail({ post }: { post: PGAnnouncementPost }) {
   const sortedRecipients = useMemo(
     () =>
       [...post.recipients].sort((a, b) => {

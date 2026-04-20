@@ -36,7 +36,11 @@ import {
   TabsList,
   TabsTrigger,
 } from '~/components/ui';
-import type { PGAnnouncement, ResponseType } from '~/data/mock-pg-announcements';
+import type {
+  AnnouncementId,
+  PGAnnouncementPost,
+  ResponseType,
+} from '~/data/mock-pg-announcements';
 import { cn } from '~/lib/utils';
 
 const DEMO_CLASSES = [
@@ -52,9 +56,9 @@ const DEMO_STATS = {
   noCount: 4,
 };
 
-const DEMO_POST_CARD_ANNOUNCEMENT: PGAnnouncement = {
+const DEMO_POST_CARD_ANNOUNCEMENT: PGAnnouncementPost = {
   kind: 'announcement',
-  id: 'demo',
+  id: 'demo' as AnnouncementId,
   title: 'Term 2 Parent-Teacher Meeting',
   description:
     'Dear parents, the term 2 PTM will be held on Saturday, 19 April. Please book a slot via Parents Gateway.',
