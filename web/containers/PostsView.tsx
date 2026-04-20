@@ -41,7 +41,11 @@ import {
   TabsList,
   TabsTrigger,
 } from '~/components/ui';
-import { PG_CONSENT_FORM_STATUS_BADGE, PG_STATUS_BADGE } from '~/data/mock-pg-announcements';
+import {
+  PG_CONSENT_FORM_STATUS_BADGE,
+  PG_STATUS_BADGE,
+  postHref,
+} from '~/data/mock-pg-announcements';
 import type { PGPost } from '~/data/mock-pg-announcements';
 import { formatDate, getRelevantDate, isLowReadRate } from '~/helpers/dateTime';
 import { notify } from '~/lib/notify';
@@ -75,10 +79,6 @@ export async function loader(): Promise<PostsLoaderData> {
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
-
-function postHref(p: PGPost): string {
-  return `/posts/${p.id}?kind=${p.kind === 'form' ? 'form' : 'announcement'}`;
-}
 
 // Tie-break: when two rows share the same timestamp, announcements render
 // before forms, then lexical ID order — keeps sort output stable across

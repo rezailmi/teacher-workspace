@@ -64,7 +64,7 @@ import {
 } from '~/components/ui';
 import {
   isConsentFormId,
-  parsePostId,
+  validatePostRoute,
   type FormQuestion,
   type PGAnnouncementTarget,
   type PGEvent,
@@ -105,19 +105,7 @@ interface CreatePostLoaderData {
  * `/posts` (see the `Navigate` guard below).
  */
 async function loadPostByKind(rawId: string, kindParam: string | null): Promise<PGPost | null> {
-  if (kindParam === 'form') {
-    const parsed = parsePostId(rawId);
-    if (!parsed || !isConsentFormId(parsed)) return null;
-    return loadConsentPostDetail(parsed);
-  }
-  if (kindParam === 'announcement') {
-    const parsed = parsePostId(rawId);
-    if (!parsed || isConsentFormId(parsed)) return null;
-    return loadPostDetail(parsed);
-  }
-  // No explicit kind in the URL — fall back to ID-shape probing so that
-  // direct pastes of `/posts/cf_123/edit` still route to the right loader.
-  const parsed = parsePostId(rawId);
+  const parsed = validatePostRoute(rawId, kindParam);
   if (!parsed) return null;
   return isConsentFormId(parsed) ? loadConsentPostDetail(parsed) : loadPostDetail(parsed);
 }

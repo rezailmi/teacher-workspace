@@ -3,7 +3,8 @@ import React, { useMemo } from 'react';
 import type { LoaderFunctionArgs } from 'react-router';
 import { isRouteErrorResponse, Link, useLoaderData, useRouteError } from 'react-router';
 
-import { loadConsentPostDetail, loadPostDetail } from '~/api/client';
+import { getConfigs } from '~/api/client';
+import type { PGApiConfig } from '~/api/types';
 import { ConsentFormHistoryList } from '~/components/posts/ConsentFormHistoryList';
 import { PostCard } from '~/components/posts/PostCard';
 import { ReadTrackingCards } from '~/components/posts/ReadTrackingCards';
@@ -11,19 +12,21 @@ import { RecipientReadTable } from '~/components/posts/RecipientReadTable';
 import { Badge, Button } from '~/components/ui';
 import {
   isConsentFormId,
-  parsePostId,
   PG_CONSENT_FORM_STATUS_BADGE,
   PG_STATUS_BADGE,
+  postHref,
+  validatePostRoute,
   type PGAnnouncementPost,
   type PGConsentFormPost,
   type PGPost,
 } from '~/data/mock-pg-announcements';
+import { POST_REGISTRY } from '~/data/posts-registry';
+import { assertNever } from '~/helpers/assertNever';
 import { formatDate, formatDateTime } from '~/helpers/dateTime';
 
-// Exhaustiveness helper — if the `PGPost` union ever gains a third kind, the
-// default branch below will fail to compile until this is handled.
-function assertNever(x: never): never {
-  throw new Error(`Unreachable post kind: ${JSON.stringify(x)}`);
+interface PostDetailLoaderData {
+  post: PGPost;
+  configs: PGApiConfig;
 }
 
 // ─── Route loader ───────────────────────────────────────────────────────────
@@ -34,32 +37,24 @@ function assertNever(x: never): never {
  * is missing or unrecognised we fall back to parsing the raw ID (numeric →
  * announcement, `cf_<digits>` → consent form). Anything else is a 404.
  */
-export async function loader({ params, request }: LoaderFunctionArgs): Promise<PGPost> {
+export async function loader({
+  params,
+  request,
+}: LoaderFunctionArgs): Promise<PostDetailLoaderData> {
   const id = params.id;
   if (!id) throw new Response('Not Found', { status: 404 });
 
   const url = new URL(request.url);
-  const kindParam = url.searchParams.get('kind');
-
-  if (kindParam === 'form') {
-    const parsed = parsePostId(id);
-    if (!parsed || !isConsentFormId(parsed)) {
-      throw new Response('Not Found', { status: 404 });
-    }
-    return loadConsentPostDetail(parsed);
-  }
-  if (kindParam === 'announcement') {
-    const parsed = parsePostId(id);
-    if (!parsed || isConsentFormId(parsed)) {
-      throw new Response('Not Found', { status: 404 });
-    }
-    return loadPostDetail(parsed);
-  }
-
-  // Fallback: infer kind from the ID shape.
-  const parsed = parsePostId(id);
+  const parsed = validatePostRoute(id, url.searchParams.get('kind'));
   if (!parsed) throw new Response('Not Found', { status: 404 });
-  return isConsentFormId(parsed) ? loadConsentPostDetail(parsed) : loadPostDetail(parsed);
+
+  const [post, configs] = await Promise.all([
+    isConsentFormId(parsed)
+      ? POST_REGISTRY.form.loadDetail(parsed)
+      : POST_REGISTRY.announcement.loadDetail(parsed),
+    getConfigs(),
+  ]);
+  return { post, configs };
 }
 
 // ─── Error boundary ─────────────────────────────────────────────────────────
@@ -88,12 +83,22 @@ export function ErrorBoundary() {
 
 // ─── Subviews ──────────────────────────────────────────────────────────────
 
+function statusBadge(post: PGPost) {
+  switch (post.kind) {
+    case 'announcement':
+      return PG_STATUS_BADGE[post.status];
+    case 'form':
+      return PG_CONSENT_FORM_STATUS_BADGE[post.status];
+    default:
+      return assertNever(post);
+  }
+}
+
 function DetailHeader({ post }: { post: PGPost }) {
-  const isForm = post.kind === 'form';
-  const badge = isForm ? PG_CONSENT_FORM_STATUS_BADGE[post.status] : PG_STATUS_BADGE[post.status];
+  const badge = statusBadge(post);
   const iso = post.postedAt ?? post.createdAt;
   const postedDate = formatDateTime(iso) ?? formatDate(iso);
-  const editHref = `/posts/${post.id}/edit?kind=${post.kind}`;
+  const editHref = postHref(post, { edit: true });
 
   return (
     <div className="flex items-start justify-between gap-4">
@@ -190,20 +195,25 @@ function ConsentFormDetail({ post }: { post: PGConsentFormPost }) {
 // ─── Component ──────────────────────────────────────────────────────────────
 
 const PostDetailView: React.FC = () => {
-  const post = useLoaderData<PGPost>();
+  const { post } = useLoaderData<PostDetailLoaderData>();
 
   return (
     <div className="space-y-6 px-6 py-6">
       <DetailHeader post={post} />
-      {post.kind === 'announcement' ? (
-        <AnnouncementDetail post={post} />
-      ) : post.kind === 'form' ? (
-        <ConsentFormDetail post={post} />
-      ) : (
-        assertNever(post)
-      )}
+      {renderDetail(post)}
     </div>
   );
 };
+
+function renderDetail(post: PGPost) {
+  switch (post.kind) {
+    case 'announcement':
+      return <AnnouncementDetail post={post} />;
+    case 'form':
+      return <ConsentFormDetail post={post} />;
+    default:
+      return assertNever(post);
+  }
+}
 
 export { PostDetailView as Component };
