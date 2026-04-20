@@ -25,6 +25,7 @@ import type {
   PGApiAnnouncementDetail,
   PGApiAnnouncementList,
   PGApiClassDetail,
+  PGApiConfig,
   PGApiConsentFormDetail,
   PGApiConsentFormList,
   PGApiConsentFormSummary,
@@ -117,6 +118,18 @@ async function fetchApi<T>(path: string): Promise<T> {
   return unwrapEnvelope<T>(await res.json());
 }
 
+/**
+ * Root-level fetch that bypasses the `/api/web/2/staff` base. Used for
+ * endpoints PG exposes at `/api/*` (currently just `/api/configs`). Kept
+ * separate from `fetchApi` so the prefix remains the single source of truth
+ * for the staff-scoped surface.
+ */
+async function fetchApiRoot<T>(path: string): Promise<T> {
+  const res = await fetch(`/api${path}`);
+  if (!res.ok) await handleErrorResponse(res);
+  return unwrapEnvelope<T>(await res.json());
+}
+
 async function mutateApi<T>(method: 'POST' | 'PUT', path: string, body: unknown): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     method,
@@ -149,6 +162,36 @@ async function fetchApiSafe<T>(path: string, fallback: T): Promise<T> {
     console.warn(`[PG API] Network error fetching ${path}, using fixture fallback`);
     return fallback;
   }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CONFIGS (feature flags)
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * `/api/configs` is served outside the `/staff` base path (PG exposes it at
+ * `/api/configs` root), so we call `fetchApiRoot` rather than `fetchApi`. The
+ * response drives feature-flag gates (schedule-send, duplicate, shortcuts);
+ * loaders fetch it once per route entry and pass it down via `useLoaderData`.
+ *
+ * Memoised at module scope so a given session only pays the RTT once. The
+ * TTL (`CONFIGS_STALE_MS`) invalidates the cache so long-lived sessions pick
+ * up flag flips without a hard refresh. Fetch failures fall back to an
+ * all-flags-off shape — no toast, no banner; the gated UI simply hides.
+ */
+const CONFIGS_STALE_MS = 15 * 60 * 1000;
+let configsPromise: Promise<PGApiConfig> | null = null;
+let configsLoadedAt = 0;
+
+const EMPTY_CONFIG: PGApiConfig = { flags: {}, configs: {} };
+
+export function getConfigs(): Promise<PGApiConfig> {
+  const now = Date.now();
+  if (!configsPromise || now - configsLoadedAt > CONFIGS_STALE_MS) {
+    configsLoadedAt = now;
+    configsPromise = fetchApiRoot<PGApiConfig>('/configs').catch(() => EMPTY_CONFIG);
+  }
+  return configsPromise;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
