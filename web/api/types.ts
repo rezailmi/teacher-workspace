@@ -155,7 +155,13 @@ export interface PGApiCreateAnnouncementPayload {
     levelIds: number[];
   };
   staffOwnerIds?: number[];
-  shortcutLink?: PGApiShortcutLink[];
+  /**
+   * Write-side shortcut keys. PG accepts a plain string array of enum keys
+   * (`"TRAVEL_DECLARATION" | "EDIT_CONTACT_DETAILS"`, see
+   * `PG-API-CONTRACT.md:192/218`), distinct from the richer
+   * `PGApiShortcutLink[]` that detail responses carry.
+   */
+  shortcutLink?: string[];
   websiteLinks?: PGApiWebsiteLink[];
   attachments?: PGApiAttachment[];
   images?: PGApiImage[];
@@ -250,7 +256,8 @@ export interface PGApiCreateConsentFormPayload {
   };
   staffOwnerIds?: number[];
   customQuestions?: PGApiCustomQuestion[];
-  shortcutLink?: PGApiShortcutLink[];
+  /** See note on `PGApiCreateAnnouncementPayload.shortcutLink`. */
+  shortcutLink?: string[];
   websiteLinks?: PGApiWebsiteLink[];
   attachments?: PGApiAttachment[];
   images?: PGApiImage[];

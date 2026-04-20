@@ -121,6 +121,7 @@ export function mapAnnouncementDetail(detail: PGApiAnnouncementDetail): PGAnnoun
       })
       .filter((t): t is PGAnnouncementTarget => t !== null),
     enquiryEmail: detail.enquiryEmailAddress,
+    websiteLinks: detail.websiteLinks.map((l) => ({ url: l.url, title: l.title })),
   };
 }
 
@@ -294,6 +295,7 @@ export function mapConsentFormDetail(detail: PGApiConsentFormDetail): PGConsentF
     reminder: mapReminder(detail.addReminderType, detail.reminderDate),
     event,
     history,
+    websiteLinks: detail.websiteLinks.map((l) => ({ url: l.url, title: l.title })),
   };
 }
 
@@ -379,6 +381,13 @@ interface PGWritePayload {
   targets: PGTarget[];
   staffInCharge?: number[];
   webLinkList?: { webLink: string; linkDescription: string }[];
+  /**
+   * PG's wire-side contract (`PG-API-CONTRACT.md:192`) accepts a plain string
+   * array of shortcut keys (`"TRAVEL_DECLARATION" | "EDIT_CONTACT_DETAILS"`).
+   * The inbound read type `PGApiShortcutLink[]` is a richer shape used on
+   * detail responses; for writes we only send the enum key.
+   */
+  shortcutLink?: string[];
 }
 
 interface PGConsentFormWritePayload extends PGWritePayload {
@@ -413,6 +422,7 @@ export function toPGCreatePayload(p: PGApiCreateAnnouncementPayload): PGWritePay
     targets: buildTargets(p.recipients),
     staffInCharge: p.staffOwnerIds,
     webLinkList: p.websiteLinks?.map((l) => ({ webLink: l.url, linkDescription: l.title })),
+    shortcutLink: p.shortcutLink,
   } satisfies PGWritePayload;
 }
 
@@ -429,6 +439,7 @@ export function toPGConsentFormCreatePayload(
     targets: buildTargets(p.recipients),
     staffInCharge: p.staffOwnerIds,
     webLinkList: p.websiteLinks?.map((l) => ({ webLink: l.url, linkDescription: l.title })),
+    shortcutLink: p.shortcutLink,
     responseType: p.responseType,
     consentByDate: p.consentByDate,
     addReminderType: p.addReminderType,
@@ -513,6 +524,10 @@ interface BuildPostPayloadInput {
   reminder: ReminderConfig;
   event?: PGEvent;
   venue?: string;
+  /** `webLinkList` source. Forwarded identically for both kinds. */
+  websiteLinks: { url: string; title: string }[];
+  /** PG shortcut keys the teacher ticked. Forwarded as `shortcutLink[]`. */
+  shortcuts: string[];
 }
 
 // Wraps plain text in a minimal valid Tiptap doc shape. Duplicated from
@@ -528,6 +543,20 @@ function textToTiptapDoc(text: string): Record<string, unknown> {
         }))
       : [{ type: 'paragraph' }],
   };
+}
+
+/**
+ * Drop empty rows (user opened an extra row then left it blank) and return
+ * `undefined` when nothing is left so the wire payload stays sparse. PG
+ * treats the `webLinkList` field as optional; sending `[]` renders an empty
+ * section in some clients.
+ */
+function pruneWebsiteLinks(
+  links: BuildPostPayloadInput['websiteLinks'],
+): PGApiCreateAnnouncementPayload['websiteLinks'] {
+  const filtered = links.filter((l) => l.url.trim().length > 0 || l.title.trim().length > 0);
+  if (filtered.length === 0) return undefined;
+  return filtered.map((l) => ({ url: l.url.trim(), title: l.title.trim() }));
 }
 
 function groupRecipients(
@@ -578,6 +607,8 @@ function buildAnnouncementPayload(state: BuildPostPayloadInput): PGApiCreateAnno
     enquiryEmailAddress: state.enquiryEmail,
     recipients: groupRecipients(state.selectedRecipients),
     staffOwnerIds: state.selectedStaff.map((s) => Number(s.id)),
+    websiteLinks: pruneWebsiteLinks(state.websiteLinks),
+    shortcutLink: state.shortcuts.length > 0 ? state.shortcuts : undefined,
   } satisfies PGApiCreateAnnouncementPayload;
 }
 
@@ -631,6 +662,8 @@ function buildConsentFormPayload(state: BuildPostPayloadInput): PGApiCreateConse
     recipients: groupRecipients(state.selectedRecipients),
     staffOwnerIds: state.selectedStaff.map((s) => Number(s.id)),
     customQuestions,
+    websiteLinks: pruneWebsiteLinks(state.websiteLinks),
+    shortcutLink: state.shortcuts.length > 0 ? state.shortcuts : undefined,
   } satisfies PGApiCreateConsentFormPayload;
 }
 

@@ -32,6 +32,16 @@ export interface PGShortcut {
   url: string;
 }
 
+/**
+ * Website link that PG surfaces beneath the description on the Parents
+ * Gateway app. Mirrors the PG API `PGApiWebsiteLink` shape — same field names
+ * — so hydration can pass the list through without further renaming.
+ */
+export interface PGWebsiteLink {
+  url: string;
+  title: string;
+}
+
 export type FormQuestionType = 'free-text' | 'mcq';
 
 export type FormQuestion =
@@ -102,6 +112,7 @@ export interface PGAnnouncement {
   targets?: PGAnnouncementTarget[];
   enquiryEmail?: string;
   shortcuts?: PGShortcut[];
+  websiteLinks?: PGWebsiteLink[];
   questions?: FormQuestion[];
   dueDate?: string;
 }
@@ -197,6 +208,7 @@ export interface PGConsentFormPost {
   targets?: PGAnnouncementTarget[];
   enquiryEmail?: string;
   shortcuts?: PGShortcut[];
+  websiteLinks?: PGWebsiteLink[];
   questions: FormQuestion[];
   consentByDate: string;
   reminder: ReminderConfig;

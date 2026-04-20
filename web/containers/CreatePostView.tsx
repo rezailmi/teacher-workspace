@@ -51,6 +51,8 @@ import { SchedulePickerDialog } from '~/components/posts/SchedulePickerDialog';
 import { SendConfirmationDialog } from '~/components/posts/SendConfirmationDialog';
 import { SplitPostButton } from '~/components/posts/SplitPostButton';
 import { VenueSection } from '~/components/posts/VenueSection';
+import { MAX_WEBSITE_LINKS, WebsiteLinksSection } from '~/components/posts/WebsiteLinksSection';
+import type { WebsiteLink } from '~/components/posts/WebsiteLinksSection';
 import {
   Button,
   Card,
@@ -183,6 +185,19 @@ interface PostFormState {
   event?: PGEvent;
   /** Venue on a consent form. Kept as a separate field from `event.venue` so the user can type a venue before/without setting start/end. */
   venue?: string;
+  /**
+   * Website links PG surfaces under the post description (`webLinkList` on the
+   * wire). Up to 3 rows. Available on both kinds — the outbound mapper
+   * forwards this into the announcement + consent-form builders identically.
+   */
+  websiteLinks: WebsiteLink[];
+  /**
+   * Shortcut keys the teacher enabled (`TRAVEL_DECLARATION`,
+   * `EDIT_CONTACT_DETAILS`). Per-shortcut PG feature flags gate the UI; the
+   * state only carries enabled keys, so a flipped-off flag can't leak a
+   * stale value into the write.
+   */
+  shortcuts: string[];
 }
 
 type PostFormAction =
@@ -200,7 +215,11 @@ type PostFormAction =
   | { type: 'SET_DUE_DATE'; payload: string }
   | { type: 'SET_REMINDER'; payload: ReminderConfig }
   | { type: 'SET_EVENT'; payload: PGEvent | undefined }
-  | { type: 'SET_VENUE'; payload: string };
+  | { type: 'SET_VENUE'; payload: string }
+  | { type: 'ADD_WEBSITE_LINK' }
+  | { type: 'REMOVE_WEBSITE_LINK'; index: number }
+  | { type: 'UPDATE_WEBSITE_LINK'; index: number; field: 'url' | 'title'; value: string }
+  | { type: 'TOGGLE_SHORTCUT'; key: string; enabled: boolean };
 
 const INITIAL_STATE: PostFormState = {
   // Default matches the type-picker's default selection ("Post"). The picker
@@ -220,6 +239,8 @@ const INITIAL_STATE: PostFormState = {
   reminder: { type: 'NONE' },
   event: undefined,
   venue: '',
+  websiteLinks: [],
+  shortcuts: [],
 };
 
 function formReducer(state: PostFormState, action: PostFormAction): PostFormState {
@@ -319,6 +340,40 @@ function formReducer(state: PostFormState, action: PostFormAction): PostFormStat
 
     case 'SET_VENUE':
       return { ...state, venue: action.payload };
+
+    case 'ADD_WEBSITE_LINK': {
+      // Enforce the 3-row cap at the reducer so any future caller (e.g. a
+      // hydration path that tries to add a 4th) can't get the state into an
+      // invalid shape. The UI also disables the button at the cap, but the
+      // reducer is the single source of truth.
+      if (state.websiteLinks.length >= MAX_WEBSITE_LINKS) return state;
+      return { ...state, websiteLinks: [...state.websiteLinks, { url: '', title: '' }] };
+    }
+
+    case 'REMOVE_WEBSITE_LINK':
+      return {
+        ...state,
+        websiteLinks: state.websiteLinks.filter((_, i) => i !== action.index),
+      };
+
+    case 'UPDATE_WEBSITE_LINK':
+      return {
+        ...state,
+        websiteLinks: state.websiteLinks.map((link, i) =>
+          i === action.index ? { ...link, [action.field]: action.value } : link,
+        ),
+      };
+
+    case 'TOGGLE_SHORTCUT': {
+      const already = state.shortcuts.includes(action.key);
+      if (action.enabled && !already) {
+        return { ...state, shortcuts: [...state.shortcuts, action.key] };
+      }
+      if (!action.enabled && already) {
+        return { ...state, shortcuts: state.shortcuts.filter((s) => s !== action.key) };
+      }
+      return state;
+    }
 
     default:
       return state;
@@ -456,6 +511,16 @@ function postToFormState(
     selectedRecipients: targetsToSelectedRecipients(post.targets ?? [], classes, students),
     selectedStaff: ownerIdsToSelectedStaff(post.staffOwnerIds, staff, post.staffInCharge),
     enquiryEmail: post.enquiryEmail ?? '',
+    // Hydrate up to MAX_WEBSITE_LINKS to keep the edit-mode state shape
+    // invariant with the create-mode cap. Extra rows (shouldn't happen —
+    // PG enforces the cap on write) get silently truncated.
+    websiteLinks: (post.websiteLinks ?? []).slice(0, MAX_WEBSITE_LINKS),
+    // PG detail responses carry shortcuts as `PGApiShortcutLink[]` (detail
+    // shape, not the write-side enum-key strings). Until Phase-1 splits the
+    // read/write shapes formally, treat hydration as empty and rely on the
+    // teacher re-toggling the checkbox. Safer than guessing a key from a
+    // human-label `title`.
+    shortcuts: [] as string[],
   };
 
   if (post.kind === 'form') {
@@ -824,6 +889,9 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
 
               {/* Attachments */}
               <AttachmentSection />
+
+              {/* Website links — available on both kinds. */}
+              <WebsiteLinksSection value={state.websiteLinks} dispatch={dispatch} />
             </CardContent>
           </Card>
 
