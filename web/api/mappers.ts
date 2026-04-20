@@ -1,10 +1,12 @@
 import type {
+  FormQuestion,
   PGAnnouncement,
   PGAnnouncementTarget,
   PGConsentFormHistoryEntry,
   PGConsentFormPost,
   PGConsentFormRecipient,
   PGConsentFormStatus,
+  PGEvent,
   PGOwnership,
   PGRecipient,
   PGStatus,
@@ -450,3 +452,193 @@ export function toPGConsentFormDraftPayload(
     scheduledSendAt: p.scheduledSendAt,
   } satisfies PGConsentFormWritePayload;
 }
+
+// ─── Post-creation dispatcher ───────────────────────────────────────────────
+// `buildPostPayload` is the single boundary where the container's collected
+// form-state becomes a wire-ready write payload. It narrows on `kind` and
+// routes to either the announcement or consent-form builder. SGT ISO
+// conversion for `datetime-local` and bare-date strings happens here so the
+// section components can stay format-agnostic.
+
+/**
+ * Convert a `<input type="datetime-local">` string (`YYYY-MM-DDTHH:MM`, naive
+ * local time) into an ISO-8601 anchored to Asia/Singapore (+08:00). Mirrors
+ * `SchedulePickerDialog.toSgtIso` — the naive string is interpreted as SGT
+ * rather than the browser's local TZ, which matches teacher expectations.
+ */
+function localDateTimeToSgtIso(localDateTime: string): string {
+  const [datePart, timePart] = localDateTime.split('T');
+  if (!datePart || !timePart) return localDateTime;
+  const [hh, mm] = timePart.split(':');
+  const hhPadded = (hh ?? '00').padStart(2, '0');
+  const mmPadded = (mm ?? '00').padStart(2, '0');
+  return `${datePart}T${hhPadded}:${mmPadded}:00+08:00`;
+}
+
+/**
+ * Convert a `<input type="date">` string (`YYYY-MM-DD`) into an ISO-8601
+ * anchored to end-of-day SGT (`23:59:59+08:00`). Matches the fixture
+ * convention for `consentByDate` / `reminderDate` (`T15:59:59.000Z`).
+ *
+ * TODO (Phase 2 contract ambiguity): PG hasn't confirmed whether the anchor
+ * time matters for reminder delivery. End-of-day is the safe default — a
+ * reminder "on March 29" fires before March 29 23:59 SGT, which is the
+ * intuitive meaning.
+ */
+function localDateToSgtIso(localDate: string): string {
+  return `${localDate}T23:59:59+08:00`;
+}
+
+/** Subset of the container's `PostFormState` that the dispatcher consumes. */
+interface BuildPostPayloadInput {
+  kind: 'announcement' | 'form';
+  title: string;
+  /** Plain-text derivation of `descriptionDoc`. */
+  description: string;
+  descriptionDoc: Record<string, unknown> | null;
+  enquiryEmail: string;
+  selectedRecipients: {
+    id: string;
+    groupType: 'class' | 'custom' | 'cca' | 'level' | 'individual';
+  }[];
+  selectedStaff: { id: string }[];
+  responseType: ResponseType;
+  questions: FormQuestion[];
+  dueDate: string;
+  reminder: ReminderConfig;
+  event?: PGEvent;
+  venue?: string;
+}
+
+// Wraps plain text in a minimal valid Tiptap doc shape. Duplicated from
+// `CreatePostView.tsx` so the mapper can produce a valid `richTextContent`
+// without importing from the container layer.
+function textToTiptapDoc(text: string): Record<string, unknown> {
+  return {
+    type: 'doc',
+    content: text
+      ? text.split('\n').map((line) => ({
+          type: 'paragraph',
+          content: line ? [{ type: 'text', text: line }] : [],
+        }))
+      : [{ type: 'paragraph' }],
+  };
+}
+
+function groupRecipients(
+  recipients: BuildPostPayloadInput['selectedRecipients'],
+): PGApiCreateAnnouncementPayload['recipients'] {
+  const out = {
+    classIds: [] as number[],
+    customGroupIds: [] as number[],
+    ccaIds: [] as number[],
+    levelIds: [] as number[],
+  };
+  for (const r of recipients) {
+    const id = Number(r.id);
+    if (Number.isNaN(id)) continue;
+    switch (r.groupType) {
+      case 'class':
+        out.classIds.push(id);
+        break;
+      case 'custom':
+        out.customGroupIds.push(id);
+        break;
+      case 'cca':
+        out.ccaIds.push(id);
+        break;
+      case 'level':
+        out.levelIds.push(id);
+        break;
+    }
+  }
+  return out;
+}
+
+// FE response types → PG wire enum. Acknowledge maps to the singular
+// `ACKNOWLEDGEMENT` on the write side (see `PGApiCreateConsentFormPayload`).
+const FE_TO_PG_CONSENT_RESPONSE_TYPE: Record<
+  'acknowledge' | 'yes-no',
+  'ACKNOWLEDGEMENT' | 'YES_NO'
+> = {
+  acknowledge: 'ACKNOWLEDGEMENT',
+  'yes-no': 'YES_NO',
+};
+
+function buildAnnouncementPayload(state: BuildPostPayloadInput): PGApiCreateAnnouncementPayload {
+  const doc = state.descriptionDoc ?? textToTiptapDoc(state.description);
+  return {
+    title: state.title,
+    richTextContent: JSON.stringify(doc),
+    enquiryEmailAddress: state.enquiryEmail,
+    recipients: groupRecipients(state.selectedRecipients),
+    staffOwnerIds: state.selectedStaff.map((s) => Number(s.id)),
+  } satisfies PGApiCreateAnnouncementPayload;
+}
+
+function buildConsentFormPayload(state: BuildPostPayloadInput): PGApiCreateConsentFormPayload {
+  const doc = state.descriptionDoc ?? textToTiptapDoc(state.description);
+  if (state.responseType === 'view-only') {
+    // Consent forms never carry `view-only`; the container's type-picker
+    // seeds `acknowledge` when the user picks post-with-response. Guard here
+    // defensively so a bad state change surfaces a clear error rather than
+    // an opaque 400 from pgw.
+    throw new Error(
+      'Consent forms require responseType of `acknowledge` or `yes-no`, got `view-only`.',
+    );
+  }
+  const responseType = FE_TO_PG_CONSENT_RESPONSE_TYPE[state.responseType];
+  const reminderDate =
+    state.reminder.type === 'NONE' ? null : localDateToSgtIso(state.reminder.date);
+  const eventStartDate = state.event ? localDateTimeToSgtIso(state.event.start) : null;
+  const eventEndDate = state.event ? localDateTimeToSgtIso(state.event.end) : null;
+  // Venue is tracked both on `state.venue` (independently editable) and as a
+  // child of `state.event.venue` when PGEvent is populated. Prefer the
+  // free-standing field so a user can type a venue before setting dates.
+  const venue = state.venue?.trim() ? state.venue.trim() : (state.event?.venue ?? null);
+  const customQuestions = state.questions.length
+    ? state.questions.map((q) =>
+        q.type === 'mcq'
+          ? {
+              questionId: 0,
+              type: 'MCQ' as const,
+              text: q.text,
+              options: q.options,
+            }
+          : {
+              questionId: 0,
+              type: 'FREE_TEXT' as const,
+              text: q.text,
+            },
+      )
+    : undefined;
+  return {
+    title: state.title,
+    richTextContent: JSON.stringify(doc),
+    enquiryEmailAddress: state.enquiryEmail,
+    responseType,
+    consentByDate: localDateToSgtIso(state.dueDate),
+    addReminderType: state.reminder.type,
+    reminderDate,
+    eventStartDate,
+    eventEndDate,
+    venue,
+    recipients: groupRecipients(state.selectedRecipients),
+    staffOwnerIds: state.selectedStaff.map((s) => Number(s.id)),
+    customQuestions,
+  } satisfies PGApiCreateConsentFormPayload;
+}
+
+/**
+ * Dispatcher: narrows on `state.kind` and returns the correct create payload
+ * shape. Callers pair this with `createAnnouncement` (kind==='announcement')
+ * or `createConsentForm` (kind==='form'); the draft/schedule variants layer
+ * `scheduledSendAt` on top.
+ */
+export function buildPostPayload(
+  state: BuildPostPayloadInput,
+): PGApiCreateAnnouncementPayload | PGApiCreateConsentFormPayload {
+  return state.kind === 'form' ? buildConsentFormPayload(state) : buildAnnouncementPayload(state);
+}
+
+export type { BuildPostPayloadInput };
