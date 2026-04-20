@@ -3,9 +3,9 @@
 ## Strategy
 
 Call sites consume semantic Tailwind utilities (`bg-background`,
-`text-muted-foreground`, `bg-sidebar-accent`). Raw Radix utilities
-(`bg-slate-4`, `text-red-9`) must be registered in the exemption list with a
-reason; CI enforces via `pnpm check:colors`.
+`text-muted-foreground`, `bg-sidebar-accent`). Prefer these over raw Radix
+utilities (`bg-slate-4`, `text-red-9`) — reach for a raw ref only when no
+semantic token fits.
 
 ## Token layers (all declared in `web/App.css`)
 
@@ -31,8 +31,7 @@ Tailwind @theme inline exports (--color-background, --color-primary, …)
   `prefers-color-scheme: dark`.
 
 Bar for any future invented token: 3+ existing call sites that canonical
-tokens can't express, with rationale captured in the exemption registry
-header before landing.
+tokens can't express.
 
 ## Primitives
 
@@ -61,6 +60,3 @@ block too.
 - [`web/components/ui/`](web/components/ui/) — shadcn primitives.
 - [`web/containers/ComponentsView.tsx`](web/containers/ComponentsView.tsx) —
   preview page at `/components`.
-- [`scripts/check-raw-colors.sh`](scripts/check-raw-colors.sh) +
-  [`scripts/raw-color-exemptions.txt`](scripts/raw-color-exemptions.txt) —
-  CI guard + exemption registry.
