@@ -24,14 +24,18 @@ import type { SelectedEntity } from '~/components/comms/entity-selector';
 import { StaffSelector } from '~/components/comms/staff-selector';
 import { StudentRecipientSelector } from '~/components/comms/student-recipient-selector';
 import { AttachmentSection } from '~/components/posts/AttachmentSection';
+import { DueDateSection } from '~/components/posts/DueDateSection';
+import { EventScheduleSection } from '~/components/posts/EventScheduleSection';
 import { PostPreview } from '~/components/posts/PostPreview';
 import { PostTypePicker, type PostKind } from '~/components/posts/PostTypePicker';
 import { QuestionBuilder } from '~/components/posts/QuestionBuilder';
+import { ReminderSection } from '~/components/posts/ReminderSection';
 import { ResponseTypeSelector } from '~/components/posts/ResponseTypeSelector';
 import { RichTextEditor } from '~/components/posts/RichTextEditor';
 import { SchedulePickerDialog } from '~/components/posts/SchedulePickerDialog';
 import { SendConfirmationDialog } from '~/components/posts/SendConfirmationDialog';
 import { SplitPostButton } from '~/components/posts/SplitPostButton';
+import { VenueSection } from '~/components/posts/VenueSection';
 import {
   Button,
   Card,
@@ -433,10 +437,19 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
   // pgw rejects writes without an enquiry email, and the outbound mapper
   // throws on the same pre-check — gate the Post button here so the user
   // sees a disabled action instead of a cryptic failure toast after submit.
-  const isFormValid =
+  //
+  // Consent-form variant (post-with-response) additionally requires a due date
+  // and a non-None reminder type. Phase 2 will flip routing to `/consentForms`
+  // and these fields will be required by the wire contract; gate in advance so
+  // the form-state matches what Phase 2 expects.
+  const baseFormValid =
     state.title.trim().length > 0 &&
     state.enquiryEmail.trim().length > 0 &&
     state.selectedRecipients.length > 0;
+  const consentFormValid =
+    selectedType !== 'post-with-response' ||
+    (state.dueDate.trim().length > 0 && state.reminder.type !== 'NONE');
+  const isFormValid = baseFormValid && consentFormValid;
   const recipientCount = state.selectedRecipients.reduce((sum, r) => sum + (r.count ?? 1), 0);
   const isEditing = Boolean(editId);
 
@@ -698,23 +711,29 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
                 <ResponseTypeSelector
                   value={state.responseType}
                   onChange={(value) => dispatch({ type: 'SET_RESPONSE_TYPE', payload: value })}
+                  hideViewOnly
                 >
                   <div className="mt-6 space-y-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="due-date">Due Date</Label>
-                      <Input
-                        id="due-date"
-                        type="date"
-                        value={state.dueDate}
-                        onChange={(e) =>
-                          dispatch({
-                            type: 'SET_DUE_DATE',
-                            payload: e.target.value,
-                          })
-                        }
-                        className="max-w-[240px]"
-                      />
-                    </div>
+                    <DueDateSection
+                      value={state.dueDate}
+                      onChange={(value) => dispatch({ type: 'SET_DUE_DATE', payload: value })}
+                      required
+                    />
+
+                    <ReminderSection
+                      value={state.reminder}
+                      onChange={(value) => dispatch({ type: 'SET_REMINDER', payload: value })}
+                    />
+
+                    <EventScheduleSection
+                      value={state.event}
+                      onChange={(value) => dispatch({ type: 'SET_EVENT', payload: value })}
+                    />
+
+                    <VenueSection
+                      value={state.venue}
+                      onChange={(value) => dispatch({ type: 'SET_VENUE', payload: value })}
+                    />
 
                     <QuestionBuilder questions={state.questions} dispatch={dispatch} />
                   </div>
