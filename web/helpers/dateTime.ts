@@ -1,4 +1,5 @@
 import type { PGPost } from '~/data/mock-pg-announcements';
+import { assertNever } from '~/helpers/assertNever';
 
 /**
  * Get the day period based on the current hour.
@@ -150,12 +151,16 @@ export function isLowReadRate(
  * - otherwise (draft / posting) → `createdAt`
  */
 export function getRelevantDate(post: PGPost): string | undefined {
-  if (post.kind === 'announcement') {
-    if (post.status === 'posted') return post.postedAt;
-    if (post.status === 'scheduled') return post.scheduledAt;
-    return post.createdAt;
+  switch (post.kind) {
+    case 'announcement':
+      if (post.status === 'posted') return post.postedAt;
+      if (post.status === 'scheduled') return post.scheduledAt;
+      return post.createdAt;
+    case 'form':
+      if (post.status === 'open' || post.status === 'closed') return post.postedAt;
+      if (post.status === 'scheduled') return post.scheduledAt;
+      return post.createdAt;
+    default:
+      return assertNever(post);
   }
-  if (post.status === 'open' || post.status === 'closed') return post.postedAt;
-  if (post.status === 'scheduled') return post.scheduledAt;
-  return post.createdAt;
 }

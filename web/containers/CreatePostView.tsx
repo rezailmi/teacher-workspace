@@ -72,6 +72,7 @@ import {
   type ReminderConfig,
   type ResponseType,
 } from '~/data/mock-pg-announcements';
+import { assertNever } from '~/helpers/assertNever';
 import { textToTiptapDoc } from '~/helpers/tiptap';
 import { notify } from '~/lib/notify';
 import { cn } from '~/lib/utils';
@@ -489,39 +490,42 @@ function postToFormState(
     shortcuts: [] as string[],
   };
 
-  if (post.kind === 'form') {
-    return {
-      ...common,
-      kind: 'form',
-      responseType: post.responseType,
-      questions: post.questions,
-      dueDate: post.consentByDate ? sgtIsoToLocalDate(post.consentByDate) : '',
-      reminder:
-        post.reminder.type === 'NONE'
-          ? { type: 'NONE' }
-          : { type: post.reminder.type, date: sgtIsoToLocalDate(post.reminder.date) },
-      event: post.event
-        ? {
-            start: sgtIsoToLocalDateTime(post.event.start),
-            end: sgtIsoToLocalDateTime(post.event.end),
-            ...(post.event.venue && { venue: post.event.venue }),
-          }
-        : undefined,
-      venue: post.event?.venue ?? '',
-    };
+  switch (post.kind) {
+    case 'form':
+      return {
+        ...common,
+        kind: 'form',
+        responseType: post.responseType,
+        questions: post.questions,
+        dueDate: post.consentByDate ? sgtIsoToLocalDate(post.consentByDate) : '',
+        reminder:
+          post.reminder.type === 'NONE'
+            ? { type: 'NONE' }
+            : { type: post.reminder.type, date: sgtIsoToLocalDate(post.reminder.date) },
+        event: post.event
+          ? {
+              start: sgtIsoToLocalDateTime(post.event.start),
+              end: sgtIsoToLocalDateTime(post.event.end),
+              ...(post.event.venue && { venue: post.event.venue }),
+            }
+          : undefined,
+        venue: post.event?.venue ?? '',
+      };
+    case 'announcement':
+      return {
+        ...common,
+        kind: 'announcement',
+        responseType: post.responseType,
+        questions: post.questions ?? [],
+        dueDate: post.dueDate ?? '',
+        // Announcements don't carry reminder/event/venue.
+        reminder: { type: 'NONE' },
+        event: undefined,
+        venue: '',
+      };
+    default:
+      return assertNever(post);
   }
-
-  return {
-    ...common,
-    kind: 'announcement',
-    responseType: post.responseType,
-    questions: post.questions ?? [],
-    dueDate: post.dueDate ?? '',
-    // Announcements don't carry reminder/event/venue.
-    reminder: { type: 'NONE' },
-    event: undefined,
-    venue: '',
-  };
 }
 
 // ─── Inner component ─────────────────────────────────────────────────────────
