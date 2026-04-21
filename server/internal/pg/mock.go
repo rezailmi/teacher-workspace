@@ -102,8 +102,19 @@ func (h *Handler) registerMock(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/web/2/staff/consentForms", jsonStub(http.StatusCreated, `{"consentFormId":301}`))
 	mux.HandleFunc("POST /api/web/2/staff/consentForms/drafts", jsonStub(http.StatusCreated, `{"consentFormDraftId":401}`))
 	mux.HandleFunc("POST /api/web/2/staff/consentForms/drafts/schedule", jsonStub(http.StatusOK, `{}`))
-	mux.HandleFunc("PUT /api/web/2/staff/consentForms/drafts/{consentFormDraftId}", jsonStub(http.StatusOK, `{}`))
-	mux.HandleFunc("PUT /api/web/2/staff/consentForms/{consentFormId}/updateDueDate", jsonStub(http.StatusOK, `{}`))
+	// Dispatched: Go ServeMux rejects overlapping wildcards
+	// (`drafts/{id}` vs `{id}/updateDueDate` both match
+	// `/consentForms/drafts/updateDueDate`), so match `{first}/{second}` once
+	// and route by which segment we got — positive match, no catch-all 200.
+	mux.HandleFunc("PUT /api/web/2/staff/consentForms/{first}/{second}", func(w http.ResponseWriter, r *http.Request) {
+		first := r.PathValue("first")
+		second := r.PathValue("second")
+		if first == "drafts" || second == "updateDueDate" {
+			jsonStub(http.StatusOK, `{}`)(w, r)
+			return
+		}
+		http.NotFound(w, r)
+	})
 	mux.HandleFunc("DELETE /api/web/2/staff/consentForms/{consentFormId}", noContent)
 	mux.HandleFunc("DELETE /api/web/2/staff/consentForms/drafts/{consentFormDraftId}", noContent)
 
