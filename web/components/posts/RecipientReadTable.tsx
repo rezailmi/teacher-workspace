@@ -68,15 +68,15 @@ function AnnouncementTable({
             <TableCell className="text-muted-foreground">{recipient.classLabel}</TableCell>
             <TableCell>
               {recipient.readStatus === 'read' ? (
-                <span className="inline-flex items-center gap-1.5 text-sm font-medium text-success-foreground">
-                  <Check className="h-4 w-4" strokeWidth={2.25} />
+                <Badge variant="success">
+                  <Check />
                   Read
-                </span>
+                </Badge>
               ) : (
-                <span className="inline-flex items-center gap-1.5 text-sm font-medium text-warning-foreground">
-                  <Clock className="h-4 w-4" strokeWidth={2.25} />
+                <Badge variant="warning">
+                  <Clock />
                   Unread
-                </span>
+                </Badge>
               )}
             </TableCell>
             <TableCell className="text-muted-foreground">
@@ -86,9 +86,15 @@ function AnnouncementTable({
               <>
                 <TableCell>
                   {recipient.acknowledgedAt ? (
-                    <Check className="h-4 w-4 text-success-foreground" />
+                    <Badge variant="success">
+                      <Check />
+                      Yes
+                    </Badge>
                   ) : (
-                    <X className="h-4 w-4 text-destructive" />
+                    <Badge variant="destructive">
+                      <X />
+                      No
+                    </Badge>
                   )}
                 </TableCell>
                 <TableCell className="text-muted-foreground">
@@ -145,14 +151,20 @@ function ConsentFormTable({
             <TableCell className="text-muted-foreground">{recipient.classLabel}</TableCell>
             <TableCell>
               {recipient.response === 'YES' ? (
-                <Badge variant="success">{responseType === 'acknowledge' ? 'Yes' : 'Yes'}</Badge>
+                <Badge variant="success">
+                  <Check />
+                  Yes
+                </Badge>
               ) : recipient.response === 'NO' ? (
-                <Badge variant="destructive">No</Badge>
+                <Badge variant="destructive">
+                  <X />
+                  No
+                </Badge>
               ) : (
-                <span className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground">
-                  <Clock className="h-4 w-4" strokeWidth={2.25} />
+                <Badge variant="warning">
+                  <Clock />
                   Pending
-                </span>
+                </Badge>
               )}
             </TableCell>
             <TableCell className="text-muted-foreground">
