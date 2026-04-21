@@ -45,7 +45,11 @@ export function RichTextEditor({
 
   const editor = useEditor({
     extensions: [
-      StarterKit.configure({ codeBlock: false }),
+      // `link` and `underline` ship inside StarterKit v3; disabling them here
+      // lets us register the standalone extensions below with our own config
+      // (custom `protocols`, `autolink`, etc.) without tiptap warning about
+      // duplicate extension names.
+      StarterKit.configure({ codeBlock: false, link: false, underline: false }),
       Underline,
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
       Link.configure({
