@@ -104,6 +104,13 @@ async function handleErrorResponse(res: Response): Promise<never> {
       notify.error('Too many requests. Please slow down and try again.');
       throw new PGError(message, code, res.status);
     default:
+      // Bare HTTP 404s (no pgw envelope) come from the mock's `http.NotFound`
+      // or any upstream that returns 404 without a `resultCode`. Normalise to
+      // `PGNotFoundError` so detail-route boundaries can render a 'Post not
+      // found' page instead of a generic toast.
+      if (res.status === 404) {
+        throw new PGNotFoundError(message, code, res.status);
+      }
       notify.error(message);
       throw new PGError(message, code, res.status);
   }

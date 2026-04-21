@@ -4,6 +4,7 @@ import type { LoaderFunctionArgs } from 'react-router';
 import { isRouteErrorResponse, Link, useLoaderData, useRouteError } from 'react-router';
 
 import { getConfigs } from '~/api/client';
+import { PGNotFoundError } from '~/api/errors';
 import type { PGApiConfig } from '~/api/types';
 import { ConsentFormHistoryList } from '~/components/posts/ConsentFormHistoryList';
 import { PostCard } from '~/components/posts/PostCard';
@@ -61,16 +62,21 @@ export async function loader({
 
 export function ErrorBoundary() {
   const error = useRouteError();
+  // 404s arrive in two shapes: (a) a loader-thrown `Response(404)` for malformed
+  // IDs that fail `validatePostRoute`, which hits `isRouteErrorResponse`; and
+  // (b) a server 404 that bubbles up as `PGNotFoundError` from the fetch layer
+  // when the ID is well-formed but the resource is missing. Both mean the same
+  // thing to the user, so render the same copy.
+  const isNotFound =
+    (isRouteErrorResponse(error) && error.status === 404) || error instanceof PGNotFoundError;
 
   return (
     <div className="flex flex-col items-center justify-center gap-4 px-6 py-16">
       <h2 className="text-xl font-semibold tracking-tight">
-        {isRouteErrorResponse(error) && error.status === 404
-          ? 'Post not found'
-          : 'Could not load post'}
+        {isNotFound ? 'Post not found' : 'Could not load post'}
       </h2>
       <p className="text-sm text-muted-foreground">
-        {isRouteErrorResponse(error) && error.status === 404
+        {isNotFound
           ? 'This post may have been deleted.'
           : 'The server may be unavailable. Please try again.'}
       </p>
