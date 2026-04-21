@@ -231,6 +231,13 @@ export interface PGApiConsentFormDetail {
   students: PGApiConsentFormStudent[];
   status: PGApiConsentFormStatus;
   consentFormHistory: PGApiConsentFormHistoryEntry[];
+  /**
+   * Same recipient target list PG sends on announcement detail — class / group
+   * / cca / level that the teacher originally targeted. Optional because the
+   * field is newer than the detail shape and some payloads may omit it; the
+   * mapper defaults to `[]` in that case.
+   */
+  target?: PGApiAnnouncementTarget[];
 }
 
 // ─── Consent form write payloads ────────────────────────────────────────────

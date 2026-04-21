@@ -288,6 +288,12 @@ export function mapConsentFormDetail(detail: PGApiConsentFormDetail): PGConsentF
     postedAt: detail.postedDate ?? undefined,
     staffInCharge: detail.staffOwners[0]?.staffName,
     staffOwnerIds: detail.staffOwners.map((s) => s.staffID),
+    targets: (detail.target ?? [])
+      .map<PGAnnouncementTarget | null>((t) => {
+        const type = toPGTargetType(t.targetType);
+        return type ? { type, id: t.targetId, label: t.targetName } : null;
+      })
+      .filter((t): t is PGAnnouncementTarget => t !== null),
     enquiryEmail: detail.enquiryEmailAddress,
     questions,
     consentByDate: detail.consentByDate ?? '',
