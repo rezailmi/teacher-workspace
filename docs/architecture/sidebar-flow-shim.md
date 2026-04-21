@@ -2,15 +2,15 @@
 
 ## Context
 
-`feat/posts-frontend` intentionally replaces `@import '@flow/core/tailwind.no-reset.css'` with a local Flow-compat shim in [web/App.css](../web/App.css) so colors can be rebased on Radix + shadcn tokens. That swap also dropped everything else Flow's stylesheet was quietly providing — spacing, typography, foreground colors, and its `@source` directives. Every sidebar fix in this branch exists to put one of those missing pieces back.
+`feat/posts-frontend` intentionally replaces `@import '@flow/core/tailwind.no-reset.css'` with a local Flow-compat shim in [web/App.css](../../web/App.css) so colors can be rebased on Radix + shadcn tokens. That swap also dropped everything else Flow's stylesheet was quietly providing — spacing, typography, foreground colors, and its `@source` directives. Every sidebar fix in this branch exists to put one of those missing pieces back.
 
 The sidebar _components_ on this branch are structurally identical to `main`. Only three files differ, and two of them are one-line fixes whose need is created by the CSS swap:
 
-| File                                                                                | Change                                              |
-| ----------------------------------------------------------------------------------- | --------------------------------------------------- |
-| [web/App.css](../web/App.css)                                                       | replaced Flow stylesheet with a local shim          |
-| [web/components/Sidebar/Sidebar.tsx](../web/components/Sidebar/Sidebar.tsx)         | cosmetic class reorder (oxfmt) — no behavior change |
-| [web/components/Sidebar/SidebarItem.tsx](../web/components/Sidebar/SidebarItem.tsx) | `p-sm` → `h-10 items-center px-sm`                  |
+| File                                                                                   | Change                                              |
+| -------------------------------------------------------------------------------------- | --------------------------------------------------- |
+| [web/App.css](../../web/App.css)                                                       | replaced Flow stylesheet with a local shim          |
+| [web/components/Sidebar/Sidebar.tsx](../../web/components/Sidebar/Sidebar.tsx)         | cosmetic class reorder (oxfmt) — no behavior change |
+| [web/components/Sidebar/SidebarItem.tsx](../../web/components/Sidebar/SidebarItem.tsx) | `p-sm` → `h-10 items-center px-sm`                  |
 
 Unchanged: `SidebarHeader.tsx`, `SidebarContent.tsx`, `SidebarFooter.tsx`, `SidebarTrigger.tsx`, `context.ts`, `SidebarProvider.tsx`.
 

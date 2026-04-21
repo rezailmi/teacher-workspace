@@ -20,7 +20,7 @@ Audit of gaps between Teacher Workspace and the actual Parents Gateway backend a
 
 ---
 
-## 1. API contracts ([web/api/types.ts](../web/api/types.ts))
+## 1. API contracts ([web/api/types.ts](../../web/api/types.ts))
 
 ### Announcements
 
@@ -59,7 +59,7 @@ Audit of gaps between Teacher Workspace and the actual Parents Gateway backend a
 
 ---
 
-## 2. Mappers ([web/api/mappers.ts](../web/api/mappers.ts))
+## 2. Mappers ([web/api/mappers.ts](../../web/api/mappers.ts))
 
 ### `mapAnnouncementSummary` (lines 21–51)
 
@@ -229,7 +229,7 @@ Every response includes `metadata.sessionExpDate` — TW can proactively show "s
 
 ## Things we deliberately skipped
 
-See [docs/local-pgw-web-setup.md](local-pgw-web-setup.md#known-issues-and-considerations) — AWS S3, Firebase push, Sendbird, Google Calendar, SendGrid, WOGAA analytics. These are not blockers for core API testing.
+See [setup/local-pgw-web.md](../setup/local-pgw-web.md#known-issues-and-considerations) — AWS S3, Firebase push, Sendbird, Google Calendar, SendGrid, WOGAA analytics. These are not blockers for core API testing.
 
 ## Recommended next steps
 

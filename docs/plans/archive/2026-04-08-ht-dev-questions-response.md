@@ -3,7 +3,7 @@
 **Status:** Internal draft for review
 **Date:** 2026-04-08
 **Audience:** TW team (not yet shared with HT)
-**Grounded in:** [RFC-027](RFC-027-frontend-architecture-monolith.md), [RFC-028](RFC-028-backend-architecture.md), [PG-BFF-DESIGN](PG-BFF-DESIGN.md)
+**Grounded in:** [RFC-027](../../architecture/frontend-rfc-027.md), [RFC-028](../../architecture/backend-rfc-028.md), [PG-BFF-DESIGN](../../references/pg-bff-design.md)
 
 > Legend: ✅ decided · 🟡 recommendation, needs your sign-off · ❓ open, needs TW input
 

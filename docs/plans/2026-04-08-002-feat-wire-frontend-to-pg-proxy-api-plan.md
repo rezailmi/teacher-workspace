@@ -341,7 +341,7 @@ In CreatePostView, use `useLoaderData<PGAnnouncement | null>()` — `null` for c
 
 ### Internal References
 
-- FE API wiring instructions: _deleted 2026-04-15 — superseded by `web/api/client.ts`, `web/api/mappers.ts`, `web/api/types.ts` and `docs/pg-audit-findings.md`_
+- FE API wiring instructions: _deleted 2026-04-15 — superseded by `web/api/client.ts`, `web/api/mappers.ts`, `web/api/types.ts` and `docs/audits/pg-backend-contract.md`_
 - Go fixtures: `server/internal/pg/fixtures/announcements.json` (real API shapes)
 - Go mock routes: `server/internal/pg/mock.go`
 - Current FE types: `web/data/mock-pg-announcements.ts`

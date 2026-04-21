@@ -27,11 +27,11 @@ Browser → Vite (5173) → Go BFF (3000) → pgw-web Express (PORT) → MySQL (
 
 A single docker-compose in the TW repo providing:
 
-| Service       | Image               | Port | Credentials                      |
-| ------------- | ------------------- | ---- | -------------------------------- |
-| MySQL master  | mysql:8.0           | 3306 | `pg-local` / `LOCAL_DEV_REPLACED`          |
+| Service       | Image               | Port | Credentials                            |
+| ------------- | ------------------- | ---- | -------------------------------------- |
+| MySQL master  | mysql:8.0           | 3306 | `pg-local` / `LOCAL_DEV_REPLACED`      |
 | MySQL replica | mysql:8.0           | 3307 | `pg-local-read` / `LOCAL_DEV_REPLACED` |
-| Redis         | redis:7.0.15-alpine | 6379 | none                             |
+| Redis         | redis:7.0.15-alpine | 6379 | none                                   |
 
 Database name: `pgdb`. Master-slave replication configured to match pgw-db-migration's `db-up.sh` behavior.
 

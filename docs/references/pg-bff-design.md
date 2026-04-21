@@ -2,21 +2,21 @@
 
 **Status:** Phase 3 in progress — fallback-mode CSRF capture-and-replay shipping 2026-04-15. Phase 2 (proxy + mock) live. Phase 4 (files) not started.
 **Date:** 2026-04-01 (last updated 2026-04-15)
-**Unblocker for "ideal" design:** [PG-TEAM-ASKS.md](PG-TEAM-ASKS.md) — the three pgw-web changes listed there retire most of the fallback state described below.
+**Unblocker for "ideal" design:** [pg-team-asks.md](pg-team-asks.md) — the three pgw-web changes listed there retire most of the fallback state described below.
 **Context:** TW integrates PG (Parents Gateway) as an app. The PG team owns `pgw-web` — we cannot modify it.
 
 ## Relationship to other docs
 
-| Doc                                                                | Scope                                                                                     |
-| ------------------------------------------------------------------ | ----------------------------------------------------------------------------------------- |
-| [PG-CONTEXT.md](PG-CONTEXT.md)                                     | 50-line orientation — what is PG, what modules                                            |
-| **This doc (PG-BFF-DESIGN.md)**                                    | TW-BFF design — how the proxy works, ideal state, fallback state, mock mode, build phases |
-| [PG-TEAM-ASKS.md](PG-TEAM-ASKS.md)                                 | Everything blocking PG team — the three pgw-web changes plus the 10 open questions        |
-| [PG-API-CONTRACT.md](PG-API-CONTRACT.md)                           | Full endpoint + response-shape reference (1300+ lines)                                    |
-| [PG-specs.md](PG-specs.md)                                         | Full module-by-module FE spec                                                             |
-| [docs/pg-audit-findings.md](../docs/pg-audit-findings.md)          | Point-in-time gap analysis (types, mappers, error handling)                               |
-| [docs/local-pgw-web-setup.md](../docs/local-pgw-web-setup.md)      | How to run pgw-web locally in Docker                                                      |
-| [RFC-028-backend-architecture.md](RFC-028-backend-architecture.md) | BFF architecture rationale (the "why")                                                    |
+| Doc                                                                   | Scope                                                                                     |
+| --------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| [pg-context.md](pg-context.md)                                        | 50-line orientation — what is PG, what modules                                            |
+| **This doc (pg-bff-design.md)**                                       | TW-BFF design — how the proxy works, ideal state, fallback state, mock mode, build phases |
+| [pg-team-asks.md](pg-team-asks.md)                                    | Everything blocking PG team — the three pgw-web changes plus the 10 open questions        |
+| [pg-api-contract.md](pg-api-contract.md)                              | Full endpoint + response-shape reference (1300+ lines)                                    |
+| [pg-specs.md](pg-specs.md)                                            | Full module-by-module FE spec                                                             |
+| [audits/pg-backend-contract.md](../audits/pg-backend-contract.md)     | Point-in-time gap analysis (types, mappers, error handling)                               |
+| [setup/local-pgw-web.md](../setup/local-pgw-web.md)                   | How to run pgw-web locally in Docker                                                      |
+| [architecture/backend-rfc-028.md](../architecture/backend-rfc-028.md) | BFF architecture rationale (the "why")                                                    |
 
 ---
 
@@ -80,15 +80,15 @@ Both TW and PG authenticate via MIMS SSO. The user logs in once — TW establish
 
 ## CSRF Handling for Write Operations
 
-**TW adds no CSRF code.** CSRF is a browser-to-server concern; TW→pgw-web is server-to-server and has no ambient credentials for cross-site requests to abuse. In the ideal state ([PG-TEAM-ASKS.md](PG-TEAM-ASKS.md) #3), pgw-web skips CSRF for TW's allowlisted IP.
+**TW adds no CSRF code.** CSRF is a browser-to-server concern; TW→pgw-web is server-to-server and has no ambient credentials for cross-site requests to abuse. In the ideal state ([pg-team-asks.md](pg-team-asks.md) #3), pgw-web skips CSRF for TW's allowlisted IP.
 
 ### Local dev
 
-pgw-web's CSRF middleware is stubbed to a no-op router at Docker build time — see the `RUN` step in [docker/pgw-web/Dockerfile](../docker/pgw-web/Dockerfile). This gives us the same behavior locally that PG team's production allowlist will provide: writes work, no header plumbing anywhere in TW. The stub file is only used in the tw-pg-experiment docker image; upstream pgw-web source is unchanged.
+pgw-web's CSRF middleware is stubbed to a no-op router at Docker build time — see the `RUN` step in [docker/pgw-web/Dockerfile](../../docker/pgw-web/Dockerfile). This gives us the same behavior locally that PG team's production allowlist will provide: writes work, no header plumbing anywhere in TW. The stub file is only used in the tw-pg-experiment docker image; upstream pgw-web source is unchanged.
 
 ### Staging / production
 
-Blocked on [PG-TEAM-ASKS.md](PG-TEAM-ASKS.md) #1-5. Until shipped, writes against a real (non-stubbed) pgw-web will fail with `Invalid CSRF Token` — the tradeoff we accept rather than carry throwaway CSRF scaffolding in TW.
+Blocked on [pg-team-asks.md](pg-team-asks.md) #1-5. Until shipped, writes against a real (non-stubbed) pgw-web will fail with `Invalid CSRF Token` — the tradeoff we accept rather than carry throwaway CSRF scaffolding in TW.
 
 ---
 

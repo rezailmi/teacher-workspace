@@ -3,13 +3,13 @@
 **From:** TW Platform Team  
 **To:** PG Team (Grace / Scott)  
 **Date:** 2026-04-07 (open questions expanded 2026-04-15)  
-**Context:** TW BFF proxies all PG staff requests through a reverse proxy. The ideal integration requires three minimal pgw-web changes; without them, TW has to carry session + CSRF state on behalf of every browser (described in [PG-BFF-DESIGN.md](PG-BFF-DESIGN.md) as fallback mode). This doc is the shortest path to removing that fallback.
+**Context:** TW BFF proxies all PG staff requests through a reverse proxy. The ideal integration requires three minimal pgw-web changes; without them, TW has to carry session + CSRF state on behalf of every browser (described in [pg-bff-design.md](pg-bff-design.md) as fallback mode). This doc is the shortest path to removing that fallback.
 
 **Related docs:**
 
-- [PG-BFF-DESIGN.md](PG-BFF-DESIGN.md) — TW-side integration design (covers both the ideal and fallback paths)
-- [PG-CONTEXT.md](PG-CONTEXT.md) — project orientation
-- [RFC-028-backend-architecture.md](RFC-028-backend-architecture.md) — BFF architecture rationale
+- [pg-bff-design.md](pg-bff-design.md) — TW-side integration design (covers both the ideal and fallback paths)
+- [pg-context.md](pg-context.md) — project orientation
+- [architecture/backend-rfc-028.md](../architecture/backend-rfc-028.md) — BFF architecture rationale
 
 ---
 
@@ -85,9 +85,9 @@ The ideal integration above removes an entire layer of TW-side code (PG session 
 ### Operational — would unblock us sooner
 
 6. **CSRF dev-bypass env flag** — any way to disable CSRF for local-dev testing short of the full allowlist? Would unblock TW writes immediately without waiting for infra changes.
-7. **MIMS artifact reuse policy** — is the MIMS SSO artifact single-use? If yes, TW must establish the PG session before the TW session on MIMS redirect, since we can't exchange the same artifact twice. (Flagged as high-severity risk in [PG-BFF-DESIGN.md](PG-BFF-DESIGN.md) Risks.)
+7. **MIMS artifact reuse policy** — is the MIMS SSO artifact single-use? If yes, TW must establish the PG session before the TW session on MIMS redirect, since we can't exchange the same artifact twice. (Flagged as high-severity risk in [pg-bff-design.md](pg-bff-design.md) Risks.)
 8. **Session-cookie name stability** — how does TW learn when pgw-web rotates its session cookie name? Changelog we can subscribe to, or is cookie-name env-var + deploy coordination expected?
-9. **`-4031` redirect behavior** — the 302 to `/error/-4031` on auth failure breaks our JSON-only envelope assumption (see [docs/pg-audit-findings.md](../docs/pg-audit-findings.md) §Error handling). Is the 302 intentional? Can it be a regular JSON error response like the other `-40xx` codes?
+9. **`-4031` redirect behavior** — the 302 to `/error/-4031` on auth failure breaks our JSON-only envelope assumption (see [audits/pg-backend-contract.md](../audits/pg-backend-contract.md) §Error handling). Is the 302 intentional? Can it be a regular JSON error response like the other `-40xx` codes?
 
 ### Strategic
 

@@ -162,7 +162,7 @@ func (h *Handler) Register(mux *http.ServeMux) {
 
 ## Task 5: Write PG team contract doc
 
-**File:** `plans/PG-TEAM-ASKS.md`
+**File:** `docs/references/pg-team-asks.md`
 
 Document the exact three changes pgw-web needs. Short, direct, copy-pasteable into email.
 

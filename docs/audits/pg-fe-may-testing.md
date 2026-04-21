@@ -12,11 +12,11 @@ Supersedes prior in-file plans (envelope unwrap, CSRF stub, outbound write mappe
 
 Three read-only audits produced the ground-truth inputs:
 
-| Reference                                       | Role                                                        | Location                                                                                        |
-| ----------------------------------------------- | ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| **Production PG FE** (pgw-web)                  | behavioural ground-truth — the real staff portal users know | [/Users/shin/Desktop/projects/pgw-web/src/app](../../pgw-web/src/app)                           |
-| **Design prototype** (design-teacher-workspace) | visual/UX reference, mock-data, cleaner abstractions        | [/Users/shin/Desktop/projects/design-teacher-workspace/src](../../design-teacher-workspace/src) |
-| **Current TW FE**                               | what we've built so far                                     | [web/](web/)                                                                                    |
+| Reference                                       | Role                                                        | Location                                                                                           |
+| ----------------------------------------------- | ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| **Production PG FE** (pgw-web)                  | behavioural ground-truth — the real staff portal users know | [/Users/shin/Desktop/projects/pgw-web/src/app](../../../pgw-web/src/app)                           |
+| **Design prototype** (design-teacher-workspace) | visual/UX reference, mock-data, cleaner abstractions        | [/Users/shin/Desktop/projects/design-teacher-workspace/src](../../../design-teacher-workspace/src) |
+| **Current TW FE**                               | what we've built so far                                     | [web/](../../web/)                                                                                 |
 
 The gap = what TW lacks versus **either** reference. Prototype = UI north star; production PG = behaviour north star.
 
@@ -52,10 +52,10 @@ The gap = what TW lacks versus **either** reference. Prototype = UI north star; 
 
 - Real end-to-end list + detail + create flow against pgw-web + MySQL (session 2026-04-15 commits)
 - Envelope auto-unwrap works for arrays + objects + bare payloads
-- Outbound write mapper (`toPGCreatePayload` in [web/api/mappers.ts](web/api/mappers.ts)) translates grouped recipients → pgw `targets`, renames fields
+- Outbound write mapper (`toPGCreatePayload` in [web/api/mappers.ts](../../web/api/mappers.ts)) translates grouped recipients → pgw `targets`, renames fields
 - Real class/staff/student/session data feeds the form selectors
 - EntitySelector ported from prototype with chip UX + search
-- Docs refactored: [PG-BFF-DESIGN.md](plans/PG-BFF-DESIGN.md), [PG-TEAM-ASKS.md](plans/PG-TEAM-ASKS.md), [pg-audit-findings.md](docs/pg-audit-findings.md)
+- Docs refactored: [pg-bff-design.md](../references/pg-bff-design.md), [pg-team-asks.md](../references/pg-team-asks.md), [pg-backend-contract.md](./pg-backend-contract.md)
 - CSRF stub pattern means local writes already work without the prod allowlist
 
 ## Gap categories, ordered by testing impact
@@ -64,20 +64,20 @@ The gap = what TW lacks versus **either** reference. Prototype = UI north star; 
 
 These are the items that will make the May demo look either broken or unfinished to non-technical stakeholders.
 
-1. **Error UX — replace `alert()`.** Install `sonner`, swap the four `alert()` call sites in [web/containers/CreatePostView.tsx](web/containers/CreatePostView.tsx) (`handleSaveDraft`, `handleSendConfirm`, etc.). Add a tiny `notify.success` / `notify.error` helper in `web/lib/notify.ts`. ~1h.
-2. **Rich text editor.** Install `@tiptap/react`, `@tiptap/starter-kit`, `@tiptap/extension-*` (underline, text-align, link, highlight, task-list). Port [rich-text-editor.tsx](../../design-teacher-workspace/src/components/comms/rich-text-editor.tsx) from prototype (354 LOC, mostly verbatim). Replace textarea + visual-only toolbar in `CreatePostView`. Confirms the `richTextContent: string` payload still works downstream. ~3h.
-3. **Questions payload wiring.** [CreatePostView.tsx:295-310](web/containers/CreatePostView.tsx#L295-L310) builds payload without `questions`. Extend the outbound mapper and `PGApiCreateAnnouncementPayload` to include `questions` (as pgw expects). Without this, "post with response" is a dead flow at submit time.
-4. **Status enum `POSTING`.** [web/api/types.ts:5](web/api/types.ts#L5) is already fixed — verify rendering handles it.
+1. **Error UX — replace `alert()`.** Install `sonner`, swap the four `alert()` call sites in [web/containers/CreatePostView.tsx](../../web/containers/CreatePostView.tsx) (`handleSaveDraft`, `handleSendConfirm`, etc.). Add a tiny `notify.success` / `notify.error` helper in `web/lib/notify.ts`. ~1h.
+2. **Rich text editor.** Install `@tiptap/react`, `@tiptap/starter-kit`, `@tiptap/extension-*` (underline, text-align, link, highlight, task-list). Port [rich-text-editor.tsx](../../../design-teacher-workspace/src/components/comms/rich-text-editor.tsx) from prototype (354 LOC, mostly verbatim). Replace textarea + visual-only toolbar in `CreatePostView`. Confirms the `richTextContent: string` payload still works downstream. ~3h.
+3. **Questions payload wiring.** [CreatePostView.tsx:295-310](../../web/containers/CreatePostView.tsx#L295-L310) builds payload without `questions`. Extend the outbound mapper and `PGApiCreateAnnouncementPayload` to include `questions` (as pgw expects). Without this, "post with response" is a dead flow at submit time.
+4. **Status enum `POSTING`.** [web/api/types.ts:5](../../web/api/types.ts#L5) is already fixed — verify rendering handles it.
 5. **Scheduled publish UI.** Mirror the prototype's split-button + date/time picker section. Payload (`scheduledSendAt`) already plumbed via `scheduleDraft`; FE just needs the date/time strip the prototype already has.
 
 Total: roughly 6–8h of focused work.
 
 ### 2. Polish (mid-May if time allows)
 
-1. **Autosave + dirty-state unload warning.** Port `useUnloadEvent` pattern from pgw-web ([SaveAsDraft.tsx:116-181](../../pgw-web/src/app/pages/Announcements/CreateAnnouncementPage/SaveAsDraft.tsx)). Send autosave with a `X-No-Extend-Session: 1` header parallel to pgw's `REQUEST_HEADER_NO_EXTEND` — the proxy can pass it through unchanged.
+1. **Autosave + dirty-state unload warning.** Port `useUnloadEvent` pattern from pgw-web ([SaveAsDraft.tsx:116-181](../../../pgw-web/src/app/pages/Announcements/CreateAnnouncementPage/SaveAsDraft.tsx)). Send autosave with a `X-No-Extend-Session: 1` header parallel to pgw's `REQUEST_HEADER_NO_EXTEND` — the proxy can pass it through unchanged.
 2. **Delete/Schedule confirmation modals.** TW already has `~/components/ui/dialog`; mirror the prototype `SendConfirmationSheet` for schedule/delete.
 3. **RecipientReadTable toolbar** (search/filter/columns/export). Search is the highest value; CSV export is one-liner using a `toCsv` util.
-4. **401-aware error routing.** In [web/api/client.ts](web/api/client.ts) `fetchApi`/`mutateApi`, when `!res.ok` inspect body for `resultCode` and route `-401` / `-4012` to a `/session-expired` route, `-404` to a not-found view, else surface the `errorReason` via toast. Much cleaner than `throw new Response('API error', ...)`.
+4. **401-aware error routing.** In [web/api/client.ts](../../web/api/client.ts) `fetchApi`/`mutateApi`, when `!res.ok` inspect body for `resultCode` and route `-401` / `-4012` to a `/session-expired` route, `-404` to a not-found view, else surface the `errorReason` via toast. Much cleaner than `throw new Response('API error', ...)`.
 5. **Outbound field coverage** — website links, shortcuts — wire form sections that the mapper already handles.
 
 ### 3. Out of scope for May testing (plan, don't build)
@@ -90,7 +90,7 @@ Total: roughly 6–8h of focused work.
 
 ## PG team asks — severity for announcements May testing
 
-Reiterating [PG-TEAM-ASKS.md](plans/PG-TEAM-ASKS.md) in testing-impact order:
+Reiterating [pg-team-asks.md](../references/pg-team-asks.md) in testing-impact order:
 
 | #   | Ask                                       | Impact on May test                                                               |
 | --- | ----------------------------------------- | -------------------------------------------------------------------------------- |
@@ -122,19 +122,19 @@ These six are independent and commitable as their own small PRs. Skipping any do
 
 ## Critical files (reference index, by concern)
 
-| Concern                    | TW file                                                                                                    | Production PG reference                                                                                                   | Prototype reference                                                                                          |
-| -------------------------- | ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| Create form shell          | [web/containers/CreatePostView.tsx](web/containers/CreatePostView.tsx)                                     | [CreateAnnouncementPage.tsx](../../pgw-web/src/app/pages/Announcements/CreateAnnouncementPage/CreateAnnouncementPage.tsx) | [announcements.new.tsx](../../design-teacher-workspace/src/routes/announcements.new.tsx)                     |
-| Save/publish orchestration | inline in container                                                                                        | [SaveAsDraft.tsx](../../pgw-web/src/app/pages/Announcements/CreateAnnouncementPage/SaveAsDraft.tsx)                       | inline                                                                                                       |
-| Rich text                  | ❌ missing                                                                                                 | `FormRichTextAreaDirty` (third-party)                                                                                     | [rich-text-editor.tsx](../../design-teacher-workspace/src/components/comms/rich-text-editor.tsx) ← port this |
-| Recipient selector         | [web/components/comms/student-recipient-selector.tsx](web/components/comms/student-recipient-selector.tsx) | `IndividualStudentGroupsComboBoxDirty`                                                                                    | ported                                                                                                       |
-| Staff selector             | [web/components/comms/staff-selector.tsx](web/components/comms/staff-selector.tsx)                         | `StaffGroupsComboBoxDirty`                                                                                                | ported                                                                                                       |
-| API client                 | [web/api/client.ts](web/api/client.ts)                                                                     | `AnnouncementManager.ts`, `AnnouncementDraftManager.ts`, `AnnouncementScheduleManager.ts`                                 | —                                                                                                            |
-| Outbound mapper            | [web/api/mappers.ts#toPGCreatePayload](web/api/mappers.ts)                                                 | `SaveAsDraftUtil.parseXXX`, `GroupsUtil.consolidateSelectedStaffID`                                                       | —                                                                                                            |
-| Error routing              | inline `throw new Response`                                                                                | [NetworkManagerUtils.ts handleErrors](../../pgw-web/src/app/util)                                                         | —                                                                                                            |
-| Autosave                   | ❌ missing                                                                                                 | `AutoSaveStatesContext` + `useAutoSaveStates`                                                                             | `setInterval` 30s in route                                                                                   |
-| Toast                      | ❌ `alert()`                                                                                               | `Notification` component + `showToast(EToastType.*)`                                                                      | sonner                                                                                                       |
-| File upload pipeline       | ❌ placeholder only                                                                                        | [fileService.upload.ts](../../pgw-web/src/app/services/fileService/fileService.upload.ts)                                 | — (local only)                                                                                               |
+| Concern                    | TW file                                                                                                          | Production PG reference                                                                                                      | Prototype reference                                                                                             |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| Create form shell          | [web/containers/CreatePostView.tsx](../../web/containers/CreatePostView.tsx)                                     | [CreateAnnouncementPage.tsx](../../../pgw-web/src/app/pages/Announcements/CreateAnnouncementPage/CreateAnnouncementPage.tsx) | [announcements.new.tsx](../../../design-teacher-workspace/src/routes/announcements.new.tsx)                     |
+| Save/publish orchestration | inline in container                                                                                              | [SaveAsDraft.tsx](../../../pgw-web/src/app/pages/Announcements/CreateAnnouncementPage/SaveAsDraft.tsx)                       | inline                                                                                                          |
+| Rich text                  | ❌ missing                                                                                                       | `FormRichTextAreaDirty` (third-party)                                                                                        | [rich-text-editor.tsx](../../../design-teacher-workspace/src/components/comms/rich-text-editor.tsx) ← port this |
+| Recipient selector         | [web/components/comms/student-recipient-selector.tsx](../../web/components/comms/student-recipient-selector.tsx) | `IndividualStudentGroupsComboBoxDirty`                                                                                       | ported                                                                                                          |
+| Staff selector             | [web/components/comms/staff-selector.tsx](../../web/components/comms/staff-selector.tsx)                         | `StaffGroupsComboBoxDirty`                                                                                                   | ported                                                                                                          |
+| API client                 | [web/api/client.ts](../../web/api/client.ts)                                                                     | `AnnouncementManager.ts`, `AnnouncementDraftManager.ts`, `AnnouncementScheduleManager.ts`                                    | —                                                                                                               |
+| Outbound mapper            | [web/api/mappers.ts#toPGCreatePayload](../../web/api/mappers.ts)                                                 | `SaveAsDraftUtil.parseXXX`, `GroupsUtil.consolidateSelectedStaffID`                                                          | —                                                                                                               |
+| Error routing              | inline `throw new Response`                                                                                      | [NetworkManagerUtils.ts handleErrors](../../../pgw-web/src/app/util)                                                         | —                                                                                                               |
+| Autosave                   | ❌ missing                                                                                                       | `AutoSaveStatesContext` + `useAutoSaveStates`                                                                                | `setInterval` 30s in route                                                                                      |
+| Toast                      | ❌ `alert()`                                                                                                     | `Notification` component + `showToast(EToastType.*)`                                                                         | sonner                                                                                                          |
+| File upload pipeline       | ❌ placeholder only                                                                                              | [fileService.upload.ts](../../../pgw-web/src/app/services/fileService/fileService.upload.ts)                                 | — (local only)                                                                                                  |
 
 ## Verification plan for the May demo
 
