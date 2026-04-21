@@ -1,0 +1,60 @@
+[
+  {
+    "announcementId": 1037,
+    "title": "Class Chalet 2026 – RSVP",
+    "content": null,
+    "richTextContent": {
+      "type": "doc",
+      "content": [
+        {
+          "type": "paragraph",
+          "attrs": { "textAlign": "left" },
+          "content": [{ "type": "text", "text": "Dear Parents," }]
+        },
+        {
+          "type": "paragraph",
+          "attrs": { "textAlign": "left" },
+          "content": [
+            {
+              "type": "text",
+              "text": "We are organising a class chalet on 30 March 2026. Please indicate whether your child will attend."
+            }
+          ]
+        }
+      ]
+    },
+    "responseType": "YES_NO",
+    "staffName": "MR AHMAD BIN IBRAHIM",
+    "createdBy": 1014,
+    "createdAt": "2026-03-11T06:30:00.000Z",
+    "postedDate": "2026-03-12T02:00:00.000Z",
+    "enquiryEmailAddress": "greenridge_sec@moe.edu.sg",
+    "attachments": [],
+    "images": [],
+    "shortcutLink": [],
+    "websiteLinks": [],
+    "target": [
+      {
+        "announcementId": 1037,
+        "announcementTargetId": 12,
+        "createdAt": "2026-03-11T08:00:00.000Z",
+        "isDeleted": false,
+        "targetAcadYear": 2026,
+        "targetId": 101,
+        "targetName": "4A (2026)",
+        "targetSchool": "Greenridge Secondary",
+        "targetType": "class",
+        "updatedAt": "2026-03-11T08:00:00.000Z"
+      }
+    ],
+    "staffOwners": [{ "staffID": 1014, "staffName": "MR AHMAD BIN IBRAHIM" }],
+    "students": [
+      { "studentId": 1, "studentName": "TAN XIAO MING", "className": "4A", "isRead": true },
+      { "studentId": 2, "studentName": "LEE WEI LIANG", "className": "4A", "isRead": true },
+      { "studentId": 3, "studentName": "CAROL CHEN HUI", "className": "4A", "isRead": false }
+    ],
+    "status": "POSTED",
+    "scheduledSendAt": null,
+    "scheduledSendFailureCode": null
+  }
+]

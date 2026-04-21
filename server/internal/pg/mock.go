@@ -8,6 +8,24 @@ import (
 //go:embed fixtures
 var fixtures embed.FS
 
+// Detail-endpoint fixture lookup by ID segment. Keeping the map here (rather
+// than a dispatching switch) means adding a new status just edits one row —
+// and requests for unknown IDs return 404 instead of leaking a stale payload
+// from some sibling status.
+var announcementDetailByID = map[string]string{
+	"1036": "fixtures/announcement_detail.json",           // POSTED view-only
+	"1037": "fixtures/announcement_detail_yes_no.json",    // POSTED yes/no
+	"1038": "fixtures/announcement_detail_scheduled.json", // SCHEDULED
+	"1039": "fixtures/announcement_detail_draft.json",     // DRAFT
+}
+
+var consentFormDetailByID = map[string]string{
+	"1038": "fixtures/consent_form_detail.json",           // OPEN
+	"1039": "fixtures/consent_form_detail_closed.json",    // CLOSED
+	"1040": "fixtures/consent_form_detail_draft.json",     // DRAFT
+	"1041": "fixtures/consent_form_detail_scheduled.json", // SCHEDULED
+}
+
 func (h *Handler) registerMock(mux *http.ServeMux) {
 	// Session & config
 	mux.HandleFunc("GET /api/web/2/staff/session/current", serveFixture("fixtures/session_current.json"))
@@ -16,7 +34,14 @@ func (h *Handler) registerMock(mux *http.ServeMux) {
 	// Announcements
 	mux.HandleFunc("GET /api/web/2/staff/announcements", serveFixture("fixtures/announcements.json"))
 	mux.HandleFunc("GET /api/web/2/staff/announcements/shared", serveFixture("fixtures/announcements_shared.json"))
-	mux.HandleFunc("GET /api/web/2/staff/announcements/{postId}", serveFixture("fixtures/announcement_detail.json"))
+	mux.HandleFunc("GET /api/web/2/staff/announcements/{postId}", func(w http.ResponseWriter, r *http.Request) {
+		path, ok := announcementDetailByID[r.PathValue("postId")]
+		if !ok {
+			http.NotFound(w, r)
+			return
+		}
+		serveFixture(path)(w, r)
+	})
 	mux.HandleFunc("GET /api/web/2/staff/announcements/{first}/{second}", func(w http.ResponseWriter, r *http.Request) {
 		switch first := r.PathValue("first"); first {
 		case "drafts", "prefilled":
@@ -30,7 +55,14 @@ func (h *Handler) registerMock(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/web/2/staff/consentForms", serveFixture("fixtures/consent_forms.json"))
 	mux.HandleFunc("GET /api/web/2/staff/consentForms/shared", serveFixture("fixtures/consent_forms.json"))
 	mux.HandleFunc("GET /api/web/2/staff/consentForms/drafts/{consentFormDraftId}", serveFixture("fixtures/consent_form_draft.json"))
-	mux.HandleFunc("GET /api/web/2/staff/consentForms/{consentFormId}", serveFixture("fixtures/consent_form_detail.json"))
+	mux.HandleFunc("GET /api/web/2/staff/consentForms/{consentFormId}", func(w http.ResponseWriter, r *http.Request) {
+		path, ok := consentFormDetailByID[r.PathValue("consentFormId")]
+		if !ok {
+			http.NotFound(w, r)
+			return
+		}
+		serveFixture(path)(w, r)
+	})
 
 	// Meetings (PTM)
 	mux.HandleFunc("GET /api/web/2/staff/ptm", serveFixture("fixtures/meetings.json"))

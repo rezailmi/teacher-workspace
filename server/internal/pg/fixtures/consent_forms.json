@@ -23,9 +23,33 @@
       "scheduledSendFailureCode": null,
       "createdByName": "TAN GUANG SHIN",
       "consentByDate": "2026-03-25T15:59:59.000Z"
+    },
+    {
+      "id": "cf_1040",
+      "postId": 1040,
+      "title": "Year 4 Camp Consent (Draft)",
+      "date": "2026-04-10T03:00:00.000Z",
+      "status": "DRAFT",
+      "toParentsOf": [],
+      "respondedMetrics": { "respondedPerStudent": 0, "totalStudents": 0 },
+      "scheduledSendFailureCode": null,
+      "createdByName": "TAN GUANG SHIN",
+      "consentByDate": null
+    },
+    {
+      "id": "cf_1041",
+      "postId": 1041,
+      "title": "Swim Gala Consent",
+      "date": "2026-04-25T01:00:00.000Z",
+      "status": "SCHEDULED",
+      "toParentsOf": ["4B"],
+      "respondedMetrics": { "respondedPerStudent": 0, "totalStudents": 28 },
+      "scheduledSendFailureCode": null,
+      "createdByName": "TAN GUANG SHIN",
+      "consentByDate": "2026-04-30T15:59:59.000Z"
     }
   ],
-  "total": 2,
+  "total": 4,
   "page": 1,
   "pageSize": 10
 }

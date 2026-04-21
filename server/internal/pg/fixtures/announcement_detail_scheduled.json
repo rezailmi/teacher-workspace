@@ -1,0 +1,60 @@
+[
+  {
+    "announcementId": 1038,
+    "title": "Science Centre Learning Journey",
+    "content": null,
+    "richTextContent": {
+      "type": "doc",
+      "content": [
+        {
+          "type": "paragraph",
+          "attrs": { "textAlign": "left" },
+          "content": [{ "type": "text", "text": "Dear Parents," }]
+        },
+        {
+          "type": "paragraph",
+          "attrs": { "textAlign": "left" },
+          "content": [
+            {
+              "type": "text",
+              "text": "Your child will be attending the Science Centre Learning Journey on 5 April 2026. Please acknowledge receipt."
+            }
+          ]
+        }
+      ]
+    },
+    "responseType": "ACKNOWLEDGE",
+    "staffName": "MS TAN WEI LING",
+    "createdBy": 1013,
+    "createdAt": "2026-03-20T06:30:00.000Z",
+    "postedDate": null,
+    "enquiryEmailAddress": "greenridge_sec@moe.edu.sg",
+    "attachments": [],
+    "images": [],
+    "shortcutLink": [],
+    "websiteLinks": [],
+    "target": [
+      {
+        "announcementId": 1038,
+        "announcementTargetId": 13,
+        "createdAt": "2026-03-20T08:00:00.000Z",
+        "isDeleted": false,
+        "targetAcadYear": 2026,
+        "targetId": 101,
+        "targetName": "4A (2026)",
+        "targetSchool": "Greenridge Secondary",
+        "targetType": "class",
+        "updatedAt": "2026-03-20T08:00:00.000Z"
+      }
+    ],
+    "staffOwners": [{ "staffID": 1013, "staffName": "TAN GUANG SHIN" }],
+    "students": [
+      { "studentId": 1, "studentName": "TAN XIAO MING", "className": "4A", "isRead": false },
+      { "studentId": 2, "studentName": "LEE WEI LIANG", "className": "4A", "isRead": false },
+      { "studentId": 3, "studentName": "CAROL CHEN HUI", "className": "4A", "isRead": false }
+    ],
+    "status": "SCHEDULED",
+    "scheduledSendAt": "2026-04-05T00:00:00.000Z",
+    "scheduledSendFailureCode": null
+  }
+]

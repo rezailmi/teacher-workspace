@@ -1,0 +1,38 @@
+[
+  {
+    "announcementId": 1039,
+    "title": "End of Year Prize-Giving Ceremony",
+    "content": null,
+    "richTextContent": {
+      "type": "doc",
+      "content": [
+        {
+          "type": "paragraph",
+          "attrs": { "textAlign": "left" },
+          "content": [
+            {
+              "type": "text",
+              "text": "Draft announcement for the End of Year Prize-Giving Ceremony — recipients to be finalised."
+            }
+          ]
+        }
+      ]
+    },
+    "responseType": "VIEW_ONLY",
+    "staffName": "MS TAN WEI LING",
+    "createdBy": 1013,
+    "createdAt": "2026-03-28T08:00:00.000Z",
+    "postedDate": null,
+    "enquiryEmailAddress": "greenridge_sec@moe.edu.sg",
+    "attachments": [],
+    "images": [],
+    "shortcutLink": [],
+    "websiteLinks": [],
+    "target": [],
+    "staffOwners": [{ "staffID": 1013, "staffName": "TAN GUANG SHIN" }],
+    "students": [],
+    "status": "DRAFT",
+    "scheduledSendAt": null,
+    "scheduledSendFailureCode": null
+  }
+]

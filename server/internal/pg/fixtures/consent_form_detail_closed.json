@@ -1,0 +1,80 @@
+{
+  "consentFormId": 1039,
+  "title": "International Olympiad Trip – Parent Consent",
+  "richTextContent": {
+    "type": "doc",
+    "content": [
+      {
+        "type": "paragraph",
+        "attrs": { "textAlign": "left" },
+        "content": [{ "type": "text", "text": "Dear Parents," }]
+      },
+      {
+        "type": "paragraph",
+        "attrs": { "textAlign": "left" },
+        "content": [
+          {
+            "type": "text",
+            "text": "Please provide consent for your child to attend the International Olympiad Trip. Submission window has closed."
+          }
+        ]
+      }
+    ]
+  },
+  "responseType": "YES_NO",
+  "eventStartDate": "2026-04-15T00:00:00.000Z",
+  "eventEndDate": "2026-04-22T00:00:00.000Z",
+  "consentByDate": "2026-03-25T15:59:59.000Z",
+  "addReminderType": "DAILY",
+  "reminderDate": "2026-03-22T15:59:59.000Z",
+  "postedDate": "2026-03-18T04:00:00.000Z",
+  "venue": null,
+  "enquiryEmailAddress": "greenridge_sec@moe.edu.sg",
+  "staffName": "TAN GUANG SHIN",
+  "createdBy": 1013,
+  "createdAt": "2026-03-18T04:00:00.000Z",
+  "attachments": [],
+  "images": [],
+  "websiteLinks": [],
+  "customQuestions": [],
+  "staffOwners": [{ "staffID": 1013, "staffName": "TAN GUANG SHIN" }],
+  "target": [
+    {
+      "announcementId": 1039,
+      "announcementTargetId": 3002,
+      "createdAt": "2026-03-18T04:00:00.000Z",
+      "updatedAt": "2026-03-18T04:00:00.000Z",
+      "isDeleted": false,
+      "targetAcadYear": 2026,
+      "targetId": 101,
+      "targetName": "4A (2026)",
+      "targetSchool": "Greenridge Secondary",
+      "targetType": "class"
+    }
+  ],
+  "students": [
+    {
+      "studentId": 1,
+      "studentName": "TAN XIAO MING",
+      "className": "4A",
+      "response": "YES",
+      "respondedAt": "2026-03-20T03:00:00.000Z"
+    },
+    {
+      "studentId": 2,
+      "studentName": "LEE WEI LIANG",
+      "className": "4A",
+      "response": "YES",
+      "respondedAt": "2026-03-21T09:30:00.000Z"
+    },
+    {
+      "studentId": 3,
+      "studentName": "CAROL CHEN HUI",
+      "className": "4A",
+      "response": "NO",
+      "respondedAt": "2026-03-22T11:00:00.000Z"
+    }
+  ],
+  "status": "CLOSED",
+  "consentFormHistory": []
+}

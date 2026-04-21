@@ -1,0 +1,40 @@
+{
+  "consentFormId": 1040,
+  "title": "Year 4 Camp Consent (Draft)",
+  "richTextContent": {
+    "type": "doc",
+    "content": [
+      {
+        "type": "paragraph",
+        "attrs": { "textAlign": "left" },
+        "content": [
+          {
+            "type": "text",
+            "text": "Draft — please review before sending. Consent form for Year 4 overnight camp."
+          }
+        ]
+      }
+    ]
+  },
+  "responseType": "YES_NO",
+  "eventStartDate": null,
+  "eventEndDate": null,
+  "consentByDate": null,
+  "addReminderType": "NONE",
+  "reminderDate": null,
+  "postedDate": null,
+  "venue": null,
+  "enquiryEmailAddress": "greenridge_sec@moe.edu.sg",
+  "staffName": "TAN GUANG SHIN",
+  "createdBy": 1013,
+  "createdAt": "2026-04-10T03:00:00.000Z",
+  "attachments": [],
+  "images": [],
+  "websiteLinks": [],
+  "customQuestions": [],
+  "staffOwners": [{ "staffID": 1013, "staffName": "TAN GUANG SHIN" }],
+  "target": [],
+  "students": [],
+  "status": "DRAFT",
+  "consentFormHistory": []
+}
