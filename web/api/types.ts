@@ -18,12 +18,26 @@ export interface PGApiAnnouncementStudent {
   isRead: boolean;
 }
 
+/**
+ * Shape of a recipient entry under `consentFormRecipients[]` on the
+ * consent-form detail response. Student identity lives on a nested `student`
+ * object; reply + respond timestamp live at the recipient root.
+ */
 export interface PGApiConsentFormStudent {
   studentId: number;
-  studentName: string;
-  className: string;
-  response: 'YES' | 'NO' | null;
-  respondedAt: string | null;
+  reply: 'YES' | 'NO' | null;
+  replyDate: string | null;
+  replyByParent: string | null;
+  remarks: string | null;
+  isIndividual: boolean;
+  onBoardedCategory?: string;
+  student: {
+    studentId: number;
+    studentName: string;
+    indexNumber?: string;
+    className: string;
+    studentSex?: string;
+  };
 }
 
 export interface PGApiImage {
@@ -198,9 +212,16 @@ export interface PGApiConsentFormSummary {
 
 export type PGApiReminderType = 'NONE' | 'ONE_TIME' | 'DAILY';
 
+/**
+ * Shape of `GET /consentForms/:id` as returned by pgw-web (verified by curl
+ * against local pgw-web 2026-04-22). pgw-web's own declared type in
+ * `shared-api-types/consentForms/consentForm.ts` uses slightly different names
+ * in places (singular vs plural) — trust the observed wire shape.
+ */
 export interface PGApiConsentFormDetail {
   consentFormId: number;
   title: string;
+  content: string | null;
   richTextContent: Record<string, unknown> | string | null;
   responseType: PGApiResponseType;
   eventStartDate: string | null;
@@ -214,21 +235,20 @@ export interface PGApiConsentFormDetail {
   staffName: string;
   createdBy: number;
   createdAt: string | null;
-  attachments: PGApiAttachment[];
   images: PGApiImage[];
-  websiteLinks: PGApiWebsiteLink[];
-  customQuestions: PGApiCustomQuestion[];
+  /** Web links field is named `webLinkList` on the detail endpoint (not `websiteLinks`). */
+  webLinkList: PGApiWebsiteLink[];
+  /** Present but structure differs from writes; kept as opaque `unknown[]`. */
+  shortcutLinkList?: unknown[];
+  /** `null` when no custom questions are set. */
+  customQuestions: PGApiCustomQuestion[] | null;
   staffOwners: PGApiStaffOwner[];
-  students: PGApiConsentFormStudent[];
-  status: PGApiConsentFormStatus;
+  /** Recipient students — field name is plural `consentFormRecipients`. */
+  consentFormRecipients: PGApiConsentFormStudent[];
   consentFormHistory: PGApiConsentFormHistoryEntry[];
-  /**
-   * Same recipient target list PG sends on announcement detail — class / group
-   * / cca / level that the teacher originally targeted. Optional because the
-   * field is newer than the detail shape and some payloads may omit it; the
-   * mapper defaults to `[]` in that case.
-   */
-  target?: PGApiAnnouncementTarget[];
+  /** Target list — plural `targets` (pgw-web's own type uses singular `target`
+   * but the wire shape is plural). */
+  targets?: PGApiAnnouncementTarget[];
 }
 
 // ─── Consent form write payloads ────────────────────────────────────────────

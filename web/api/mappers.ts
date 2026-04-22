@@ -27,7 +27,6 @@ import type {
   PGApiAnnouncementSummary,
   PGApiConsentFormDetail,
   PGApiConsentFormStatus,
-  PGApiConsentFormStudent,
   PGApiConsentFormSummary,
   PGApiCreateAnnouncementPayload,
   PGApiCreateConsentFormDraftPayload,
@@ -35,8 +34,9 @@ import type {
   PGApiReminderType,
 } from './types';
 
-/** Shared recipient fields both detail mappers carry verbatim. */
-function buildRecipientBase(s: PGApiAnnouncementStudent | PGApiConsentFormStudent) {
+/** Shared recipient fields for the announcement detail mapper. Consent forms
+ *  use a nested `student` object and are mapped inline in `mapConsentFormDetail`. */
+function buildRecipientBase(s: PGApiAnnouncementStudent) {
   return {
     studentId: String(s.studentId),
     studentName: s.studentName,
@@ -269,15 +269,29 @@ function mapReminder(type: PGApiReminderType, date: string | null): ReminderConf
  * shape the TW UI consumes.
  */
 export function mapConsentFormDetail(detail: PGApiConsentFormDetail): PGConsentFormPost {
-  const status = toPGConsentFormStatus(detail.status);
-  const totalCount = detail.students.length;
-  const yesCount = detail.students.filter((s) => s.response === 'YES').length;
-  const noCount = detail.students.filter((s) => s.response === 'NO').length;
+  // Detail endpoint doesn't carry `status`; derive from posting/due dates.
+  // - postedDate set + consentByDate in future → OPEN
+  // - postedDate set + consentByDate passed → CLOSED
+  // - no postedDate → DRAFT (shouldn't reach here, but safe fallback)
+  const now = Date.now();
+  const dueAt = detail.consentByDate ? Date.parse(detail.consentByDate) : NaN;
+  const status: PGConsentFormStatus = detail.postedDate
+    ? Number.isFinite(dueAt) && dueAt < now
+      ? 'closed'
+      : 'open'
+    : 'draft';
 
-  const recipients: PGConsentFormRecipient[] = detail.students.map((s) => ({
-    ...buildRecipientBase(s),
-    response: s.response,
-    respondedAt: s.respondedAt,
+  const recipientRows = detail.consentFormRecipients ?? [];
+  const totalCount = recipientRows.length;
+  const yesCount = recipientRows.filter((r) => r.reply === 'YES').length;
+  const noCount = recipientRows.filter((r) => r.reply === 'NO').length;
+
+  const recipients: PGConsentFormRecipient[] = recipientRows.map((r) => ({
+    studentId: String(r.student.studentId),
+    studentName: r.student.studentName,
+    classLabel: r.student.className,
+    response: r.reply,
+    respondedAt: r.replyDate,
   }));
 
   const richTextContent =
@@ -294,22 +308,26 @@ export function mapConsentFormDetail(detail: PGApiConsentFormDetail): PGConsentF
         }
       : undefined;
 
-  const questions = detail.customQuestions.map<PGConsentFormPost['questions'][number]>((q) =>
-    q.type === 'MCQ'
-      ? {
-          id: String(q.questionId),
-          text: q.text,
-          type: 'mcq',
-          options: (q.options && q.options.length > 0 ? q.options : ['']) as [string, ...string[]],
-        }
-      : {
-          id: String(q.questionId),
-          text: q.text,
-          type: 'free-text',
-        },
+  const questions = (detail.customQuestions ?? []).map<PGConsentFormPost['questions'][number]>(
+    (q) =>
+      q.type === 'MCQ'
+        ? {
+            id: String(q.questionId),
+            text: q.text,
+            type: 'mcq',
+            options: (q.options && q.options.length > 0 ? q.options : ['']) as [
+              string,
+              ...string[],
+            ],
+          }
+        : {
+            id: String(q.questionId),
+            text: q.text,
+            type: 'free-text',
+          },
   );
 
-  const history: PGConsentFormHistoryEntry[] = detail.consentFormHistory;
+  const history: PGConsentFormHistoryEntry[] = detail.consentFormHistory ?? [];
 
   return {
     kind: 'form',
@@ -332,7 +350,7 @@ export function mapConsentFormDetail(detail: PGApiConsentFormDetail): PGConsentF
     postedAt: detail.postedDate ?? undefined,
     staffInCharge: detail.staffOwners[0]?.staffName,
     staffOwnerIds: detail.staffOwners.map((s) => s.staffID),
-    targets: (detail.target ?? [])
+    targets: (detail.targets ?? [])
       .map<PGAnnouncementTarget | null>((t) => {
         const type = toPGTargetType(t.targetType);
         return type ? { type, id: t.targetId, label: t.targetName } : null;
@@ -344,7 +362,7 @@ export function mapConsentFormDetail(detail: PGApiConsentFormDetail): PGConsentF
     reminder: mapReminder(detail.addReminderType, detail.reminderDate),
     event,
     history,
-    websiteLinks: detail.websiteLinks.map((l) => ({ url: l.url, title: l.title })),
+    websiteLinks: (detail.webLinkList ?? []).map((l) => ({ url: l.url, title: l.title })),
   };
 }
 
