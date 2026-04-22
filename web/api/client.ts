@@ -312,10 +312,14 @@ function fetchSharedConsentForms() {
   return fetchApi<PGApiConsentFormList>('/consentForms/shared');
 }
 
-export function fetchConsentFormDetail(formId: ConsentFormId) {
-  // pgw strips the `cf_` prefix when addressing the detail endpoint.
+export async function fetchConsentFormDetail(
+  formId: ConsentFormId,
+): Promise<PGApiConsentFormDetail> {
+  // pgw strips the `cf_` prefix when addressing the detail endpoint. The
+  // response shape is `body: [<detail>]` (single-element array) — unwrap.
   const numericId = formId.slice(3);
-  return fetchApi<PGApiConsentFormDetail>(`/consentForms/${numericId}`);
+  const arr = await fetchApi<PGApiConsentFormDetail[]>(`/consentForms/${numericId}`);
+  return arr[0];
 }
 
 // ─── Write ──────────────────────────────────────────────────────────────────
