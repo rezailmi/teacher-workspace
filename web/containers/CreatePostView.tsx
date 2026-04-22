@@ -1,5 +1,5 @@
 import { ArrowLeft, Eye, EyeOff } from 'lucide-react';
-import { useDeferredValue, useMemo, useReducer, useRef, useState } from 'react';
+import { useDeferredValue, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import type { LoaderFunctionArgs } from 'react-router';
 import { Link, Navigate, useLoaderData, useNavigate, useParams } from 'react-router';
 
@@ -75,6 +75,7 @@ import {
 import { assertNever } from '~/helpers/assertNever';
 import { textToTiptapDoc } from '~/helpers/tiptap';
 import { useAutoSave, type AutoSaveStatus } from '~/hooks/useAutoSave';
+import { useUnsavedChangesGuard } from '~/hooks/useUnsavedChangesGuard';
 import { notify } from '~/lib/notify';
 import { cn } from '~/lib/utils';
 
@@ -626,6 +627,21 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
     enabled: !isSaving, // pause autosave while publishing/scheduling
     shouldSave: (s) => s.title.trim().length > 0 || editorHasContent(s.descriptionDoc),
   });
+
+  const lastSavedSerialized = useRef<string | null>(null);
+  useEffect(() => {
+    if (autoSave.status === 'saved') {
+      lastSavedSerialized.current = JSON.stringify(state);
+    }
+  }, [autoSave.status, state]);
+
+  const isDirty =
+    lastSavedSerialized.current !== null
+      ? JSON.stringify(state) !== lastSavedSerialized.current
+      : // No save has happened yet. Treat as dirty only if there's meaningful content.
+        state.title.trim().length > 0 || editorHasContent(state.descriptionDoc);
+
+  useUnsavedChangesGuard(isDirty);
 
   if (editId && !editData) {
     return <Navigate to="/posts" replace />;
