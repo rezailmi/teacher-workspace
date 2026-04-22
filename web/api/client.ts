@@ -343,8 +343,8 @@ export function deleteConsentFormDraft(draftId: number) {
 /** Consent-form list loader that returns the unified `PGConsentFormPost[]` shape. */
 export async function loadConsentPostsList(): Promise<PGConsentFormPost[]> {
   const [own, shared] = await Promise.all([fetchConsentForms(), fetchSharedConsentForms()]);
-  const mappedOwn = own.posts.map((p) => mapConsentFormSummaryToPost(p, 'mine'));
-  const mappedShared = shared.posts.map((p) => mapConsentFormSummaryToPost(p, 'shared'));
+  const mappedOwn = own.map((p) => mapConsentFormSummaryToPost(p, 'mine'));
+  const mappedShared = shared.map((p) => mapConsentFormSummaryToPost(p, 'shared'));
   return mergeAndDedup(mappedOwn, mappedShared);
 }
 

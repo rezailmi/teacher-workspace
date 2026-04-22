@@ -182,12 +182,7 @@ export interface PGApiDuplicatePayload {
 
 // ─── Consent Forms ──────────────────────────────────────────────────────────
 
-export interface PGApiConsentFormList {
-  posts: PGApiConsentFormSummary[];
-  total: number;
-  page: number;
-  pageSize: number;
-}
+export type PGApiConsentFormList = PGApiConsentFormSummary[];
 
 export interface PGApiConsentFormSummary {
   id: string;
