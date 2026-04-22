@@ -881,7 +881,9 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
 
               {/* Enquiry email */}
               <div className="space-y-1.5">
-                <Label>Enquiry email</Label>
+                <Label>
+                  Enquiry email <span className="text-destructive">*</span>
+                </Label>
                 <p className="text-sm text-muted-foreground">
                   Select the preferred email address to receive enquiries from parents.
                 </p>
@@ -935,7 +937,9 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
               {/* Description with counter and toolbar */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <Label id="post-description-label">Description</Label>
+                  <Label id="post-description-label">
+                    Description <span className="text-destructive">*</span>
+                  </Label>
                   <span className="text-xs text-muted-foreground tabular-nums">
                     {state.description.length}/2000
                   </span>

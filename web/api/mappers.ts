@@ -641,14 +641,19 @@ export function buildConsentFormPayload(
     );
   }
   const responseType = FE_TO_PG_CONSENT_RESPONSE_TYPE[state.responseType];
+  // PGW's consent-form contract types these fields as always-string (see
+  // `pgw-web/src/app/pages/ConsentForms/ConsentForm.types.ts`). Sending `null`
+  // produces `"reminderDate" must be a string` at runtime even when the field
+  // is logically absent. Use empty strings for the "no value" case.
   const reminderDate =
-    state.reminder.type === 'NONE' ? null : localDateToSgtIso(state.reminder.date);
-  const eventStartDate = state.event ? localDateTimeToSgtIso(state.event.start) : null;
-  const eventEndDate = state.event ? localDateTimeToSgtIso(state.event.end) : null;
+    state.reminder.type === 'NONE' ? '' : (localDateToSgtIso(state.reminder.date) ?? '');
+  const eventStartDate = state.event ? (localDateTimeToSgtIso(state.event.start) ?? '') : '';
+  const eventEndDate = state.event ? (localDateTimeToSgtIso(state.event.end) ?? '') : '';
+  const consentByDate = state.dueDate.trim() ? (localDateToSgtIso(state.dueDate) ?? '') : '';
   // Venue is tracked both on `state.venue` (independently editable) and as a
   // child of `state.event.venue` when PGEvent is populated. Prefer the
   // free-standing field so a user can type a venue before setting dates.
-  const venue = state.venue?.trim() ? state.venue.trim() : (state.event?.venue ?? null);
+  const venue = state.venue?.trim() ? state.venue.trim() : (state.event?.venue ?? '');
   const customQuestions = state.questions.length
     ? state.questions.map((q) =>
         q.type === 'mcq'
@@ -670,7 +675,7 @@ export function buildConsentFormPayload(
     richTextContent: JSON.stringify(doc),
     enquiryEmailAddress: state.enquiryEmail,
     responseType,
-    consentByDate: localDateToSgtIso(state.dueDate),
+    consentByDate,
     addReminderType: state.reminder.type,
     reminderDate,
     eventStartDate,
