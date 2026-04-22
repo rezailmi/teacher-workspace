@@ -1,4 +1,5 @@
 import type {
+  AnnouncementDraftId,
   AnnouncementId,
   ConsentFormId,
   PGAnnouncementPost,
@@ -9,6 +10,7 @@ import { notify } from '~/lib/notify';
 import { PGError, PGNotFoundError, PGSessionExpiredError, PGValidationError } from './errors';
 import {
   mapAnnouncementDetail,
+  mapAnnouncementDraftDetail,
   mapAnnouncementSummary,
   mapConsentFormDetail,
   mapConsentFormSummaryToPost,
@@ -19,6 +21,7 @@ import {
 } from './mappers';
 import type {
   PGApiAnnouncementDetail,
+  PGApiAnnouncementDraft,
   PGApiAnnouncementList,
   PGApiClassDetail,
   PGApiConfig,
@@ -213,6 +216,15 @@ async function fetchAnnouncementDetail(postId: AnnouncementId): Promise<PGApiAnn
   return arr[0];
 }
 
+async function fetchAnnouncementDraftDetail(
+  draftId: AnnouncementDraftId,
+): Promise<PGApiAnnouncementDraft> {
+  // pgw-web wraps single-detail responses as `body: [<detail>]`; unwrap.
+  const bareId = draftId.replace(/^annDraft_/, '');
+  const arr = await fetchApi<PGApiAnnouncementDraft[]>(`/announcements/drafts/${bareId}`);
+  return arr[0];
+}
+
 // ─── Write ──────────────────────────────────────────────────────────────────
 
 /** Create and immediately send an announcement. */
@@ -271,6 +283,13 @@ export async function loadPostsList(): Promise<PGAnnouncementPost[]> {
 export async function loadPostDetail(postId: AnnouncementId): Promise<PGAnnouncementPost> {
   const detail = await fetchAnnouncementDetail(postId);
   return mapAnnouncementDetail(detail);
+}
+
+export async function loadAnnouncementDraftDetail(
+  draftId: AnnouncementDraftId,
+): Promise<PGAnnouncementPost> {
+  const detail = await fetchAnnouncementDraftDetail(draftId);
+  return mapAnnouncementDraftDetail(detail);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

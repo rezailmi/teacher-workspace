@@ -12,12 +12,14 @@ import { ReadTrackingCards } from '~/components/posts/ReadTrackingCards';
 import { RecipientReadTable } from '~/components/posts/RecipientReadTable';
 import { Badge, Button } from '~/components/ui';
 import {
+  isAnnouncementDraftId,
   isConsentFormId,
   PG_CONSENT_FORM_STATUS_BADGE,
   PG_STATUS_BADGE,
   postHref,
   validatePostRoute,
   type PGAnnouncementPost,
+  type AnnouncementId,
   type PGConsentFormPost,
   type PGPost,
 } from '~/data/mock-pg-announcements';
@@ -49,10 +51,14 @@ export async function loader({
   const parsed = validatePostRoute(id, url.searchParams.get('kind'));
   if (!parsed) throw new Response('Not Found', { status: 404 });
 
+  // Draft announcements are only accessible via the edit route; a direct detail
+  // request for a draft ID is treated as 404.
+  if (isAnnouncementDraftId(parsed)) throw new Response('Not Found', { status: 404 });
+
   const [post, configs] = await Promise.all([
     isConsentFormId(parsed)
       ? POST_REGISTRY.form.loadDetail(parsed)
-      : POST_REGISTRY.announcement.loadDetail(parsed),
+      : POST_REGISTRY.announcement.loadDetail(parsed as AnnouncementId),
     getConfigs(),
   ]);
   return { post, configs };

@@ -15,6 +15,7 @@ import {
   fetchSchoolStudents,
   fetchSession,
   getConfigs,
+  loadAnnouncementDraftDetail,
   loadConsentPostDetail,
   loadPostDetail,
   updateConsentFormDraft,
@@ -63,6 +64,7 @@ import {
   SelectValue,
 } from '~/components/ui';
 import {
+  isAnnouncementDraftId,
   isConsentFormId,
   validatePostRoute,
   type FormQuestion,
@@ -110,7 +112,9 @@ interface CreatePostLoaderData {
 async function loadPostByKind(rawId: string, kindParam: string | null): Promise<PGPost | null> {
   const parsed = validatePostRoute(rawId, kindParam);
   if (!parsed) return null;
-  return isConsentFormId(parsed) ? loadConsentPostDetail(parsed) : loadPostDetail(parsed);
+  if (isConsentFormId(parsed)) return loadConsentPostDetail(parsed);
+  if (isAnnouncementDraftId(parsed)) return loadAnnouncementDraftDetail(parsed);
+  return loadPostDetail(parsed);
 }
 
 export async function loader({
@@ -614,7 +618,9 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
   const isFormValid = baseFormValid && consentFormValid;
   const recipientCount = state.selectedRecipients.reduce((sum, r) => sum + (r.count ?? 1), 0);
   const isEditing = Boolean(editId);
-  const draftIdRef = useRef<number | null>(isEditing && editId ? Number(editId) : null);
+  const draftIdRef = useRef<number | null>(
+    editId && editId.startsWith('annDraft_') ? Number(editId.slice('annDraft_'.length)) : null,
+  );
   const autoSave = useAutoSave({
     payload: state,
     save: async (_snapshot, { signal }) => {
@@ -653,10 +659,9 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
       if (draftIdRef.current == null) {
         const { announcementDraftId } = await createDraft(payload, { signal: opts.signal });
         draftIdRef.current = announcementDraftId;
-        // Intentionally no navigate: `/posts/:id/edit` for a draft hits the
-        // posted-announcement loader today and fails with -403. Until drafts
-        // are routed through their own branded id + loader, subsequent saves
-        // stay on the create URL and use `draftIdRef` to dispatch updateDraft.
+        navigate(`/posts/annDraft_${announcementDraftId}/edit?kind=announcement`, {
+          replace: true,
+        });
       } else {
         await updateDraft(draftIdRef.current, payload, { signal: opts.signal });
       }
@@ -687,10 +692,10 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
         }
       } else {
         const draftPayload = { ...buildAnnouncementPayload(state), scheduledSendAt };
-        if (isEditing && editId) {
+        if (isEditing && draftIdRef.current != null) {
           // Editing an existing draft: keep the same draft, just push the new
           // `scheduledSendAt` with the other field updates.
-          await updateDraft(Number(editId), draftPayload);
+          await updateDraft(draftIdRef.current, draftPayload);
         } else {
           // New post → schedule in a single round-trip. `scheduleDraft` (which
           // targets a pre-saved draft) is deferred; we don't need it for this

@@ -88,7 +88,7 @@ export interface PGAnnouncementPost {
    * `/announcements`; `'form'` (on `PGConsentFormPost`) routes to `/consentForms`.
    */
   kind: 'announcement';
-  id: AnnouncementId;
+  id: AnnouncementId | AnnouncementDraftId;
   title: string;
   /** Plain-text derivation of `richTextContent`; kept for list/preview display. */
   description: string;
@@ -236,20 +236,28 @@ export type PGAnnouncement = PGAnnouncementPost;
  * `loadConsentFormDetail(announcementId)` by accident.
  */
 export type AnnouncementId = string & { readonly __brand: 'AnnouncementId' };
+export type AnnouncementDraftId = `annDraft_${string}` & {
+  readonly __brand: 'AnnouncementDraftId';
+};
 export type ConsentFormId = `cf_${string}` & { readonly __brand: 'ConsentFormId' };
-export type PostId = AnnouncementId | ConsentFormId;
+export type PostId = AnnouncementId | AnnouncementDraftId | ConsentFormId;
 
 export function isConsentFormId(id: PostId): id is ConsentFormId {
   return id.startsWith('cf_');
 }
 
+export function isAnnouncementDraftId(id: PostId): id is AnnouncementDraftId {
+  return id.startsWith('annDraft_');
+}
+
 /**
  * Parse a raw URL segment into a typed `PostId`. Returns `null` for anything
- * that isn't a numeric announcement ID or a `cf_<digits>` consent-form ID —
- * callers treat that as a 404.
+ * that isn't a numeric announcement ID, a `cf_<digits>` consent-form ID, or
+ * an `annDraft_<digits>` draft announcement ID — callers treat that as a 404.
  */
 export function parsePostId(raw: string): PostId | null {
   if (/^cf_\d+$/.test(raw)) return raw as ConsentFormId;
+  if (/^annDraft_\d+$/.test(raw)) return raw as AnnouncementDraftId;
   if (/^\d+$/.test(raw)) return raw as AnnouncementId;
   return null;
 }

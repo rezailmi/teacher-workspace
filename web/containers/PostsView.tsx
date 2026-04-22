@@ -14,6 +14,7 @@ import { Link, useLoaderData, useNavigate, useRevalidator } from 'react-router';
 import {
   deleteAnnouncement,
   deleteConsentForm,
+  deleteDraft,
   duplicateAnnouncement,
   getConfigs,
   loadConsentPostsList,
@@ -42,11 +43,12 @@ import {
   TabsTrigger,
 } from '~/components/ui';
 import {
+  isAnnouncementDraftId,
   PG_CONSENT_FORM_STATUS_BADGE,
   PG_STATUS_BADGE,
   postHref,
 } from '~/data/mock-pg-announcements';
-import type { PGPost } from '~/data/mock-pg-announcements';
+import type { AnnouncementId, PGPost } from '~/data/mock-pg-announcements';
 import { formatDate, getRelevantDate, isLowReadRate } from '~/helpers/dateTime';
 import { notify } from '~/lib/notify';
 
@@ -141,8 +143,10 @@ const PostsView: React.FC = () => {
       try {
         if (row.kind === 'form') {
           await deleteConsentForm(row.id);
+        } else if (isAnnouncementDraftId(row.id)) {
+          await deleteDraft(Number(row.id.slice('annDraft_'.length)));
         } else {
-          await deleteAnnouncement(row.id);
+          await deleteAnnouncement(row.id as AnnouncementId);
         }
         revalidator.revalidate();
         notify.success('Post deleted.');

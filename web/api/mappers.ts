@@ -1,4 +1,5 @@
 import type {
+  AnnouncementDraftId,
   AnnouncementId,
   ConsentFormId,
   FormQuestion,
@@ -20,6 +21,7 @@ import { extractTextFromTiptap, textToTiptapDoc } from '~/helpers/tiptap';
 
 import type {
   PGApiAnnouncementDetail,
+  PGApiAnnouncementDraft,
   PGApiAnnouncementStatus,
   PGApiAnnouncementStudent,
   PGApiAnnouncementSummary,
@@ -57,9 +59,14 @@ export function mapAnnouncementSummary(
     ? Math.round(api.readMetrics.readPerStudent * api.readMetrics.totalStudents)
     : 0;
 
+  const id =
+    status === 'draft'
+      ? (`annDraft_${api.postId}` as AnnouncementDraftId)
+      : (String(api.postId) as AnnouncementId);
+
   return {
     kind: 'announcement',
-    id: String(api.postId) as AnnouncementId,
+    id,
     title: api.title,
     description: '',
     status,
@@ -134,6 +141,43 @@ export function mapAnnouncementDetail(detail: PGApiAnnouncementDetail): PGAnnoun
       .filter((t): t is PGAnnouncementTarget => t !== null),
     enquiryEmail: detail.enquiryEmailAddress,
     websiteLinks: detail.websiteLinks.map((l) => ({ url: l.url, title: l.title })),
+  };
+}
+
+/**
+ * Map a draft-detail response to PGAnnouncementPost. Minimal field mapping for
+ * the create/edit flow — populates title/richText/email so the form hydrates
+ * on reload; recipients, staff, attachments are left empty because the
+ * /announcements/drafts/:id response shape for those fields is not yet
+ * documented (staffGroups/studentGroups arrays were empty in observed samples).
+ * Extend as shapes become verifiable.
+ */
+export function mapAnnouncementDraftDetail(draft: PGApiAnnouncementDraft): PGAnnouncementPost {
+  const richTextContent =
+    draft.richTextContent && typeof draft.richTextContent === 'string'
+      ? (JSON.parse(draft.richTextContent) as Record<string, unknown>)
+      : null;
+
+  return {
+    kind: 'announcement',
+    id: `annDraft_${draft.announcementDraftId}` as AnnouncementDraftId,
+    title: draft.title,
+    description: richTextContent ? extractTextFromTiptap(richTextContent) : '',
+    richTextContent,
+    status: 'draft',
+    responseType: 'view-only',
+    ownership: 'mine',
+    recipients: [],
+    stats: {
+      totalCount: 0,
+      readCount: 0,
+      responseCount: 0,
+      yesCount: 0,
+      noCount: 0,
+    },
+    createdAt: draft.updatedAt,
+    createdBy: '',
+    scheduledAt: draft.scheduledDateTime ?? undefined,
   };
 }
 

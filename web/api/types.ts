@@ -122,24 +122,20 @@ export interface PGApiAnnouncementDetail {
 
 export interface PGApiAnnouncementDraft {
   announcementDraftId: number;
+  status: 'DRAFT';
+  postedAnnouncementId: number | null;
   title: string;
   content: string | null;
-  richTextContent: Record<string, unknown> | string | null;
+  richTextContent: string | null;
   enquiryEmailAddress: string;
-  attachments: PGApiAttachment[];
-  images: PGApiImage[];
-  shortcutLink: PGApiShortcutLink[];
-  websiteLinks: PGApiWebsiteLink[];
-  staffOwners: PGApiStaffOwner[];
-  recipients: {
-    classIds: number[];
-    customGroupIds: number[];
-    ccaIds: number[];
-    levelIds: number[];
-  };
-  scheduledSendAt: string | null;
-  createdAt: string;
+  staffGroups: unknown[];
+  studentGroups: unknown[];
+  images: { images: unknown[]; imagesOrigin: string };
+  attachments: unknown[];
+  urls: unknown[];
+  shortcuts: unknown[];
   updatedAt: string;
+  scheduledDateTime: string | null;
 }
 
 // ─── Announcement write payloads ────────────────────────────────────────────
