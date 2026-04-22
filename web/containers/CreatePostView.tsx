@@ -1,5 +1,5 @@
 import { ArrowLeft, Eye, EyeOff } from 'lucide-react';
-import { useDeferredValue, useEffect, useMemo, useReducer, useRef, useState } from 'react';
+import { useDeferredValue, useMemo, useReducer, useRef, useState } from 'react';
 import type { LoaderFunctionArgs } from 'react-router';
 import { Link, Navigate, useLoaderData, useNavigate, useParams } from 'react-router';
 
@@ -615,8 +615,6 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
   const recipientCount = state.selectedRecipients.reduce((sum, r) => sum + (r.count ?? 1), 0);
   const isEditing = Boolean(editId);
   const draftIdRef = useRef<number | null>(isEditing && editId ? Number(editId) : null);
-  const [isSavingDraft, setIsSavingDraft] = useState(false);
-
   const autoSave = useAutoSave({
     payload: state,
     save: async (_snapshot, { signal }) => {
@@ -628,16 +626,9 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
     shouldSave: (s) => s.title.trim().length > 0 || editorHasContent(s.descriptionDoc),
   });
 
-  const lastSavedSerialized = useRef<string | null>(null);
-  useEffect(() => {
-    if (autoSave.status === 'saved') {
-      lastSavedSerialized.current = JSON.stringify(state);
-    }
-  }, [autoSave.status, state]);
-
   const isDirty =
-    lastSavedSerialized.current !== null
-      ? JSON.stringify(state) !== lastSavedSerialized.current
+    autoSave.lastSavedSerialized !== null
+      ? JSON.stringify(state) !== autoSave.lastSavedSerialized
       : // No save has happened yet. Treat as dirty only if there's meaningful content.
         state.title.trim().length > 0 || editorHasContent(state.descriptionDoc);
 
@@ -657,14 +648,11 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
   }
 
   async function handleSaveDraft(opts: { signal?: AbortSignal } = {}): Promise<void> {
-    if (isSavingDraft) return; // single-flight for manual clicks
-    setIsSavingDraft(true);
     try {
       const payload = buildAnnouncementPayload(state);
       if (draftIdRef.current == null) {
         const { announcementDraftId } = await createDraft(payload, { signal: opts.signal });
         draftIdRef.current = announcementDraftId;
-        // Switch the URL so refresh hits the draft. `replace` to avoid a history entry.
         navigate(`/posts/${announcementDraftId}/edit`, { replace: true });
       } else {
         await updateDraft(draftIdRef.current, payload, { signal: opts.signal });
@@ -677,8 +665,6 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
         notify.error('Failed to save draft.');
       }
       throw err;
-    } finally {
-      setIsSavingDraft(false);
     }
   }
 
@@ -792,12 +778,12 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
             <Button
               variant="secondary"
               size="sm"
-              disabled={isSavingDraft}
+              disabled={autoSave.status === 'saving'}
               onClick={() => {
-                void handleSaveDraft();
+                void autoSave.saveNow();
               }}
             >
-              {isSavingDraft ? 'Saving…' : 'Save draft'}
+              {autoSave.status === 'saving' ? 'Saving…' : 'Save draft'}
             </Button>
             {/* Schedule action is gated on PG's `schedule_announcement_form_post`
                 flag. When disabled, `onSchedule` is left undefined so the

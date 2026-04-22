@@ -21,6 +21,8 @@ export interface UseAutoSaveOptions<TPayload> {
 export interface UseAutoSaveResult {
   status: AutoSaveStatus;
   lastSavedAt: Date | null;
+  /** JSON.stringify of the payload at the moment of the last successful save. */
+  lastSavedSerialized: string | null;
   /** Force an immediate save; aborts any in-flight autosave first. */
   saveNow: () => Promise<void>;
 }
@@ -30,6 +32,7 @@ export function useAutoSave<TPayload>(options: UseAutoSaveOptions<TPayload>): Us
 
   const [status, setStatus] = useState<AutoSaveStatus>('idle');
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+  const [lastSavedSerialized, setLastSavedSerialized] = useState<string | null>(null);
 
   const payloadRef = useRef(payload);
   const saveRef = useRef(save);
@@ -62,14 +65,13 @@ export function useAutoSave<TPayload>(options: UseAutoSaveOptions<TPayload>): Us
       // Only mark saved if this is still the latest request.
       if (inFlightRef.current === controller) {
         lastSerializedRef.current = serialized;
+        setLastSavedSerialized(serialized);
         setLastSavedAt(new Date());
         setStatus('saved');
       }
     } catch (err) {
       if (controller.signal.aborted) return; // superseded, don't surface.
       setStatus('error');
-      // Let the caller's save() surface its own toast; hook only tracks status.
-      // Re-throw so saveNow() callers can await the outcome.
       throw err;
     } finally {
       if (inFlightRef.current === controller) {
@@ -78,7 +80,6 @@ export function useAutoSave<TPayload>(options: UseAutoSaveOptions<TPayload>): Us
     }
   }, []);
 
-  // Interval scheduler.
   useEffect(() => {
     if (!enabled) return;
     const id = window.setInterval(() => {
@@ -89,7 +90,6 @@ export function useAutoSave<TPayload>(options: UseAutoSaveOptions<TPayload>): Us
     return () => window.clearInterval(id);
   }, [enabled, intervalMs, runSave]);
 
-  // Abort any in-flight save on unmount.
   useEffect(() => {
     return () => {
       inFlightRef.current?.abort();
@@ -101,5 +101,5 @@ export function useAutoSave<TPayload>(options: UseAutoSaveOptions<TPayload>): Us
     await runSave();
   }, [runSave]);
 
-  return { status, lastSavedAt, saveNow };
+  return { status, lastSavedAt, lastSavedSerialized, saveNow };
 }
