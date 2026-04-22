@@ -1,0 +1,84 @@
+{
+  "schoolId": 2001,
+  "acadYear": "2026",
+  "categories": [
+    { "type": "CLASS", "groups": ["class-101", "class-102"] },
+    { "type": "LEVEL", "groups": ["level-4"] },
+    { "type": "CCA", "groups": ["cca-boxing", "cca-choir"] }
+  ],
+  "groups": {
+    "class-101": {
+      "id": "class-101",
+      "type": "CLASS",
+      "label": "4A (2026)",
+      "description": "SECONDARY 4",
+      "students": [1, 2, 3, 4]
+    },
+    "class-102": {
+      "id": "class-102",
+      "type": "CLASS",
+      "label": "4B (2026)",
+      "description": "SECONDARY 4",
+      "students": []
+    },
+    "level-4": {
+      "id": "level-4",
+      "type": "LEVEL",
+      "label": "Secondary 4",
+      "students": [1, 2, 3, 4]
+    },
+    "cca-boxing": {
+      "id": "cca-boxing",
+      "type": "CCA",
+      "label": "Boxing",
+      "students": [1]
+    },
+    "cca-choir": {
+      "id": "cca-choir",
+      "type": "CCA",
+      "label": "Choir",
+      "students": [3]
+    }
+  },
+  "students": {
+    "1": {
+      "id": 1,
+      "name": "TAN XIAO MING",
+      "nric": "T0412345A",
+      "levelId": 4,
+      "classId": 101,
+      "index": "15"
+    },
+    "2": {
+      "id": 2,
+      "name": "LEE WEI LIANG",
+      "nric": "T0412346B",
+      "levelId": 4,
+      "classId": 101,
+      "index": "8"
+    },
+    "3": {
+      "id": 3,
+      "name": "CAROL CHEN HUI",
+      "nric": "T0412347C",
+      "levelId": 4,
+      "classId": 101,
+      "index": "3"
+    },
+    "4": {
+      "id": 4,
+      "name": "DAVID NG JUN WEI",
+      "nric": "T0412348D",
+      "levelId": 4,
+      "classId": 101,
+      "index": "5"
+    }
+  },
+  "levels": {
+    "4": { "id": 4, "label": "Secondary 4" }
+  },
+  "classes": {
+    "101": { "id": 101, "label": "4A (2026)", "description": "SECONDARY 4" },
+    "102": { "id": 102, "label": "4B (2026)", "description": "SECONDARY 4" }
+  }
+}

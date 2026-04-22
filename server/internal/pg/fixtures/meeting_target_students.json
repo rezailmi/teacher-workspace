@@ -1,0 +1,36 @@
+{
+  "eventStudents": [
+    {
+      "eventStudentId": 5001,
+      "studentName": "TAN XIAO MING",
+      "className": "4A",
+      "classSerialNo": "15",
+      "ccaName": "BOXING",
+      "remarks": ""
+    },
+    {
+      "eventStudentId": 5002,
+      "studentName": "LEE WEI LIANG",
+      "className": "4A",
+      "classSerialNo": "8",
+      "ccaName": "",
+      "remarks": ""
+    },
+    {
+      "eventStudentId": 5003,
+      "studentName": "CAROL CHEN HUI",
+      "className": "4A",
+      "classSerialNo": "3",
+      "ccaName": "CHOIR",
+      "remarks": ""
+    },
+    {
+      "eventStudentId": 5004,
+      "studentName": "DAVID NG JUN WEI",
+      "className": "4A",
+      "classSerialNo": "5",
+      "ccaName": "",
+      "remarks": "Called sick"
+    }
+  ]
+}
