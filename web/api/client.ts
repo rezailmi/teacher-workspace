@@ -130,11 +130,17 @@ async function fetchApiRoot<T>(path: string): Promise<T> {
   return unwrapEnvelope<T>(await res.json());
 }
 
-async function mutateApi<T>(method: 'POST' | 'PUT', path: string, body: unknown): Promise<T> {
+async function mutateApi<T>(
+  method: 'POST' | 'PUT',
+  path: string,
+  body: unknown,
+  options: { signal?: AbortSignal } = {},
+): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     method,
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
+    signal: options.signal,
   });
   if (!res.ok) await handleErrorResponse(res);
   // Handle empty responses (204 No Content or empty body)
@@ -215,9 +221,12 @@ export function createAnnouncement(payload: PGApiCreateAnnouncementPayload) {
 }
 
 /** Save an announcement as draft. */
-export function createDraft(payload: PGApiCreateDraftPayload) {
+export function createDraft(
+  payload: PGApiCreateDraftPayload,
+  options: { signal?: AbortSignal } = {},
+): Promise<{ announcementDraftId: number }> {
   const body = { ...toPGCreatePayload(payload), scheduledSendAt: payload.scheduledSendAt };
-  return mutateApi<{ announcementDraftId: number }>('POST', '/announcements/drafts', body);
+  return mutateApi('POST', '/announcements/drafts', body, options);
 }
 
 /** Schedule a draft for future sending. */
@@ -226,9 +235,13 @@ export function scheduleDraft(payload: PGApiScheduleDraftPayload) {
 }
 
 /** Update an existing draft. */
-export function updateDraft(draftId: number, payload: PGApiCreateDraftPayload) {
+export function updateDraft(
+  draftId: number,
+  payload: PGApiCreateDraftPayload,
+  options: { signal?: AbortSignal } = {},
+): Promise<void> {
   const body = { ...toPGCreatePayload(payload), scheduledSendAt: payload.scheduledSendAt };
-  return mutateApi<void>('PUT', `/announcements/drafts/${draftId}`, body);
+  return mutateApi('PUT', `/announcements/drafts/${draftId}`, body, options);
 }
 
 /** Duplicate an existing announcement. */
