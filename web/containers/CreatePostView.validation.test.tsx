@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { SelectedEntity } from '~/components/comms/entity-selector';
-import type { FormQuestion, ReminderConfig } from '~/data/mock-pg-announcements';
+import type { ReminderConfig } from '~/data/mock-pg-announcements';
 
 import { isCreatePostFormValid } from './createPostValidation';
 import type { PostFormState } from './CreatePostView';
@@ -75,24 +75,5 @@ describe('isCreatePostFormValid — post-with-response (form)', () => {
     // PGW allows NONE as a valid reminder choice.
     const reminder: ReminderConfig = { type: 'NONE' };
     expect(isCreatePostFormValid({ ...formBase, reminder }, 'post-with-response')).toBe(true);
-  });
-
-  it('fails when responseType is custom and there are no questions', () => {
-    const customNoQs: PostFormState = {
-      ...formBase,
-      responseType: 'custom' as PostFormState['responseType'],
-      questions: [],
-    };
-    expect(isCreatePostFormValid(customNoQs, 'post-with-response')).toBe(false);
-  });
-
-  it('passes when responseType is custom and there is at least one question', () => {
-    const question: FormQuestion = { id: 'q1', type: 'free-text', text: 'What?' };
-    const withQs: PostFormState = {
-      ...formBase,
-      responseType: 'custom' as PostFormState['responseType'],
-      questions: [question],
-    };
-    expect(isCreatePostFormValid(withQs, 'post-with-response')).toBe(true);
   });
 });

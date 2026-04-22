@@ -450,14 +450,15 @@ export function toPGCreatePayload(
 
 export function toPGConsentFormCreatePayload(
   p: PGApiCreateConsentFormPayload,
+  opts: { allowPartial?: boolean } = {},
 ): PGConsentFormWritePayload {
-  if (!p.enquiryEmailAddress) {
+  if (!p.enquiryEmailAddress && !opts.allowPartial) {
     throw new Error('enquiryEmailAddress is required');
   }
   return {
     title: p.title,
     content: p.richTextContent,
-    enquiryEmailAddress: p.enquiryEmailAddress,
+    enquiryEmailAddress: p.enquiryEmailAddress ?? '',
     targets: buildTargets(p.recipients),
     staffInCharge: p.staffOwnerIds,
     webLinkList: p.websiteLinks?.map((l) => ({ webLink: l.url, linkDescription: l.title })),
@@ -481,7 +482,7 @@ export function toPGConsentFormDraftPayload(
   p: PGApiCreateConsentFormDraftPayload,
 ): PGConsentFormWritePayload {
   return {
-    ...toPGConsentFormCreatePayload(p),
+    ...toPGConsentFormCreatePayload(p, { allowPartial: true }),
     scheduledSendAt: p.scheduledSendAt,
   } satisfies PGConsentFormWritePayload;
 }
@@ -630,12 +631,13 @@ export function buildConsentFormPayload(
   state: BuildPostPayloadInput,
 ): PGApiCreateConsentFormPayload {
   const doc = state.descriptionDoc ?? textToTiptapDoc(state.description);
-  if (state.responseType !== 'acknowledge' && state.responseType !== 'yes-no') {
-    // Consent forms sent to PGW only support acknowledge/yes-no. `view-only`
-    // and `custom` are front-end-only values; guard here defensively so a bad
-    // state change surfaces a clear error rather than an opaque 400 from pgw.
+  if (state.responseType === 'view-only') {
+    // Consent forms never carry `view-only`; the container's type-picker
+    // seeds `acknowledge` when the user picks post-with-response. Guard here
+    // defensively so a bad state change surfaces a clear error rather than
+    // an opaque 400 from pgw.
     throw new Error(
-      `Consent forms require responseType of \`acknowledge\` or \`yes-no\`, got \`${state.responseType}\`.`,
+      'Consent forms require responseType of `acknowledge` or `yes-no`, got `view-only`.',
     );
   }
   const responseType = FE_TO_PG_CONSENT_RESPONSE_TYPE[state.responseType];

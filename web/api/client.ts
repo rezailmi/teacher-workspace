@@ -330,11 +330,15 @@ export function createConsentForm(payload: PGApiCreateConsentFormPayload) {
 }
 
 /** Save a consent form as draft (optionally with a scheduled send-at). */
-export function createConsentFormDraft(payload: PGApiCreateConsentFormDraftPayload) {
+export function createConsentFormDraft(
+  payload: PGApiCreateConsentFormDraftPayload,
+  options: { signal?: AbortSignal } = {},
+) {
   return mutateApi<{ consentFormDraftId: number }>(
     'POST',
     '/consentForms/drafts',
     toPGConsentFormDraftPayload(payload),
+    options,
   );
 }
 
@@ -342,11 +346,13 @@ export function createConsentFormDraft(payload: PGApiCreateConsentFormDraftPaylo
 export function updateConsentFormDraft(
   draftId: number,
   payload: PGApiCreateConsentFormDraftPayload,
+  options: { signal?: AbortSignal } = {},
 ) {
   return mutateApi<void>(
     'PUT',
     `/consentForms/drafts/${draftId}`,
     toPGConsentFormDraftPayload(payload),
+    options,
   );
 }
 

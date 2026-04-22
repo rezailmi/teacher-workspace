@@ -8,8 +8,7 @@ import type { PostFormState } from './CreatePostView';
  *
  * Gate 1 — common: title, enquiry email, recipients, and description are
  * required for all post types.
- * Gate 2 — post-with-response only: due date is required; when responseType
- * is 'custom', at least one question must be present.
+ * Gate 2 — post-with-response only: due date is required.
  */
 export function isCreatePostFormValid(
   state: PostFormState,
@@ -24,13 +23,10 @@ export function isCreatePostFormValid(
 
   if (!baseValid) return false;
 
-  // Gate 2: consent-form (post-with-response) — due date + responseType-specific gates.
+  // Gate 2: consent-form (post-with-response) — due date required.
   if (selectedType !== 'post-with-response') return true;
 
   if (state.dueDate.trim().length === 0) return false;
-
-  // Custom response type requires at least one question.
-  if (state.responseType === 'custom' && state.questions.length === 0) return false;
 
   return true;
 }
