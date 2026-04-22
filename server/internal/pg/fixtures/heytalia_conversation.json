@@ -1,0 +1,23 @@
+{
+  "conversation": {
+    "conversationId": "mock-conversation-1",
+    "sessionId": "mock-session-1",
+    "pgStaffId": "1013",
+    "pgSchoolId": "2001",
+    "platform": "PGW",
+    "platformMetadata": {},
+    "title": "Mocked conversation",
+    "messages": [
+      {
+        "role": "assistant",
+        "content": "HeyTalia is disabled in the tw-pg-experiment mock mode.",
+        "timestamp": "2026-04-22T00:00:00.000Z"
+      }
+    ],
+    "createdAt": "2026-04-22T00:00:00.000Z",
+    "updatedAt": "2026-04-22T00:00:00.000Z",
+    "lastUpdated": 1777641600000,
+    "messageCount": 1,
+    "ttl": 86400
+  }
+}

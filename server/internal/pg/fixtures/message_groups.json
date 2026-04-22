@@ -1,0 +1,24 @@
+[
+  {
+    "staffMessageGroupId": 1,
+    "groupId": 101,
+    "groupType": "class",
+    "groupName": "4A (2026)",
+    "numberOfStudents": 30,
+    "staffMessageGroupRoleName": "Form Teacher",
+    "isDeleted": false,
+    "createdAt": "2026-01-15T08:30:00.000Z",
+    "updatedAt": "2026-03-20T14:45:00.000Z"
+  },
+  {
+    "staffMessageGroupId": 2,
+    "groupId": 2001,
+    "groupType": "cca",
+    "groupName": "Boxing Club",
+    "numberOfStudents": 12,
+    "staffMessageGroupRoleName": "CCA Teacher",
+    "isDeleted": false,
+    "createdAt": "2026-02-01T09:00:00.000Z",
+    "updatedAt": "2026-03-18T11:20:00.000Z"
+  }
+]

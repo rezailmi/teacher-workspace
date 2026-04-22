@@ -1,0 +1,14 @@
+{
+  "flags": {
+    "absence_submission": { "enabled": true },
+    "duplicate_announcement_form_post": { "enabled": true },
+    "heytalia_chat": { "enabled": true },
+    "schedule_announcement_form_post": { "enabled": true },
+    "web_notification": {
+      "enabled": false,
+      "message": "",
+      "startDateTime": "2026-03-01T00:00:00.000Z",
+      "endDateTime": "2026-04-01T00:00:00.000Z"
+    }
+  }
+}

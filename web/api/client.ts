@@ -6,10 +6,6 @@ import type {
 } from '~/data/mock-pg-announcements';
 import { notify } from '~/lib/notify';
 
-import detailFixture from '../../server/internal/pg/fixtures/announcement_detail.json';
-import announcementsFixture from '../../server/internal/pg/fixtures/announcements.json';
-import sharedFixture from '../../server/internal/pg/fixtures/announcements_shared.json';
-import consentFormsFixture from '../../server/internal/pg/fixtures/consent_forms.json';
 import { PGError, PGNotFoundError, PGSessionExpiredError, PGValidationError } from './errors';
 import {
   mapAnnouncementDetail,
@@ -153,21 +149,6 @@ async function deleteApi(path: string): Promise<void> {
   if (!res.ok) await handleErrorResponse(res);
 }
 
-/** Returns fallback on network errors; re-throws HTTP and abort errors. */
-async function fetchApiSafe<T>(path: string, fallback: T): Promise<T> {
-  try {
-    return await fetchApi<T>(path);
-  } catch (err) {
-    // Re-throw AbortError so React Router's navigation cancellation works
-    if (err instanceof DOMException && err.name === 'AbortError') throw err;
-    // Re-throw HTTP errors so they surface to error boundaries / containers
-    if (err instanceof PGError) throw err;
-    // Only fall back for network-level failures (server unreachable)
-    console.warn(`[PG API] Network error fetching ${path}, using fixture fallback`);
-    return fallback;
-  }
-}
-
 // ═══════════════════════════════════════════════════════════════════════════
 // CONFIGS (feature flags)
 // ═══════════════════════════════════════════════════════════════════════════
@@ -213,26 +194,16 @@ export function getConfigs(): Promise<PGApiConfig> {
 // ─── Read ───────────────────────────────────────────────────────────────────
 
 function fetchAnnouncements() {
-  return fetchApiSafe<PGApiAnnouncementList>(
-    '/announcements',
-    announcementsFixture as unknown as PGApiAnnouncementList,
-  );
+  return fetchApi<PGApiAnnouncementList>('/announcements');
 }
 
 function fetchSharedAnnouncements() {
-  return fetchApiSafe<PGApiAnnouncementList>(
-    '/announcements/shared',
-    sharedFixture as unknown as PGApiAnnouncementList,
-  );
+  return fetchApi<PGApiAnnouncementList>('/announcements/shared');
 }
 
 async function fetchAnnouncementDetail(postId: AnnouncementId): Promise<PGApiAnnouncementDetail> {
   // pgw-web wraps single-detail responses as `body: [<detail>]`; unwrap the array.
-  // Fixture mirrors that shape so mock mode stays in lockstep.
-  const arr = await fetchApiSafe<PGApiAnnouncementDetail[]>(
-    `/announcements/${postId}`,
-    detailFixture as unknown as PGApiAnnouncementDetail[],
-  );
+  const arr = await fetchApi<PGApiAnnouncementDetail[]>(`/announcements/${postId}`);
   return arr[0];
 }
 
@@ -296,17 +267,11 @@ export async function loadPostDetail(postId: AnnouncementId): Promise<PGAnnounce
 // ─── Read ───────────────────────────────────────────────────────────────────
 
 function fetchConsentForms() {
-  return fetchApiSafe<PGApiConsentFormList>(
-    '/consentForms',
-    consentFormsFixture as unknown as PGApiConsentFormList,
-  );
+  return fetchApi<PGApiConsentFormList>('/consentForms');
 }
 
 function fetchSharedConsentForms() {
-  return fetchApiSafe<PGApiConsentFormList>(
-    '/consentForms/shared',
-    consentFormsFixture as unknown as PGApiConsentFormList,
-  );
+  return fetchApi<PGApiConsentFormList>('/consentForms/shared');
 }
 
 export function fetchConsentFormDetail(formId: ConsentFormId) {
