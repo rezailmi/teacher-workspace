@@ -653,7 +653,10 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
       if (draftIdRef.current == null) {
         const { announcementDraftId } = await createDraft(payload, { signal: opts.signal });
         draftIdRef.current = announcementDraftId;
-        navigate(`/posts/${announcementDraftId}/edit`, { replace: true });
+        // Intentionally no navigate: `/posts/:id/edit` for a draft hits the
+        // posted-announcement loader today and fails with -403. Until drafts
+        // are routed through their own branded id + loader, subsequent saves
+        // stay on the create URL and use `draftIdRef` to dispatch updateDraft.
       } else {
         await updateDraft(draftIdRef.current, payload, { signal: opts.signal });
       }
