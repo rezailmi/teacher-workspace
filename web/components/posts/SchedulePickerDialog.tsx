@@ -1,9 +1,8 @@
 import { useMemo, useState } from 'react';
-import { DayPicker } from 'react-day-picker';
 
-import 'react-day-picker/style.css';
 import {
   Button,
+  Calendar,
   Dialog,
   DialogContent,
   DialogDescription,
@@ -126,18 +125,16 @@ export function SchedulePickerDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-2">
-          <div className="rounded-xl border p-3">
-            <DayPicker
-              mode="single"
-              selected={date}
-              onSelect={setDate}
-              disabled={{ before: today, after: maxDate }}
-              showOutsideDays
-            />
-          </div>
+        <div className="flex flex-col gap-4 py-2">
+          <Calendar
+            mode="single"
+            selected={date}
+            onSelect={setDate}
+            disabled={{ before: today, after: maxDate }}
+            className="rounded-xl border"
+          />
 
-          <div className="space-y-1.5">
+          <div className="flex flex-col gap-1.5">
             <Label htmlFor="schedule-time-select" className="text-muted-foreground">
               Time (Asia/Singapore)
             </Label>
