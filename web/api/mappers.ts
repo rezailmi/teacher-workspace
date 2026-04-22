@@ -414,8 +414,8 @@ interface PGConsentFormWritePayload extends PGWritePayload {
   consentByDate: string;
   addReminderType: PGApiReminderType;
   reminderDate?: string | null;
-  eventStartDate?: string | null;
-  eventEndDate?: string | null;
+  eventStartDate?: { date: string; time: string } | null;
+  eventEndDate?: { date: string; time: string } | null;
   venue?: string | null;
   customQuestions?: { questionText: string; questionType: 'TEXT' | 'MCQ'; options?: string[] }[];
   scheduledSendAt?: string | null;
@@ -505,13 +505,19 @@ export function toPGConsentFormDraftPayload(
  * browser typing "09:00" will have it stamped as `09:00+08:00` — numerically
  * lossless on round-trip, but they should know they're picking SGT time.
  */
-function localDateTimeToSgtIso(localDateTime: string): string {
+/**
+ * Split a local `YYYY-MM-DDTHH:mm` datetime into PGW's expected
+ * `{ date: 'YYYY-MM-DD', time: 'HH:mm' }` shape for consent-form event fields.
+ * Returns `null` for an unparseable / empty input so callers can pass it
+ * straight into the wire payload.
+ */
+function splitLocalDateTime(localDateTime: string): { date: string; time: string } | null {
   const [datePart, timePart] = localDateTime.split('T');
-  if (!datePart || !timePart) return localDateTime;
+  if (!datePart || !timePart) return null;
   const [hh, mm] = timePart.split(':');
   const hhPadded = (hh ?? '00').padStart(2, '0');
   const mmPadded = (mm ?? '00').padStart(2, '0');
-  return `${datePart}T${hhPadded}:${mmPadded}:00+08:00`;
+  return { date: datePart, time: `${hhPadded}:${mmPadded}` };
 }
 
 /**
@@ -641,14 +647,14 @@ export function buildConsentFormPayload(
     );
   }
   const responseType = FE_TO_PG_CONSENT_RESPONSE_TYPE[state.responseType];
-  // PGW's consent-form contract types these fields as always-string (see
-  // `pgw-web/src/app/pages/ConsentForms/ConsentForm.types.ts`). Sending `null`
-  // produces `"reminderDate" must be a string` at runtime even when the field
-  // is logically absent. Use empty strings for the "no value" case.
+  // PGW's consent-form schema accepts empty strings for reminderDate /
+  // consentByDate / venue, but event dates must be `{ date, time }` or null
+  // (Joi rejects `""` with "eventStartDate is not allowed"). See
+  // `pgw-web/src/server/modules/consent-form/consent-form-draft.service.ts`.
   const reminderDate =
     state.reminder.type === 'NONE' ? '' : (localDateToSgtIso(state.reminder.date) ?? '');
-  const eventStartDate = state.event ? (localDateTimeToSgtIso(state.event.start) ?? '') : '';
-  const eventEndDate = state.event ? (localDateTimeToSgtIso(state.event.end) ?? '') : '';
+  const eventStartDate = state.event ? splitLocalDateTime(state.event.start) : null;
+  const eventEndDate = state.event ? splitLocalDateTime(state.event.end) : null;
   const consentByDate = state.dueDate.trim() ? (localDateToSgtIso(state.dueDate) ?? '') : '';
   // Venue is tracked both on `state.venue` (independently editable) and as a
   // child of `state.event.venue` when PGEvent is populated. Prefer the

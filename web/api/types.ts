@@ -243,8 +243,10 @@ export interface PGApiCreateConsentFormPayload {
   consentByDate: string;
   addReminderType: PGApiReminderType;
   reminderDate?: string | null;
-  eventStartDate?: string | null;
-  eventEndDate?: string | null;
+  /** PGW expects `{ date: 'YYYY-MM-DD', time: 'HH:mm' }` or `null` — see
+   *  `pgw-web/src/server/modules/consent-form/consent-form-draft.service.ts#L337`. */
+  eventStartDate?: { date: string; time: string } | null;
+  eventEndDate?: { date: string; time: string } | null;
   venue?: string | null;
   recipients: {
     classIds: number[];
