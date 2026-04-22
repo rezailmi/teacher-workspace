@@ -32,15 +32,17 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
   Input,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
-  Tabs,
-  TabsList,
-  TabsTrigger,
 } from '~/components/ui';
 import {
   isAnnouncementDraftId,
@@ -182,15 +184,18 @@ const PostsView: React.FC = () => {
         </div>
       </div>
 
-      {/* Toolbar: tabs + search + filter */}
+      {/* Toolbar: view selector + search + filter */}
       <div className="space-y-4 pt-4">
         <div className="flex flex-wrap items-center justify-between gap-3 px-6">
-          <Tabs value={tab} onValueChange={(v) => setTab(v as PostTab)}>
-            <TabsList>
-              <TabsTrigger value="view-only">Posts</TabsTrigger>
-              <TabsTrigger value="with-responses">Posts with responses</TabsTrigger>
-            </TabsList>
-          </Tabs>
+          <Select value={tab} onValueChange={(v) => setTab(v as PostTab)}>
+            <SelectTrigger className="w-[200px]" aria-label="View">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="view-only">Posts</SelectItem>
+              <SelectItem value="with-responses">Posts with responses</SelectItem>
+            </SelectContent>
+          </Select>
 
           <div className="flex items-center gap-2">
             <div className="relative">
