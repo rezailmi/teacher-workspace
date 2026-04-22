@@ -409,7 +409,26 @@ interface PGWritePayload {
   shortcutLink?: string[];
 }
 
-interface PGConsentFormWritePayload extends PGWritePayload {
+/** Shape for `POST /consentForms` (publish). PGW uses ISO strings for event
+ *  dates and `inAppShortcutLink` here — different from the draft shape. See
+ *  `pgw-web/src/server/apiv2/staff/controllers/consent-form/create.staff.consent-form.controller.ts`. */
+interface PGConsentFormPublishPayload extends Omit<PGWritePayload, 'shortcutLink'> {
+  responseType: 'ACKNOWLEDGEMENT' | 'YES_NO';
+  consentByDate: string;
+  addReminderType: PGApiReminderType;
+  reminderDate?: string | null;
+  startDateTime?: string | null;
+  endDateTime?: string | null;
+  venue?: string | null;
+  inAppShortcutLink?: string[];
+  customQuestions?: { questionText: string; questionType: 'TEXT' | 'MCQ'; options?: string[] }[];
+}
+
+/** Shape for `POST /consentForms/drafts` and PUT update. PGW uses
+ *  `{ date, time }` objects for event dates and `shortcutLink` is ignored via
+ *  `allowUnknown: true`. See
+ *  `pgw-web/src/server/modules/consent-form/consent-form-draft.service.ts#L326`. */
+interface PGConsentFormDraftWritePayload extends PGWritePayload {
   responseType: 'ACKNOWLEDGEMENT' | 'YES_NO';
   consentByDate: string;
   addReminderType: PGApiReminderType;
@@ -448,13 +467,47 @@ export function toPGCreatePayload(
   } satisfies PGWritePayload;
 }
 
+function dateTimeToIso(dt: { date: string; time: string } | null | undefined): string | null {
+  if (!dt) return null;
+  return `${dt.date}T${dt.time}:00+08:00`;
+}
+
+function mapCustomQuestions(qs: PGApiCreateConsentFormPayload['customQuestions']) {
+  return qs?.map((q) => ({
+    questionText: q.text,
+    questionType: q.type === 'MCQ' ? ('MCQ' as const) : ('TEXT' as const),
+    ...(q.options && { options: q.options }),
+  }));
+}
+
 export function toPGConsentFormCreatePayload(
   p: PGApiCreateConsentFormPayload,
-  opts: { allowPartial?: boolean } = {},
-): PGConsentFormWritePayload {
-  if (!p.enquiryEmailAddress && !opts.allowPartial) {
+): PGConsentFormPublishPayload {
+  if (!p.enquiryEmailAddress) {
     throw new Error('enquiryEmailAddress is required');
   }
+  return {
+    title: p.title,
+    content: p.richTextContent,
+    enquiryEmailAddress: p.enquiryEmailAddress,
+    targets: buildTargets(p.recipients),
+    staffInCharge: p.staffOwnerIds,
+    webLinkList: p.websiteLinks?.map((l) => ({ webLink: l.url, linkDescription: l.title })),
+    inAppShortcutLink: p.shortcutLink,
+    responseType: p.responseType,
+    consentByDate: p.consentByDate,
+    addReminderType: p.addReminderType,
+    reminderDate: p.reminderDate,
+    startDateTime: dateTimeToIso(p.eventStartDate),
+    endDateTime: dateTimeToIso(p.eventEndDate),
+    venue: p.venue,
+    customQuestions: mapCustomQuestions(p.customQuestions),
+  } satisfies PGConsentFormPublishPayload;
+}
+
+export function toPGConsentFormDraftPayload(
+  p: PGApiCreateConsentFormDraftPayload,
+): PGConsentFormDraftWritePayload {
   return {
     title: p.title,
     content: p.richTextContent,
@@ -470,21 +523,9 @@ export function toPGConsentFormCreatePayload(
     eventStartDate: p.eventStartDate,
     eventEndDate: p.eventEndDate,
     venue: p.venue,
-    customQuestions: p.customQuestions?.map((q) => ({
-      questionText: q.text,
-      questionType: q.type === 'MCQ' ? 'MCQ' : 'TEXT',
-      ...(q.options && { options: q.options }),
-    })),
-  } satisfies PGConsentFormWritePayload;
-}
-
-export function toPGConsentFormDraftPayload(
-  p: PGApiCreateConsentFormDraftPayload,
-): PGConsentFormWritePayload {
-  return {
-    ...toPGConsentFormCreatePayload(p, { allowPartial: true }),
+    customQuestions: mapCustomQuestions(p.customQuestions),
     scheduledSendAt: p.scheduledSendAt,
-  } satisfies PGConsentFormWritePayload;
+  } satisfies PGConsentFormDraftWritePayload;
 }
 
 // ─── Post-creation dispatcher ───────────────────────────────────────────────
