@@ -1,13 +1,8 @@
-import CharacterCount from '@tiptap/extension-character-count';
-import Highlight from '@tiptap/extension-highlight';
-import Link from '@tiptap/extension-link';
-import TextAlign from '@tiptap/extension-text-align';
-import Underline from '@tiptap/extension-underline';
 import { EditorContent, useEditor } from '@tiptap/react';
-import StarterKit from '@tiptap/starter-kit';
 import { useEffect, useRef } from 'react';
 
 import { RichTextToolbar } from '~/components/posts/RichTextToolbar';
+import { createRichTextExtensions } from '~/helpers/tiptap';
 import { cn } from '~/lib/utils';
 
 export interface RichTextEditorProps {
@@ -44,28 +39,13 @@ export function RichTextEditor({
   onChangeRef.current = onChange;
 
   const editor = useEditor({
-    extensions: [
-      // `link` and `underline` ship inside StarterKit v3; disabling them here
-      // lets us register the standalone extensions below with our own config
-      // (custom `protocols`, `autolink`, etc.) without tiptap warning about
-      // duplicate extension names.
-      StarterKit.configure({ codeBlock: false, link: false, underline: false }),
-      Underline,
-      TextAlign.configure({ types: ['heading', 'paragraph'] }),
-      Link.configure({
-        openOnClick: false,
-        autolink: true,
-        protocols: ['http', 'https', 'mailto'],
-      }),
-      Highlight,
-      ...(maxLength != null ? [CharacterCount.configure({ limit: maxLength })] : []),
-    ],
+    extensions: createRichTextExtensions({ maxLength }),
     content: initialContent ?? undefined,
     editable,
     editorProps: {
       attributes: {
         class:
-          'min-h-[160px] w-full rounded-b-xl border border-t-0 bg-background px-3 py-2 text-sm outline-none prose prose-sm max-w-none focus-visible:ring-1 focus-visible:ring-ring',
+          'rich-content min-h-[160px] w-full rounded-b-xl border border-t-0 bg-background px-3 py-2 outline-none focus-visible:ring-1 focus-visible:ring-ring',
         ...(ariaLabelledBy ? { 'aria-labelledby': ariaLabelledBy } : {}),
         ...(placeholder ? { 'data-placeholder': placeholder } : {}),
       },

@@ -2,6 +2,35 @@
 // mappers. Keep them here so both sides reach for a single implementation —
 // the Tiptap schema lives here, not in two places that can drift.
 
+import CharacterCount from '@tiptap/extension-character-count';
+import Highlight from '@tiptap/extension-highlight';
+import Link from '@tiptap/extension-link';
+import TextAlign from '@tiptap/extension-text-align';
+import Underline from '@tiptap/extension-underline';
+import StarterKit from '@tiptap/starter-kit';
+
+/**
+ * Extension set shared by the live editor (`useEditor`) and the static
+ * preview (`generateHTML`). Keeping both sides on the same schema is what
+ * makes the preview pixel-match what the teacher typed.
+ */
+export function createRichTextExtensions(opts?: { maxLength?: number }) {
+  return [
+    // StarterKit v3 bundles link + underline; we disable them so the
+    // standalone extensions below register with our own config.
+    StarterKit.configure({ codeBlock: false, link: false, underline: false }),
+    Underline,
+    TextAlign.configure({ types: ['heading', 'paragraph'] }),
+    Link.configure({
+      openOnClick: false,
+      autolink: true,
+      protocols: ['http', 'https', 'mailto'],
+    }),
+    Highlight,
+    ...(opts?.maxLength != null ? [CharacterCount.configure({ limit: opts.maxLength })] : []),
+  ];
+}
+
 export function textToTiptapDoc(text: string): Record<string, unknown> {
   return {
     type: 'doc',

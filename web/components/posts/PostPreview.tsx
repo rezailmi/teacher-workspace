@@ -1,3 +1,4 @@
+import { generateHTML } from '@tiptap/react';
 import {
   ArrowDown,
   ArrowUp,
@@ -12,6 +13,11 @@ import React, { useMemo } from 'react';
 import { Button } from '~/components/ui';
 import type { PostFormState } from '~/containers/CreatePostView';
 import { formatDateTime, formatLocalDate, formatLocalDateTimeRange } from '~/helpers/dateTime';
+import { createRichTextExtensions, extractTextFromTiptap } from '~/helpers/tiptap';
+
+// Built once — `generateHTML` only reads the schema, so the extensions never
+// need a maxLength here (CharacterCount has no effect on static rendering).
+const RICH_TEXT_EXTENSIONS = createRichTextExtensions();
 
 interface PostPreviewProps {
   formState: PostFormState;
@@ -24,10 +30,18 @@ const PostPreview = React.memo(function PostPreview({
   currentUserName = 'Daniel Tan',
   defaultEnquiryEmail = 'enquiry@school.edu.sg',
 }: PostPreviewProps) {
-  const { kind, title, description, responseType, questions, enquiryEmail } = formState;
+  const { kind, title, description, descriptionDoc, responseType, questions, enquiryEmail } =
+    formState;
   // Freeze the preview timestamp to the moment the component mounts so
   // `React.memo` short-circuits re-renders when form state is unchanged.
   const timestamp = useMemo(() => formatDateTime(new Date().toISOString(), { case: 'upper' }), []);
+  // Serialize the Tiptap doc to HTML once per doc change; the editor holds the
+  // JSON, we just re-render it statically with the same schema.
+  const descriptionHtml = useMemo(() => {
+    if (!descriptionDoc) return '';
+    if (!extractTextFromTiptap(descriptionDoc)) return '';
+    return generateHTML(descriptionDoc as Parameters<typeof generateHTML>[0], RICH_TEXT_EXTENSIONS);
+  }, [descriptionDoc]);
   const hasContent = Boolean(title || description);
   const dimmedWhenEmpty = hasContent ? 'text-foreground' : 'text-muted-foreground/60';
   const enquiryContact = enquiryEmail || defaultEnquiryEmail;
@@ -95,7 +109,14 @@ const PostPreview = React.memo(function PostPreview({
           <p className="text-[11px] font-medium tracking-widest text-muted-foreground uppercase">
             Details
           </p>
-          {description ? (
+          {descriptionHtml ? (
+            <div
+              className="rich-content"
+              // `generateHTML` serializes a trusted Tiptap schema; Link is
+              // constrained to http/https/mailto via createRichTextExtensions.
+              dangerouslySetInnerHTML={{ __html: descriptionHtml }}
+            />
+          ) : description ? (
             <p className="text-sm whitespace-pre-wrap text-foreground">{description}</p>
           ) : (
             <p className="text-sm text-muted-foreground/60">{descriptionPlaceholder}</p>
