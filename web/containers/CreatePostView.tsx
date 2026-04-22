@@ -659,9 +659,13 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
       if (draftIdRef.current == null) {
         const { announcementDraftId } = await createDraft(payload, { signal: opts.signal });
         draftIdRef.current = announcementDraftId;
-        navigate(`/posts/annDraft_${announcementDraftId}/edit?kind=announcement`, {
-          replace: true,
-        });
+        // Don't navigate: the draft-detail mapper doesn't yet re-hydrate
+        // recipients/staff/attachments (pgw `studentGroups`/`staffGroups`
+        // mapping is a follow-up), so navigating would remount the form into
+        // a partial state. `draftIdRef` keeps the id in-memory so subsequent
+        // saves call `updateDraft`. Trade-off: a browser refresh loses the
+        // link to the in-flight draft (it's still saved in PGW — the user
+        // can find it from `/posts` and click through).
       } else {
         await updateDraft(draftIdRef.current, payload, { signal: opts.signal });
       }

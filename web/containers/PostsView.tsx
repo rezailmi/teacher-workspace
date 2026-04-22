@@ -305,7 +305,10 @@ const PostRowInner: React.FC<PostRowProps> = ({ row, duplicateEnabled, onDuplica
     isLowReadRate(row.postedAt, row.stats.readCount, row.stats.totalCount);
 
   return (
-    <TableRow className="cursor-pointer" onClick={() => navigate(postHref(row))}>
+    <TableRow
+      className="cursor-pointer"
+      onClick={() => navigate(postHref(row, { edit: row.status === 'draft' }))}
+    >
       {/* Title + description stacked */}
       <TableCell className="overflow-hidden pl-6 align-top whitespace-normal">
         <div className="min-w-0 py-1">
