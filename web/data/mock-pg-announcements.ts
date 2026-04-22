@@ -1,7 +1,7 @@
 import type { PGApiConsentFormHistoryEntry } from '~/api/types';
 
 export type PGStatus = 'posted' | 'scheduled' | 'draft' | 'posting';
-export type ResponseType = 'view-only' | 'acknowledge' | 'yes-no';
+export type ResponseType = 'view-only' | 'acknowledge' | 'yes-no' | 'custom';
 
 // Presentation mapping for status badges. Living here (alongside the PGStatus
 // type) keeps the status set and its label/variant in sync.
@@ -19,6 +19,7 @@ export const RESPONSE_TYPE_META: Record<ResponseType, { label: string; descripti
   'view-only': { label: 'View Only', description: 'Parents can read but not respond' },
   acknowledge: { label: 'Acknowledge', description: 'Parents must acknowledge receipt' },
   'yes-no': { label: 'Yes / No', description: 'Parents respond with Yes or No' },
+  custom: { label: 'Custom', description: 'Build a custom form with your own questions' },
 };
 
 export type ResponseTypeWithResponse = 'acknowledge' | 'yes-no';

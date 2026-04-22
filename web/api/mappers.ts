@@ -630,13 +630,12 @@ export function buildConsentFormPayload(
   state: BuildPostPayloadInput,
 ): PGApiCreateConsentFormPayload {
   const doc = state.descriptionDoc ?? textToTiptapDoc(state.description);
-  if (state.responseType === 'view-only') {
-    // Consent forms never carry `view-only`; the container's type-picker
-    // seeds `acknowledge` when the user picks post-with-response. Guard here
-    // defensively so a bad state change surfaces a clear error rather than
-    // an opaque 400 from pgw.
+  if (state.responseType !== 'acknowledge' && state.responseType !== 'yes-no') {
+    // Consent forms sent to PGW only support acknowledge/yes-no. `view-only`
+    // and `custom` are front-end-only values; guard here defensively so a bad
+    // state change surfaces a clear error rather than an opaque 400 from pgw.
     throw new Error(
-      'Consent forms require responseType of `acknowledge` or `yes-no`, got `view-only`.',
+      `Consent forms require responseType of \`acknowledge\` or \`yes-no\`, got \`${state.responseType}\`.`,
     );
   }
   const responseType = FE_TO_PG_CONSENT_RESPONSE_TYPE[state.responseType];

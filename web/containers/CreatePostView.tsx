@@ -80,6 +80,9 @@ import { useAutoSave, type AutoSaveStatus } from '~/hooks/useAutoSave';
 import { useUnsavedChangesGuard } from '~/hooks/useUnsavedChangesGuard';
 import { notify } from '~/lib/notify';
 import { cn } from '~/lib/utils';
+import { reportValidationError } from '~/lib/validation-errors';
+
+import { isCreatePostFormValid } from './createPostValidation';
 
 // ─── Route loader ───────────────────────────────────────────────────────────
 
@@ -608,14 +611,7 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
   // and a non-None reminder type. Phase 2 will flip routing to `/consentForms`
   // and these fields will be required by the wire contract; gate in advance so
   // the form-state matches what Phase 2 expects.
-  const baseFormValid =
-    state.title.trim().length > 0 &&
-    state.enquiryEmail.trim().length > 0 &&
-    state.selectedRecipients.length > 0;
-  const consentFormValid =
-    selectedType !== 'post-with-response' ||
-    (state.dueDate.trim().length > 0 && state.reminder.type !== 'NONE');
-  const isFormValid = baseFormValid && consentFormValid;
+  const isFormValid = isCreatePostFormValid(state, selectedType);
   const recipientCount = state.selectedRecipients.reduce((sum, r) => sum + (r.count ?? 1), 0);
   const isEditing = Boolean(editId);
   const draftIdRef = useRef<number | null>(
@@ -672,7 +668,7 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') return;
       if (err instanceof PGValidationError) {
-        notify.error(err.message);
+        notify.error(reportValidationError(err));
       } else if (err instanceof Error && !(err instanceof PGError)) {
         // Plain `Error`s from the outbound mapper (e.g. payload-builder
         // guards) carry a useful message; surface it verbatim rather than a
@@ -718,7 +714,7 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
     } catch (err) {
       setSaveState('idle');
       if (err instanceof PGValidationError) {
-        notify.error(err.message);
+        notify.error(reportValidationError(err));
       } else if (!(err instanceof PGError)) {
         notify.error('Failed to schedule post. Please try again.');
       }
@@ -741,7 +737,7 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
     } catch (err) {
       setSaveState('idle');
       if (err instanceof PGValidationError) {
-        notify.error(err.message);
+        notify.error(reportValidationError(err));
       } else if (err instanceof Error && !(err instanceof PGError)) {
         // Plain `Error`s from the outbound mapper (e.g. missing email) carry
         // a useful message; surface it verbatim rather than a generic toast.
