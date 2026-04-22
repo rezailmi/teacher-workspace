@@ -74,7 +74,7 @@ import {
 } from '~/data/mock-pg-announcements';
 import { assertNever } from '~/helpers/assertNever';
 import { textToTiptapDoc } from '~/helpers/tiptap';
-import type { AutoSaveStatus } from '~/hooks/useAutoSave';
+import { useAutoSave, type AutoSaveStatus } from '~/hooks/useAutoSave';
 import { notify } from '~/lib/notify';
 import { cn } from '~/lib/utils';
 
@@ -529,6 +529,12 @@ function postToFormState(
   }
 }
 
+function editorHasContent(doc: PostFormState['descriptionDoc']): boolean {
+  if (!doc || typeof doc !== 'object') return false;
+  const content = (doc as { content?: unknown[] }).content;
+  return Array.isArray(content) && content.length > 0;
+}
+
 // ─── Inner component ─────────────────────────────────────────────────────────
 
 function CreatePostViewInner({ editId }: { editId?: string }) {
@@ -609,6 +615,17 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
   const isEditing = Boolean(editId);
   const draftIdRef = useRef<number | null>(isEditing && editId ? Number(editId) : null);
   const [isSavingDraft, setIsSavingDraft] = useState(false);
+
+  const autoSave = useAutoSave({
+    payload: state,
+    save: async (_snapshot, { signal }) => {
+      // Re-use handleSaveDraft so URL navigation + error handling stay DRY.
+      await handleSaveDraft({ signal });
+    },
+    intervalMs: 30_000,
+    enabled: !isSaving, // pause autosave while publishing/scheduling
+    shouldSave: (s) => s.title.trim().length > 0 || editorHasContent(s.descriptionDoc),
+  });
 
   if (editId && !editData) {
     return <Navigate to="/posts" replace />;
@@ -733,9 +750,6 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
       </div>
     );
   }
-
-  // Placeholder; replaced in Task 5.
-  const autoSave = { status: 'idle' as AutoSaveStatus, lastSavedAt: null as Date | null };
 
   // ── Form view ──────────────────────────────────────────────────────────
   return (
