@@ -430,14 +430,17 @@ function buildTargets(r: PGApiCreateAnnouncementPayload['recipients']): PGTarget
   ];
 }
 
-export function toPGCreatePayload(p: PGApiCreateAnnouncementPayload): PGWritePayload {
-  if (!p.enquiryEmailAddress) {
+export function toPGCreatePayload(
+  p: PGApiCreateAnnouncementPayload,
+  opts: { allowPartial?: boolean } = {},
+): PGWritePayload {
+  if (!p.enquiryEmailAddress && !opts.allowPartial) {
     throw new Error('enquiryEmailAddress is required');
   }
   return {
     title: p.title,
     content: p.richTextContent,
-    enquiryEmailAddress: p.enquiryEmailAddress,
+    enquiryEmailAddress: p.enquiryEmailAddress ?? '',
     targets: buildTargets(p.recipients),
     staffInCharge: p.staffOwnerIds,
     webLinkList: p.websiteLinks?.map((l) => ({ webLink: l.url, linkDescription: l.title })),

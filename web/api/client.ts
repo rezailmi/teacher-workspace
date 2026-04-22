@@ -232,12 +232,15 @@ export function createAnnouncement(payload: PGApiCreateAnnouncementPayload) {
   return mutateApi<{ postId: number }>('POST', '/announcements', toPGCreatePayload(payload));
 }
 
-/** Save an announcement as draft. */
+/** Save an announcement as draft. PGW allows partial data on drafts. */
 export function createDraft(
   payload: PGApiCreateDraftPayload,
   options: { signal?: AbortSignal } = {},
 ): Promise<{ announcementDraftId: number }> {
-  const body = { ...toPGCreatePayload(payload), scheduledSendAt: payload.scheduledSendAt };
+  const body = {
+    ...toPGCreatePayload(payload, { allowPartial: true }),
+    scheduledSendAt: payload.scheduledSendAt,
+  };
   return mutateApi('POST', '/announcements/drafts', body, options);
 }
 
@@ -246,13 +249,16 @@ export function scheduleDraft(payload: PGApiScheduleDraftPayload) {
   return mutateApi<void>('POST', '/announcements/drafts/schedule', payload);
 }
 
-/** Update an existing draft. */
+/** Update an existing draft. PGW allows partial data on drafts. */
 export function updateDraft(
   draftId: number,
   payload: PGApiCreateDraftPayload,
   options: { signal?: AbortSignal } = {},
 ): Promise<void> {
-  const body = { ...toPGCreatePayload(payload), scheduledSendAt: payload.scheduledSendAt };
+  const body = {
+    ...toPGCreatePayload(payload, { allowPartial: true }),
+    scheduledSendAt: payload.scheduledSendAt,
+  };
   return mutateApi('PUT', `/announcements/drafts/${draftId}`, body, options);
 }
 

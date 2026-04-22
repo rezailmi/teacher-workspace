@@ -673,6 +673,11 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
       if (err instanceof DOMException && err.name === 'AbortError') return;
       if (err instanceof PGValidationError) {
         notify.error(err.message);
+      } else if (err instanceof Error && !(err instanceof PGError)) {
+        // Plain `Error`s from the outbound mapper (e.g. payload-builder
+        // guards) carry a useful message; surface it verbatim rather than a
+        // generic toast.
+        notify.error(err.message);
       } else if (!(err instanceof PGError)) {
         notify.error('Failed to save draft.');
       }
