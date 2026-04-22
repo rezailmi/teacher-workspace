@@ -118,9 +118,20 @@ Use `want/got` style:
 - Containment: `t.Errorf("want err containing %q, got: %v", substr, err)`
 - When `got` isn't already captured, use an `if` initialiser: `if want, got := "XXX", resp.Header.Get("X-XXX"); want != got { ... }`
 
-### TypeScript
+### Frontend
 
-- No frontend tests yet
+**Stack:** Vitest + React Testing Library + jsdom.
+
+**Run:**
+
+```bash
+pnpm test          # single run (CI)
+pnpm test:watch    # watch mode (development)
+```
+
+**File placement:** Test files live colocated with the file under test, or in a `__tests__` sibling directory. Use the `.test.ts` / `.test.tsx` extension.
+
+**Naming:** Mirror the Go conventions — outcome first, optionally followed by scenario: `"returns error on timeout"`, `"skips save when payload is unchanged"`. Describe blocks carry the function or component name; `it` blocks describe the observable outcome.
 
 ## Commit Conventions
 
