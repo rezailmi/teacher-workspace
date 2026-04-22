@@ -114,7 +114,12 @@ func (cfg *Config) Validate() error {
 		}
 	}
 
-	return errors.Join(append(errs, cfg.Server.validate(), cfg.OTPaaS.validate())...)
+	errs = append(errs, cfg.Server.validate())
+	// OTPaaS is only contacted when proxying to real PGW; mock mode needs no creds.
+	if !cfg.PG.Mock {
+		errs = append(errs, cfg.OTPaaS.validate())
+	}
+	return errors.Join(errs...)
 }
 
 func (c ServerConfig) validate() error {
