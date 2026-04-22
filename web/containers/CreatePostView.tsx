@@ -74,6 +74,7 @@ import {
 } from '~/data/mock-pg-announcements';
 import { assertNever } from '~/helpers/assertNever';
 import { textToTiptapDoc } from '~/helpers/tiptap';
+import type { AutoSaveStatus } from '~/hooks/useAutoSave';
 import { notify } from '~/lib/notify';
 import { cn } from '~/lib/utils';
 
@@ -606,6 +607,8 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
   const isFormValid = baseFormValid && consentFormValid;
   const recipientCount = state.selectedRecipients.reduce((sum, r) => sum + (r.count ?? 1), 0);
   const isEditing = Boolean(editId);
+  const draftIdRef = useRef<number | null>(isEditing && editId ? Number(editId) : null);
+  const [isSavingDraft, setIsSavingDraft] = useState(false);
 
   if (editId && !editData) {
     return <Navigate to="/posts" replace />;
@@ -617,6 +620,32 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
     dispatch({ type: 'SET_KIND', payload: kind });
     if (type === 'post-with-response') {
       dispatch({ type: 'SET_RESPONSE_TYPE', payload: 'acknowledge' });
+    }
+  }
+
+  async function handleSaveDraft(opts: { signal?: AbortSignal } = {}): Promise<void> {
+    if (isSavingDraft) return; // single-flight for manual clicks
+    setIsSavingDraft(true);
+    try {
+      const payload = buildAnnouncementPayload(state);
+      if (draftIdRef.current == null) {
+        const { announcementDraftId } = await createDraft(payload, { signal: opts.signal });
+        draftIdRef.current = announcementDraftId;
+        // Switch the URL so refresh hits the draft. `replace` to avoid a history entry.
+        navigate(`/posts/${announcementDraftId}/edit`, { replace: true });
+      } else {
+        await updateDraft(draftIdRef.current, payload, { signal: opts.signal });
+      }
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') return;
+      if (err instanceof PGValidationError) {
+        notify.error(err.message);
+      } else if (!(err instanceof PGError)) {
+        notify.error('Failed to save draft.');
+      }
+      throw err;
+    } finally {
+      setIsSavingDraft(false);
     }
   }
 
@@ -705,6 +734,9 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
     );
   }
 
+  // Placeholder; replaced in Task 5.
+  const autoSave = { status: 'idle' as AutoSaveStatus, lastSavedAt: null as Date | null };
+
   // ── Form view ──────────────────────────────────────────────────────────
   return (
     <div className="flex flex-col">
@@ -721,13 +753,22 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
             </h1>
           </div>
 
-          {/* Right: preview toggle + split button */}
+          {/* Right: save-status + preview toggle + save draft + split button */}
           <div className="flex items-center gap-3">
+            <SaveStatusTicker status={autoSave.status} lastSavedAt={autoSave.lastSavedAt} />
             <Button variant="ghost" size="sm" onClick={() => setShowPreview((s) => !s)}>
               {showPreview ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              {showPreview ? 'Hide Preview' : 'Show Preview'}
             </Button>
-
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={isSavingDraft}
+              onClick={() => {
+                void handleSaveDraft();
+              }}
+            >
+              {isSavingDraft ? 'Saving…' : 'Save draft'}
+            </Button>
             {/* Schedule action is gated on PG's `schedule_announcement_form_post`
                 flag. When disabled, `onSchedule` is left undefined so the
                 dropdown's "Schedule for later" entry still renders but
@@ -1003,3 +1044,26 @@ function CreatePostView() {
 
 export { CreatePostView as Component };
 export type { PostFormAction, PostFormState };
+
+// ─── SaveStatusTicker ────────────────────────────────────────────────────────
+
+function SaveStatusTicker({
+  status,
+  lastSavedAt,
+}: {
+  status: AutoSaveStatus;
+  lastSavedAt: Date | null;
+}) {
+  let label: string;
+  if (status === 'saving') label = 'Saving…';
+  else if (status === 'error') label = 'Save failed';
+  else if (lastSavedAt) {
+    label = `Saved ${lastSavedAt.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
+  } else label = '';
+
+  return (
+    <span className="text-xs text-muted-foreground tabular-nums" aria-live="polite">
+      {label}
+    </span>
+  );
+}
