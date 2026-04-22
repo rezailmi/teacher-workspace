@@ -60,9 +60,7 @@ function ReminderSection({ value, onChange }: ReminderSectionProps) {
   return (
     <div className="space-y-3">
       <div>
-        <p className="text-sm font-medium">
-          Reminder <span className="text-destructive">*</span>
-        </p>
+        <p className="text-sm font-medium">Reminder</p>
         <p className="text-sm text-muted-foreground">Remind parents who have not yet responded.</p>
       </div>
 
