@@ -38,13 +38,20 @@ export function isCreatePostFormValid(
   );
   if (!allUploadsResolved) return false;
 
+  if (selectedType !== 'post-with-response') return true;
+
+  // Due date must be today or later. Past dates make the reminder window empty
+  // and are rejected by pgw-web business rules.
+  const today = todayIso();
+  if (state.dueDate < today) return false;
+
   // Reminder-date window: when ONE_TIME or DAILY, date must sit between
   // tomorrow and `dueDate - 1` (inclusive). Otherwise PGW returns a generic
   // "Bad request" at submit time.
   if (state.reminder.type === 'ONE_TIME' || state.reminder.type === 'DAILY') {
     const r = state.reminder.date;
     if (!r) return false;
-    const min = addDaysIso(todayIso(), 1);
+    const min = addDaysIso(today, 1);
     const max = addDaysIso(state.dueDate, -1);
     if (r < min || r > max) return false;
   }
