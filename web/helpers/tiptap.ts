@@ -3,8 +3,6 @@
 // the Tiptap schema lives here, not in two places that can drift.
 
 import CharacterCount from '@tiptap/extension-character-count';
-import Highlight from '@tiptap/extension-highlight';
-import Link from '@tiptap/extension-link';
 import TextAlign from '@tiptap/extension-text-align';
 import Underline from '@tiptap/extension-underline';
 import StarterKit from '@tiptap/starter-kit';
@@ -16,17 +14,30 @@ import StarterKit from '@tiptap/starter-kit';
  */
 export function createRichTextExtensions(opts?: { maxLength?: number }) {
   return [
-    // StarterKit v3 bundles link + underline; we disable them so the
-    // standalone extensions below register with our own config.
-    StarterKit.configure({ codeBlock: false, link: false, underline: false }),
-    Underline,
-    TextAlign.configure({ types: ['heading', 'paragraph'] }),
-    Link.configure({
-      openOnClick: false,
-      autolink: true,
-      protocols: ['http', 'https', 'mailto'],
+    // StarterKit ships many extensions bundled — disable every node/mark that
+    // PGW's schema validator (`pgw-web/src/server/utils/richTextUtil.ts#101`)
+    // rejects. The final allowlist matches `pgw-web` exactly:
+    // doc, paragraph, text, bold, italic, underline, bulletList, orderedList,
+    // listItem, hardBreak, history.
+    StarterKit.configure({
+      // Use the standalone Underline extension below for consistency with pgw-web.
+      underline: false,
+      // Not allowed by PGW's schema:
+      link: false,
+      heading: false,
+      strike: false,
+      code: false,
+      blockquote: false,
+      codeBlock: false,
+      horizontalRule: false,
     }),
-    Highlight,
+    Underline,
+    // `justify` matches pgw-web's alignment set. Only paragraph + lists get
+    // textAlign (pgw-web uses `['paragraph', 'orderedList', 'bulletList']`).
+    TextAlign.configure({
+      types: ['paragraph', 'orderedList', 'bulletList'],
+      alignments: ['left', 'center', 'right', 'justify'],
+    }),
     ...(opts?.maxLength != null ? [CharacterCount.configure({ limit: opts.maxLength })] : []),
   ];
 }

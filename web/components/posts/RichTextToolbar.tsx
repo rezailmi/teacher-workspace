@@ -1,20 +1,13 @@
 import type { Editor } from '@tiptap/react';
 import {
   AlignCenter,
+  AlignJustify,
   AlignLeft,
   AlignRight,
   Bold,
-  Code,
-  Heading1,
-  Heading2,
-  Heading3,
-  Highlighter,
   Italic,
-  Link as LinkIcon,
   List,
   ListOrdered,
-  Quote,
-  Strikethrough,
   Underline as UnderlineIcon,
 } from 'lucide-react';
 
@@ -80,21 +73,6 @@ function RichTextToolbar({ editor, className }: RichTextToolbarProps) {
       case 'underline':
         editor.chain().focus().toggleUnderline().run();
         break;
-      case 'strike':
-        editor.chain().focus().toggleStrike().run();
-        break;
-      case 'code':
-        editor.chain().focus().toggleCode().run();
-        break;
-      case 'h1':
-        editor.chain().focus().toggleHeading({ level: 1 }).run();
-        break;
-      case 'h2':
-        editor.chain().focus().toggleHeading({ level: 2 }).run();
-        break;
-      case 'h3':
-        editor.chain().focus().toggleHeading({ level: 3 }).run();
-        break;
       case 'alignLeft':
         editor.chain().focus().setTextAlign('left').run();
         break;
@@ -104,31 +82,16 @@ function RichTextToolbar({ editor, className }: RichTextToolbarProps) {
       case 'alignRight':
         editor.chain().focus().setTextAlign('right').run();
         break;
+      case 'alignJustify':
+        editor.chain().focus().setTextAlign('justify').run();
+        break;
       case 'bulletList':
         editor.chain().focus().toggleBulletList().run();
         break;
       case 'orderedList':
         editor.chain().focus().toggleOrderedList().run();
         break;
-      case 'blockquote':
-        editor.chain().focus().toggleBlockquote().run();
-        break;
-      case 'highlight':
-        editor.chain().focus().toggleHighlight().run();
-        break;
     }
-  }
-
-  function handleLink() {
-    if (!editor) return;
-    const previous = editor.getAttributes('link').href as string | undefined;
-    const url = window.prompt('Enter URL (leave empty to remove link)', previous ?? '');
-    if (url === null) return; // user cancelled
-    if (url === '') {
-      editor.chain().focus().extendMarkRange('link').unsetLink().run();
-      return;
-    }
-    editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
   }
 
   return (
@@ -160,44 +123,6 @@ function RichTextToolbar({ editor, className }: RichTextToolbarProps) {
         disabled={disabled}
         onClick={() => toggle('underline')}
       />
-      <ToolbarButton
-        label="Strikethrough"
-        icon={<Strikethrough className="h-4 w-4" />}
-        active={editor?.isActive('strike')}
-        disabled={disabled}
-        onClick={() => toggle('strike')}
-      />
-      <ToolbarButton
-        label="Inline code"
-        icon={<Code className="h-4 w-4" />}
-        active={editor?.isActive('code')}
-        disabled={disabled}
-        onClick={() => toggle('code')}
-      />
-
-      <Divider />
-
-      <ToolbarButton
-        label="Heading 1"
-        icon={<Heading1 className="h-4 w-4" />}
-        active={editor?.isActive('heading', { level: 1 })}
-        disabled={disabled}
-        onClick={() => toggle('h1')}
-      />
-      <ToolbarButton
-        label="Heading 2"
-        icon={<Heading2 className="h-4 w-4" />}
-        active={editor?.isActive('heading', { level: 2 })}
-        disabled={disabled}
-        onClick={() => toggle('h2')}
-      />
-      <ToolbarButton
-        label="Heading 3"
-        icon={<Heading3 className="h-4 w-4" />}
-        active={editor?.isActive('heading', { level: 3 })}
-        disabled={disabled}
-        onClick={() => toggle('h3')}
-      />
 
       <Divider />
 
@@ -222,6 +147,13 @@ function RichTextToolbar({ editor, className }: RichTextToolbarProps) {
         disabled={disabled}
         onClick={() => toggle('alignRight')}
       />
+      <ToolbarButton
+        label="Align justify"
+        icon={<AlignJustify className="h-4 w-4" />}
+        active={editor?.isActive({ textAlign: 'justify' })}
+        disabled={disabled}
+        onClick={() => toggle('alignJustify')}
+      />
 
       <Divider />
 
@@ -238,30 +170,6 @@ function RichTextToolbar({ editor, className }: RichTextToolbarProps) {
         active={editor?.isActive('orderedList')}
         disabled={disabled}
         onClick={() => toggle('orderedList')}
-      />
-
-      <Divider />
-
-      <ToolbarButton
-        label="Quote"
-        icon={<Quote className="h-4 w-4" />}
-        active={editor?.isActive('blockquote')}
-        disabled={disabled}
-        onClick={() => toggle('blockquote')}
-      />
-      <ToolbarButton
-        label="Link"
-        icon={<LinkIcon className="h-4 w-4" />}
-        active={editor?.isActive('link')}
-        disabled={disabled}
-        onClick={handleLink}
-      />
-      <ToolbarButton
-        label="Highlight"
-        icon={<Highlighter className="h-4 w-4" />}
-        active={editor?.isActive('highlight')}
-        disabled={disabled}
-        onClick={() => toggle('highlight')}
       />
     </div>
   );
