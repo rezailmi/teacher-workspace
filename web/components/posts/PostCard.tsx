@@ -48,6 +48,10 @@ export function PostCard({ post, attachments, className }: PostCardProps) {
   const venue = isForm ? post.event?.venue : undefined;
   const dueDate = isForm ? formatDate(post.consentByDate) : undefined;
   const reminder = isForm ? reminderSummary(post.reminder) : null;
+  // Default reminder is always sent on the consent-by date itself (PGW behaviour).
+  // Only show when a due date has been set on the form.
+  const defaultReminderDate =
+    isForm && post.consentByDate ? formatDate(post.consentByDate) : undefined;
   const questions = isForm ? post.questions : undefined;
 
   return (
@@ -64,7 +68,7 @@ export function PostCard({ post, attachments, className }: PostCardProps) {
           </p>
         </div>
 
-        {isForm && (eventStart || venue || dueDate || reminder) && (
+        {isForm && (eventStart || venue || dueDate || reminder || defaultReminderDate) && (
           <>
             <Separator />
             <div className="space-y-2.5">
@@ -102,6 +106,12 @@ export function PostCard({ post, attachments, className }: PostCardProps) {
                 <div className="flex items-start gap-2 text-sm">
                   <Bell className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" strokeWidth={2} />
                   <span>{reminder}</span>
+                </div>
+              )}
+              {defaultReminderDate && (
+                <div className="flex items-start gap-2 text-sm text-muted-foreground">
+                  <Bell className="mt-0.5 h-4 w-4 shrink-0" strokeWidth={2} />
+                  <span>Default reminder: {defaultReminderDate}</span>
                 </div>
               )}
             </div>

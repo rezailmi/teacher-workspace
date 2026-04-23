@@ -7,6 +7,7 @@ import {
   RadioGroupItem,
 } from '~/components/ui';
 import type { ReminderConfig } from '~/data/mock-pg-announcements';
+import { formatLocalDate } from '~/helpers/dateTime';
 
 type ReminderRadioValue = 'NONE' | 'ONE_TIME' | 'DAILY';
 
@@ -31,9 +32,12 @@ const REMINDER_OPTIONS: { value: ReminderRadioValue; label: string; description:
 interface ReminderSectionProps {
   value: ReminderConfig;
   onChange: (value: ReminderConfig) => void;
+  /** The consent-by date in `YYYY-MM-DD` form. Used to display the default
+   *  reminder info line ("Default reminder will be sent on [date]"). */
+  consentByDate?: string;
 }
 
-function ReminderSection({ value, onChange }: ReminderSectionProps) {
+function ReminderSection({ value, onChange, consentByDate }: ReminderSectionProps) {
   // Stash the picked date on the NONE branch so ONE_TIME/DAILY toggles
   // restore it. Living in state (not a ref) means it survives remounts and
   // shows up in devtools.
@@ -57,12 +61,19 @@ function ReminderSection({ value, onChange }: ReminderSectionProps) {
   // Empty display on NONE so the hidden picker doesn't flash a stale date.
   const displayDate = value.type === 'NONE' ? '' : value.date;
 
+  const defaultReminderFormatted = consentByDate ? (formatLocalDate(consentByDate) ?? '-') : '-';
+
   return (
     <div className="space-y-3">
       <div>
         <p className="text-sm font-medium">Reminder</p>
         <p className="text-sm text-muted-foreground">Remind parents who have not yet responded.</p>
       </div>
+
+      <p className="text-sm">
+        Default reminder will be sent on{' '}
+        <span className="font-medium">{defaultReminderFormatted}</span>
+      </p>
 
       <RadioGroup
         value={value.type}
