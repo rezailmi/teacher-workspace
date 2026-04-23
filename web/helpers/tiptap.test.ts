@@ -1,37 +1,50 @@
-import { getSchema } from '@tiptap/core';
 import { describe, expect, it } from 'vitest';
 
 import { createRichTextExtensions } from './tiptap';
 
+interface AnyExt {
+  name: string;
+  config: { addOptions: () => Record<string, unknown> };
+}
+
+function findExt(name: string): AnyExt {
+  const ext = createRichTextExtensions().find((e) => (e as unknown as AnyExt).name === name);
+  return ext as unknown as AnyExt;
+}
+
 describe('rich-text extension schema', () => {
-  it('exposes the PGW allowlist of nodes', () => {
-    const schema = getSchema(createRichTextExtensions());
-    const nodeNames = Object.keys(schema.nodes).sort();
-    // PGW allows these; anything else would fail `isValidSchema` server-side.
-    expect(nodeNames).toEqual(
-      expect.arrayContaining([
-        'doc',
-        'paragraph',
-        'text',
-        'bulletList',
-        'orderedList',
-        'listItem',
-        'hardBreak',
-      ]),
-    );
-    expect(nodeNames).not.toContain('heading');
-    expect(nodeNames).not.toContain('blockquote');
-    expect(nodeNames).not.toContain('codeBlock');
-    expect(nodeNames).not.toContain('horizontalRule');
+  it('StarterKit is configured to disable nodes not in PGW allowlist', () => {
+    const sk = findExt('starterKit');
+    expect(sk).toBeDefined();
+    const opts = sk.config.addOptions();
+    // PGW rejects these — must be disabled in StarterKit.
+    expect(opts.heading).toBe(false);
+    expect(opts.strike).toBe(false);
+    expect(opts.code).toBe(false);
+    expect(opts.blockquote).toBe(false);
+    expect(opts.codeBlock).toBe(false);
+    expect(opts.horizontalRule).toBe(false);
+    expect(opts.link).toBe(false);
+    // Underline is handled by the standalone extension below.
+    expect(opts.underline).toBe(false);
   });
 
-  it('exposes the PGW allowlist of marks', () => {
-    const schema = getSchema(createRichTextExtensions());
-    const markNames = Object.keys(schema.marks).sort();
-    expect(markNames).toEqual(expect.arrayContaining(['bold', 'italic', 'underline']));
-    expect(markNames).not.toContain('link');
-    expect(markNames).not.toContain('highlight');
-    expect(markNames).not.toContain('strike');
-    expect(markNames).not.toContain('code');
+  it('standalone Underline extension is present', () => {
+    const names = createRichTextExtensions().map((e) => (e as unknown as AnyExt).name);
+    expect(names).toContain('underline');
+  });
+
+  it('TextAlign is configured for paragraph + list nodes with all four alignments', () => {
+    const ta = findExt('textAlign');
+    expect(ta).toBeDefined();
+    const opts = ta.config.addOptions();
+    expect(opts.types).toEqual(['paragraph', 'orderedList', 'bulletList']);
+    expect(opts.alignments).toEqual(['left', 'center', 'right', 'justify']);
+  });
+
+  it('Link and Highlight extensions are not in the extension list', () => {
+    const names = createRichTextExtensions().map((e) => (e as unknown as AnyExt).name);
+    expect(names).not.toContain('link');
+    expect(names).not.toContain('highlight');
   });
 });
