@@ -1,5 +1,5 @@
 import { ArrowLeft } from 'lucide-react';
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import type { LoaderFunctionArgs } from 'react-router';
 import { isRouteErrorResponse, Link, useLoaderData, useRouteError } from 'react-router';
 
@@ -8,7 +8,11 @@ import { PGNotFoundError } from '~/api/errors';
 import type { PGApiConfig } from '~/api/types';
 import { ConsentFormHistoryList } from '~/components/posts/ConsentFormHistoryList';
 import { PostCard } from '~/components/posts/PostCard';
-import { ReadTrackingCards } from '~/components/posts/ReadTrackingCards';
+import { ReadTrackingCards, type ReadCardFilter } from '~/components/posts/ReadTrackingCards';
+import {
+  DEFAULT_RECIPIENT_FILTER,
+  type RecipientFilterValue,
+} from '~/components/posts/RecipientFilterPopover';
 import { RecipientReadTable } from '~/components/posts/RecipientReadTable';
 import { Badge, Button } from '~/components/ui';
 import {
@@ -158,12 +162,32 @@ function AnnouncementDetail({ post }: { post: PGAnnouncementPost }) {
     [post.recipients],
   );
 
+  // Filter is lifted here so stat cards can drive it. `read` maps 1:1 to the
+  // Read card's main/pending toggle; class + columns are still teacher-driven
+  // via the popover.
+  const [filter, setFilter] = useState<RecipientFilterValue>(DEFAULT_RECIPIENT_FILTER);
+  const readCardFilter: ReadCardFilter =
+    filter.read === 'read' ? 'read' : filter.read === 'unread' ? 'unread' : null;
+
   return (
     <div className="grid gap-6 lg:grid-cols-3">
       <div className="space-y-6 lg:col-span-2">
-        <ReadTrackingCards responseType={post.responseType} stats={post.stats} />
+        <ReadTrackingCards
+          responseType={post.responseType}
+          stats={post.stats}
+          readFilter={readCardFilter}
+          onReadFilterChange={(next) =>
+            setFilter((f) => ({ ...f, read: next === null ? 'all' : next }))
+          }
+        />
 
-        <RecipientReadTable recipients={sortedRecipients} responseType={post.responseType} />
+        <RecipientReadTable
+          recipients={sortedRecipients}
+          responseType={post.responseType}
+          filter={filter}
+          onFilterChange={setFilter}
+          exportId={String(post.id)}
+        />
       </div>
 
       <div className="lg:sticky lg:top-6 lg:self-start">
@@ -194,6 +218,7 @@ function ConsentFormDetail({ post }: { post: PGConsentFormPost }) {
           kind="form"
           recipients={sortedRecipients}
           responseType={post.responseType}
+          exportId={String(post.id)}
         />
 
         <ConsentFormHistoryList entries={post.history} />

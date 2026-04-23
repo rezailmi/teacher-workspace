@@ -8,8 +8,22 @@ import type {
 } from '~/data/mock-pg-announcements';
 import { cn } from '~/lib/utils';
 
+/**
+ * Scope the Read card filters by when clicked. `main` = "filter to read only";
+ * `pending` = "filter to unread only". `null` means no active filter.
+ */
+export type ReadCardFilter = 'read' | 'unread' | null;
+
 type ReadTrackingCardsProps =
-  | { kind?: 'announcement'; responseType: ResponseType; stats: PGAnnouncementStats }
+  | {
+      kind?: 'announcement';
+      responseType: ResponseType;
+      stats: PGAnnouncementStats;
+      /** When provided, the Read card becomes clickable (both the main count
+       *  and the unread pending note). Consent forms don't receive this. */
+      readFilter?: ReadCardFilter;
+      onReadFilterChange?: (next: ReadCardFilter) => void;
+    }
   | { kind: 'form'; responseType: 'acknowledge' | 'yes-no'; stats: PGConsentFormStats };
 
 /**
@@ -54,6 +68,12 @@ interface ResponseCardProps {
   pendingNote?: string | null;
   /** Right-edge mini-stats. Empty array hides the right column entirely. */
   miniStats?: MiniStat[];
+  /** Clicking the main count region fires this; makes the region focusable. */
+  onMainActivate?: () => void;
+  /** Clicking the pendingNote fires this; makes it focusable. */
+  onPendingActivate?: () => void;
+  /** `'main'` highlights the main count; `'pending'` highlights the note. */
+  active?: 'main' | 'pending' | null;
 }
 
 const ResponseCard = memo(function ResponseCard({
@@ -62,8 +82,20 @@ const ResponseCard = memo(function ResponseCard({
   total,
   pendingNote,
   miniStats = [],
+  onMainActivate,
+  onPendingActivate,
+  active = null,
 }: ResponseCardProps) {
   const percent = total > 0 ? (count / total) * 100 : 0;
+
+  const mainContent = (
+    <div className="flex items-baseline gap-1.5 whitespace-nowrap">
+      <span className="text-4xl leading-none font-semibold tracking-tight tabular-nums">
+        {count}
+      </span>
+      <span className="text-xl text-muted-foreground tabular-nums">/ {total}</span>
+    </div>
+  );
 
   return (
     <Card>
@@ -73,15 +105,41 @@ const ResponseCard = memo(function ResponseCard({
             <span className="text-xs font-semibold tracking-[0.14em] text-muted-foreground uppercase">
               {label}
             </span>
-            <div className="flex items-baseline gap-1.5 whitespace-nowrap">
-              <span className="text-4xl leading-none font-semibold tracking-tight tabular-nums">
-                {count}
-              </span>
-              <span className="text-xl text-muted-foreground tabular-nums">/ {total}</span>
-            </div>
-            {pendingNote && (
-              <span className="text-sm font-medium text-warning-foreground">{pendingNote}</span>
+            {onMainActivate ? (
+              <button
+                type="button"
+                onClick={onMainActivate}
+                aria-pressed={active === 'main'}
+                className={cn(
+                  'rounded-md text-left transition-colors',
+                  'focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none',
+                  active === 'main' ? 'ring-2 ring-primary' : 'hover:bg-muted/40',
+                )}
+              >
+                {mainContent}
+              </button>
+            ) : (
+              mainContent
             )}
+            {pendingNote &&
+              (onPendingActivate ? (
+                <button
+                  type="button"
+                  onClick={onPendingActivate}
+                  aria-pressed={active === 'pending'}
+                  className={cn(
+                    'rounded-md px-1 text-left text-sm font-medium text-warning-foreground transition-colors',
+                    'focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none',
+                    active === 'pending'
+                      ? 'bg-warning/20 ring-2 ring-warning'
+                      : 'hover:bg-warning/10',
+                  )}
+                >
+                  {pendingNote}
+                </button>
+              ) : (
+                <span className="text-sm font-medium text-warning-foreground">{pendingNote}</span>
+              ))}
           </div>
 
           {miniStats.length > 0 && (
@@ -109,12 +167,23 @@ const ResponseCard = memo(function ResponseCard({
 function AnnouncementCard({
   responseType,
   stats,
+  readFilter,
+  onReadFilterChange,
 }: {
   responseType: ResponseType;
   stats: PGAnnouncementStats;
+  readFilter?: ReadCardFilter;
+  onReadFilterChange?: (next: ReadCardFilter) => void;
 }) {
   const { totalCount, readCount, responseCount, yesCount, noCount } = stats;
   const unreadCount = Math.max(totalCount - readCount, 0);
+
+  const active: 'main' | 'pending' | null =
+    readFilter === 'read' ? 'main' : readFilter === 'unread' ? 'pending' : null;
+  const toggle = (scope: 'read' | 'unread') => {
+    if (!onReadFilterChange) return;
+    onReadFilterChange(readFilter === scope ? null : scope);
+  };
 
   const readCard = (
     <ResponseCard
@@ -122,6 +191,9 @@ function AnnouncementCard({
       count={readCount}
       total={totalCount}
       pendingNote={unreadCount > 0 ? `${unreadCount} unread` : null}
+      onMainActivate={onReadFilterChange ? () => toggle('read') : undefined}
+      onPendingActivate={onReadFilterChange && unreadCount > 0 ? () => toggle('unread') : undefined}
+      active={active}
     />
   );
 
@@ -193,5 +265,12 @@ export function ReadTrackingCards(props: ReadTrackingCardsProps) {
   if (props.kind === 'form') {
     return <ConsentFormCard responseType={props.responseType} stats={props.stats} />;
   }
-  return <AnnouncementCard responseType={props.responseType} stats={props.stats} />;
+  return (
+    <AnnouncementCard
+      responseType={props.responseType}
+      stats={props.stats}
+      readFilter={props.readFilter}
+      onReadFilterChange={props.onReadFilterChange}
+    />
+  );
 }
