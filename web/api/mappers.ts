@@ -1,6 +1,7 @@
 import type {
   AnnouncementDraftId,
   AnnouncementId,
+  ConsentFormDraftId,
   ConsentFormId,
   FormQuestion,
   PGAnnouncementPost,
@@ -26,6 +27,7 @@ import type {
   PGApiAnnouncementStudent,
   PGApiAnnouncementSummary,
   PGApiConsentFormDetail,
+  PGApiConsentFormDraft,
   PGApiConsentFormStatus,
   PGApiConsentFormSummary,
   PGApiCreateAnnouncementPayload,
@@ -181,6 +183,54 @@ export function mapAnnouncementDraftDetail(draft: PGApiAnnouncementDraft): PGAnn
   };
 }
 
+/**
+ * Map a consent-form draft-detail response into the unified `PGConsentFormPost`
+ * shape. Minimal mapping — populates title/richText/email/dueDate so the form
+ * hydrates on reload. Recipients, staff, and attachments are left empty because
+ * the `staffGroups`/`studentGroups` shape on the draft endpoint is not yet
+ * documented (arrays were empty in observed samples). Extend as shapes become
+ * verifiable. Mirrors `mapAnnouncementDraftDetail` in structure.
+ */
+export function mapConsentFormDraftDetail(draft: PGApiConsentFormDraft): PGConsentFormPost {
+  // richTextContent arrives as a JSON-encoded string on the draft endpoint
+  // (unlike the posted-form detail which can be an already-parsed object).
+  const richTextContent =
+    draft.richTextContent && typeof draft.richTextContent === 'string'
+      ? (JSON.parse(draft.richTextContent) as Record<string, unknown>)
+      : null;
+
+  const addReminderType: PGApiReminderType =
+    draft.addReminderType === 'ONE_TIME' || draft.addReminderType === 'DAILY'
+      ? draft.addReminderType
+      : 'NONE';
+
+  return {
+    kind: 'form',
+    id: `cfDraft_${draft.consentFormDraftId}` as ConsentFormDraftId,
+    title: draft.title,
+    description: richTextContent ? extractTextFromTiptap(richTextContent) : '',
+    richTextContent,
+    status: 'draft',
+    responseType: draft.responseType === 'YES_NO' ? 'yes-no' : 'acknowledge',
+    ownership: 'mine',
+    recipients: [],
+    stats: {
+      totalCount: 0,
+      yesCount: 0,
+      noCount: 0,
+      pendingCount: 0,
+    },
+    createdAt: draft.updatedAt,
+    createdBy: '',
+    scheduledAt: draft.scheduledDateTime ?? undefined,
+    enquiryEmail: draft.enquiryEmailAddress,
+    consentByDate: draft.consentByDate ?? '',
+    reminder: mapReminder(addReminderType, draft.reminderDate || null),
+    questions: [],
+    history: [],
+  };
+}
+
 // Inbound `targetType` is sent lowercase by pgw-web (`class` | `group` | `cca` | `level`);
 // normalize defensively in case future payloads upcase it.
 const PG_TARGET_TYPE_MAP: Record<string, PGTargetType> = {
@@ -221,9 +271,14 @@ export function mapConsentFormSummaryToPost(
     ? Math.round(api.respondedMetrics.respondedPerStudent * totalCount)
     : 0;
 
+  const id =
+    status === 'draft'
+      ? (`cfDraft_${api.postId}` as ConsentFormDraftId)
+      : (`cf_${api.postId}` as ConsentFormId);
+
   return {
     kind: 'form',
-    id: `cf_${api.postId}` as ConsentFormId,
+    id,
     title: api.title,
     description: '',
     status,

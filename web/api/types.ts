@@ -152,6 +152,32 @@ export interface PGApiAnnouncementDraft {
   scheduledDateTime: string | null;
 }
 
+export interface PGApiConsentFormDraft {
+  consentFormDraftId: number;
+  status: 'DRAFT';
+  postedConsentFormId: number | null;
+  title: string;
+  content: string | null;
+  richTextContent: string | null;
+  venue: string;
+  eventStartDate: { date: string; time: string } | null;
+  eventEndDate: { date: string; time: string } | null;
+  reminderDate: string;
+  addReminderType: 'NONE' | 'ONE_TIME' | 'DAILY' | '';
+  enquiryEmailAddress: string;
+  consentByDate: string | null;
+  responseType: 'ACKNOWLEDGEMENT' | 'YES_NO' | '';
+  questions: unknown[];
+  staffGroups: unknown[];
+  studentGroups: unknown[];
+  images: { images: unknown[]; imagesOrigin: string };
+  attachments: unknown[];
+  urls: unknown[];
+  shortcuts: unknown[];
+  updatedAt: string;
+  scheduledDateTime: string | null;
+}
+
 // ─── Announcement write payloads ────────────────────────────────────────────
 
 export interface PGApiCreateAnnouncementPayload {

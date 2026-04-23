@@ -1,6 +1,7 @@
 import type {
   AnnouncementDraftId,
   AnnouncementId,
+  ConsentFormDraftId,
   ConsentFormId,
   PGAnnouncementPost,
   PGConsentFormPost,
@@ -13,6 +14,7 @@ import {
   mapAnnouncementDraftDetail,
   mapAnnouncementSummary,
   mapConsentFormDetail,
+  mapConsentFormDraftDetail,
   mapConsentFormSummaryToPost,
   mergeAndDedup,
   toPGConsentFormCreatePayload,
@@ -26,6 +28,7 @@ import type {
   PGApiClassDetail,
   PGApiConfig,
   PGApiConsentFormDetail,
+  PGApiConsentFormDraft,
   PGApiConsentFormList,
   PGApiCreateAnnouncementPayload,
   PGApiCreateConsentFormDraftPayload,
@@ -387,6 +390,23 @@ export async function loadConsentPostsList(): Promise<PGConsentFormPost[]> {
 export async function loadConsentPostDetail(formId: ConsentFormId): Promise<PGConsentFormPost> {
   const detail = await fetchConsentFormDetail(formId);
   return mapConsentFormDetail(detail);
+}
+
+async function fetchConsentFormDraftDetail(
+  draftId: ConsentFormDraftId,
+): Promise<PGApiConsentFormDraft> {
+  // Strip the `cfDraft_` prefix to get the bare numeric ID.
+  const bareId = draftId.replace(/^cfDraft_/, '');
+  // pgw-web wraps single-detail responses as `body: [<detail>]`; unwrap.
+  const arr = await fetchApi<PGApiConsentFormDraft[]>(`/consentForms/drafts/${bareId}`);
+  return arr[0];
+}
+
+export async function loadConsentFormDraftDetail(
+  draftId: ConsentFormDraftId,
+): Promise<PGConsentFormPost> {
+  const draft = await fetchConsentFormDraftDetail(draftId);
+  return mapConsentFormDraftDetail(draft);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

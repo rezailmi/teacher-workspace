@@ -190,7 +190,7 @@ export const PG_CONSENT_FORM_STATUS_BADGE: Record<
  */
 export interface PGConsentFormPost {
   kind: 'form';
-  id: ConsentFormId;
+  id: ConsentFormId | ConsentFormDraftId;
   title: string;
   description: string;
   richTextContent?: Record<string, unknown> | null;
@@ -240,22 +240,32 @@ export type AnnouncementDraftId = `annDraft_${string}` & {
   readonly __brand: 'AnnouncementDraftId';
 };
 export type ConsentFormId = `cf_${string}` & { readonly __brand: 'ConsentFormId' };
-export type PostId = AnnouncementId | AnnouncementDraftId | ConsentFormId;
+export type ConsentFormDraftId = `cfDraft_${string}` & { readonly __brand: 'ConsentFormDraftId' };
+export type PostId = AnnouncementId | AnnouncementDraftId | ConsentFormId | ConsentFormDraftId;
 
 export function isConsentFormId(id: PostId): id is ConsentFormId {
-  return id.startsWith('cf_');
+  return id.startsWith('cf_') && !id.startsWith('cfDraft_');
 }
 
 export function isAnnouncementDraftId(id: PostId): id is AnnouncementDraftId {
   return id.startsWith('annDraft_');
 }
 
+export function isConsentFormDraftId(id: PostId): id is ConsentFormDraftId {
+  return id.startsWith('cfDraft_');
+}
+
 /**
  * Parse a raw URL segment into a typed `PostId`. Returns `null` for anything
- * that isn't a numeric announcement ID, a `cf_<digits>` consent-form ID, or
- * an `annDraft_<digits>` draft announcement ID — callers treat that as a 404.
+ * that isn't a numeric announcement ID, a `cf_<digits>` consent-form ID, a
+ * `cfDraft_<digits>` consent-form draft ID, or an `annDraft_<digits>` draft
+ * announcement ID — callers treat that as a 404.
+ *
+ * More-specific prefixes are checked first so `cfDraft_` is not accidentally
+ * matched by the `cf_` branch.
  */
 export function parsePostId(raw: string): PostId | null {
+  if (/^cfDraft_\d+$/.test(raw)) return raw as ConsentFormDraftId;
   if (/^cf_\d+$/.test(raw)) return raw as ConsentFormId;
   if (/^annDraft_\d+$/.test(raw)) return raw as AnnouncementDraftId;
   if (/^\d+$/.test(raw)) return raw as AnnouncementId;
@@ -267,7 +277,7 @@ export function parsePostId(raw: string): PostId | null {
  * regex matching at call sites.
  */
 export function postKindFromId(id: PostId): 'announcement' | 'form' {
-  return isConsentFormId(id) ? 'form' : 'announcement';
+  return isConsentFormId(id) || isConsentFormDraftId(id) ? 'form' : 'announcement';
 }
 
 /**
@@ -288,7 +298,8 @@ export function postHref(post: PGPost, opts?: { edit?: boolean }): string {
 export function validatePostRoute(rawId: string, kindParam: string | null): PostId | null {
   const parsed = parsePostId(rawId);
   if (!parsed) return null;
-  if (kindParam === 'form' && !isConsentFormId(parsed)) return null;
-  if (kindParam === 'announcement' && isConsentFormId(parsed)) return null;
+  const isForm = isConsentFormId(parsed) || isConsentFormDraftId(parsed);
+  if (kindParam === 'form' && !isForm) return null;
+  if (kindParam === 'announcement' && isForm) return null;
   return parsed;
 }
