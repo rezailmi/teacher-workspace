@@ -2,7 +2,10 @@ package pg
 
 import (
 	"embed"
+	"encoding/json"
 	"net/http"
+	"strconv"
+	"sync/atomic"
 )
 
 //go:embed fixtures
@@ -328,12 +331,47 @@ func registerMockHeyTalia(mux *http.ServeMux) {
 
 // ─── Files ──────────────────────────────────────────────────────────────────
 
+// mockAttachmentIDCounter mints monotonic attachment IDs for the mock
+// preUploadValidation handler. Seeded at 10_000 so mock IDs can't collide
+// with fixture IDs (which live in the 1000s).
+var mockAttachmentIDCounter atomic.Int64
+
+func init() {
+	mockAttachmentIDCounter.Store(10_000)
+}
+
 func registerMockFiles(mux *http.ServeMux) {
-	mux.HandleFunc("POST /api/files/2/preUploadValidation", jsonStub(http.StatusOK, `{"valid":true}`))
-	mux.HandleFunc("GET /api/files/2/postUploadVerification", jsonStub(http.StatusOK, `{}`))
+	// Real PG flow: preUploadValidation returns a presigned S3 URL. Mock
+	// points the "presigned URL" at our own /mockUpload route so dev
+	// round-trips without external S3.
+	mux.HandleFunc("POST /api/files/2/preUploadValidation", handleMockPreUpload)
+	mux.HandleFunc("POST /api/files/2/mockUpload", noContent)
+	// AV scan is instant in the mock; `verified: true` is unconditional.
+	mux.HandleFunc("GET /api/files/2/postUploadVerification", jsonStub(http.StatusOK, `{"verified":true}`))
 	mux.HandleFunc("GET /api/files/2/handleDownloadAttachment", jsonStub(http.StatusOK, `{}`))
 	mux.HandleFunc("GET /api/files/2/scanResult", jsonStub(http.StatusOK, `{"status":"clean"}`))
 	mux.HandleFunc("GET /api/files/2/handleResizeImageNotFound", noContent)
+}
+
+func handleMockPreUpload(w http.ResponseWriter, r *http.Request) {
+	// Parse generously — real PG accepts up to 5 MB per file; we don't need
+	// to retain the body, just drain the multipart so the client sees a 200.
+	// ParseMultipartForm errors are non-fatal for the mock — real PG might
+	// tighten these checks, but the tests drive the mock with well-formed
+	// payloads and a permissive mock is less brittle than a strict one.
+	_ = r.ParseMultipartForm(6 << 20)
+
+	id := mockAttachmentIDCounter.Add(1)
+	resp := map[string]any{
+		"attachmentId": id,
+		"presignedUrl": "/api/files/2/mockUpload?attachmentId=" + strconv.FormatInt(id, 10),
+		"fields":       map[string]string{},
+	}
+
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(resp)
 }
 
 // ─── Platform (feature flags, web notifications) ────────────────────────────

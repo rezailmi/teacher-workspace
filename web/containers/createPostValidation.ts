@@ -24,9 +24,29 @@ export function isCreatePostFormValid(
   if (!baseValid) return false;
 
   // Gate 2: consent-form (post-with-response) — due date required.
-  if (selectedType !== 'post-with-response') return true;
+  if (selectedType === 'post-with-response' && state.dueDate.trim().length === 0) {
+    return false;
+  }
 
-  if (state.dueDate.trim().length === 0) return false;
+  // Gate 3: all in-flight uploads must have resolved. Submitting while rows
+  // are `uploading` / `verifying` would send partial state; errored rows are
+  // allowed through because the mapper filters them out on the wire.
+  const allUploadsResolved = [...state.attachments, ...state.photos].every(
+    (u) => u.status === 'ready' || u.status === 'error',
+  );
+  if (!allUploadsResolved) return false;
 
   return true;
+}
+
+/**
+ * True when at least one attachment or photo is actively uploading or
+ * verifying. Used by the Send button handler to surface a toast when the
+ * user tries to submit too early — distinct from `isCreatePostFormValid`
+ * so the caller can tell "form unfilled" from "upload pending" apart.
+ */
+export function hasPendingUploads(state: PostFormState): boolean {
+  return [...state.attachments, ...state.photos].some(
+    (u) => u.status === 'uploading' || u.status === 'verifying',
+  );
 }

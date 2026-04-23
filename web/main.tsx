@@ -1,3 +1,4 @@
+import { DirectEdit } from 'made-refine';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { Toaster } from 'sonner';
@@ -8,5 +9,6 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <App />
     <Toaster position="bottom-right" closeButton />
+    {import.meta.env.DEV && <DirectEdit />}
   </React.StrictMode>,
 );

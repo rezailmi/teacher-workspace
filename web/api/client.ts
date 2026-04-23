@@ -161,6 +161,21 @@ async function deleteApi(path: string): Promise<void> {
   if (!res.ok) await handleErrorResponse(res);
 }
 
+/**
+ * POST a `multipart/form-data` body to a root-prefixed path. Used for
+ * `/api/files/*` where the payload is the raw file plus a few text fields,
+ * not JSON. Shares `handleErrorResponse` and `unwrapEnvelope` with the JSON
+ * helpers so errors surface the same way.
+ */
+async function postMultipart<T>(path: string, formData: FormData): Promise<T> {
+  const res = await fetch(`/api${path}`, { method: 'POST', body: formData });
+  if (!res.ok) await handleErrorResponse(res);
+  if (res.status === 204) return undefined as T;
+  const text = await res.text();
+  if (!text) return undefined as T;
+  return unwrapEnvelope<T>(JSON.parse(text));
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // CONFIGS (feature flags)
 // ═══════════════════════════════════════════════════════════════════════════
@@ -463,4 +478,110 @@ export function updateDisplayName(staffId: number, displayName: string) {
 
 export function updateDisplayEmail(staffId: number, displayEmail: string) {
   return mutateApi<void>('PUT', `/${staffId}/updateDisplayEmail`, { displayEmail });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// FILE ATTACHMENTS
+//
+// PG's documented 3-step upload flow (docs/references/pg-api-contract.md
+// §1231-1278). Mocked locally via `server/internal/pg/mock.go` —
+// `registerMockFiles` points `presignedUrl` at a local `/api/files/2/mockUpload`
+// route that just 204s, so the client exercises all three legs without an
+// actual S3 roundtrip. When pgw-web implements the real endpoints, the
+// client code is unchanged — see TODO in
+// `docs/plans/2026-04-23-001-feat-file-attachments-plan.md`.
+// ═══════════════════════════════════════════════════════════════════════════
+
+export type AttachmentUploadType = 'ANNOUNCEMENT' | 'CONSENT_FORM';
+
+export interface PreUploadResponse {
+  attachmentId: number;
+  presignedUrl: string;
+  fields: Record<string, string>;
+}
+
+/**
+ * Step 1 — POST file + metadata to `preUploadValidation`. Returns the
+ * attachment ID and the presigned URL the client should POST the raw file
+ * to next. `type` tags which domain this upload belongs to so PG can enforce
+ * per-domain quotas and MIME policies.
+ */
+export function validateAttachmentUpload(
+  file: File,
+  type: AttachmentUploadType,
+): Promise<PreUploadResponse> {
+  const fd = new FormData();
+  fd.append('file', file);
+  fd.append('type', type);
+  fd.append('mimeType', file.type);
+  fd.append('fileSize', String(file.size));
+  return postMultipart<PreUploadResponse>('/files/2/preUploadValidation', fd);
+}
+
+/**
+ * Step 2 — POST the file to the presigned URL. The AWS POST policy requires
+ * `fields` to be serialized before `file` in the multipart body, so the
+ * order here is load-bearing — do not reorder.
+ */
+export async function uploadToPresignedUrl(
+  presignedUrl: string,
+  fields: Record<string, string>,
+  file: File,
+): Promise<void> {
+  const fd = new FormData();
+  for (const [k, v] of Object.entries(fields)) fd.append(k, v);
+  fd.append('file', file);
+  const res = await fetch(presignedUrl, { method: 'POST', body: fd });
+  if (!res.ok) throw new Error(`S3 upload failed: ${res.status}`);
+}
+
+/**
+ * Step 3 — poll `postUploadVerification` until the AV scan reports verified.
+ * The mock always returns `{verified:true}` instantly; real PG scans take
+ * variable time, so we poll with a small delay and cap the total wait.
+ * Exact backoff tuning lives in the plan's Real-PGW TODO.
+ */
+export async function verifyAttachmentUpload(
+  attachmentId: number,
+  { timeoutMs = 30_000, intervalMs = 500 }: { timeoutMs?: number; intervalMs?: number } = {},
+): Promise<{ verified: boolean }> {
+  const deadline = Date.now() + timeoutMs;
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    const res = await fetch(`/api/files/2/postUploadVerification?attachmentId=${attachmentId}`);
+    if (!res.ok) await handleErrorResponse(res);
+    const text = await res.text();
+    const body = text ? (unwrapEnvelope(JSON.parse(text)) as { verified?: boolean }) : {};
+    if (body.verified === true) return { verified: true };
+    if (Date.now() >= deadline) throw new Error('Scan timed out.');
+    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+  }
+}
+
+export type UploadStage = 'uploading' | 'verifying' | 'ready';
+
+/**
+ * Composes the three steps behind a single call. Emits stage transitions via
+ * `onProgress` so callers (the AttachmentSection hook) can dispatch reducer
+ * updates. Resolves with the server-issued identifiers needed for the post
+ * payload; rejects on any leg failing so the caller can flip the UI row to
+ * `error`.
+ */
+export async function uploadAttachment(
+  file: File,
+  type: AttachmentUploadType,
+  onProgress?: (stage: UploadStage) => void,
+): Promise<{ attachmentId: number; url: string }> {
+  onProgress?.('uploading');
+  const pre = await validateAttachmentUpload(file, type);
+  await uploadToPresignedUrl(pre.presignedUrl, pre.fields, file);
+  onProgress?.('verifying');
+  await verifyAttachmentUpload(pre.attachmentId);
+  onProgress?.('ready');
+  // The real PG write payload needs the S3 location PG resolves via
+  // `handleDownloadAttachment`. Mock doesn't return one, so synthesize a
+  // stable URL pointing at the download endpoint — keeps the wire payload
+  // shape-correct even against the mock.
+  const url = `/api/files/2/handleDownloadAttachment?attachmentId=${pre.attachmentId}`;
+  return { attachmentId: pre.attachmentId, url };
 }

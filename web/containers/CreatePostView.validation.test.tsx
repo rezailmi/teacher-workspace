@@ -30,6 +30,8 @@ const validBase: PostFormState = {
   reminder: { type: 'NONE' },
   websiteLinks: [],
   shortcuts: [],
+  attachments: [],
+  photos: [],
 };
 
 describe('isCreatePostFormValid — announcement', () => {

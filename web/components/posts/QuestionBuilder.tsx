@@ -4,7 +4,7 @@ import { Button, Input } from '~/components/ui';
 import type { PostFormAction } from '~/containers/CreatePostView';
 import type { FormQuestion } from '~/data/mock-pg-announcements';
 
-const MAX_QUESTIONS = 5;
+export const MAX_QUESTIONS = 5;
 const MIN_MCQ_OPTIONS = 2;
 const MAX_MCQ_OPTIONS = 6;
 
@@ -14,10 +14,16 @@ interface QuestionBuilderProps {
 }
 
 function QuestionBuilder({ questions, dispatch }: QuestionBuilderProps) {
+  if (questions.length === 0) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        No questions added yet. Use &quot;Add a Question&quot; to create one.
+      </p>
+    );
+  }
+
   return (
     <div className="space-y-4">
-      <p className="text-sm font-medium">Additional Questions</p>
-
       {questions.map((question, index) => (
         <div key={question.id} className="space-y-3 rounded-xl border p-4">
           <div className="flex items-start gap-2">
@@ -46,7 +52,7 @@ function QuestionBuilder({ questions, dispatch }: QuestionBuilderProps) {
                     })
                   }
                 >
-                  Free Text
+                  Open-ended
                 </Button>
                 <Button
                   variant={question.type === 'mcq' ? 'default' : 'secondary'}
@@ -175,19 +181,6 @@ function QuestionBuilder({ questions, dispatch }: QuestionBuilderProps) {
           )}
         </div>
       ))}
-
-      <Button
-        variant="secondary"
-        size="sm"
-        disabled={questions.length >= MAX_QUESTIONS}
-        onClick={() => dispatch({ type: 'ADD_QUESTION' })}
-      >
-        <Plus className="h-4 w-4" />
-        Add question
-        {questions.length >= MAX_QUESTIONS && (
-          <span className="ml-1 text-sm text-muted-foreground">(max {MAX_QUESTIONS})</span>
-        )}
-      </Button>
     </div>
   );
 }

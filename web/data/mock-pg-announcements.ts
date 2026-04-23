@@ -82,6 +82,25 @@ export interface PGAnnouncementStats {
   noCount: number;
 }
 
+/**
+ * Read-side shape for a single uploaded attachment or photo carried through
+ * `PGAnnouncementPost` / `PGConsentFormPost`. Matches `UploadingFile` in the
+ * form reducer so edit-mode rehydration can splice these arrays directly
+ * into form state without reshaping.
+ */
+export interface PGUploadedFile {
+  localId: string;
+  kind: 'file' | 'photo';
+  name: string;
+  size: number;
+  mimeType: string;
+  status: 'ready';
+  attachmentId: number;
+  url: string;
+  thumbnailUrl?: string;
+  isCover?: boolean;
+}
+
 export interface PGAnnouncementPost {
   /**
    * Discriminant for the `PGPost` union. `'announcement'` routes to
@@ -117,6 +136,10 @@ export interface PGAnnouncementPost {
   websiteLinks?: PGWebsiteLink[];
   questions?: FormQuestion[];
   dueDate?: string;
+  /** File attachments rehydrated from `detail.attachments`. */
+  attachments?: PGUploadedFile[];
+  /** Photos rehydrated from `detail.images` (if surfaced by the detail endpoint). */
+  photos?: PGUploadedFile[];
 }
 
 // ─── Consent form variant ─────────────────────────────────────────────────────
@@ -160,6 +183,13 @@ export interface PGConsentFormRecipient {
   classLabel: string;
   response: 'YES' | 'NO' | null;
   respondedAt: string | null;
+  /**
+   * Onboarding state on the Parents Gateway side. Derived from
+   * `PGApiConsentFormStudent.onBoardedCategory`: any non-empty category maps
+   * to `'onboarded'`. Announcement recipients don't currently carry this
+   * field (BFF doesn't surface it yet) — hence it's only on forms.
+   */
+  pgStatus: 'onboarded' | 'not-onboarded';
 }
 
 export interface PGConsentFormStats {
@@ -216,6 +246,12 @@ export interface PGConsentFormPost {
   reminder: ReminderConfig;
   event?: PGEvent;
   history: PGConsentFormHistoryEntry[];
+  /** File attachments — detail contract currently omits this field on consent
+   * forms (only `images` is exposed). Populated when the contract closes that
+   * gap; today this stays undefined on consent-form reload. */
+  attachments?: PGUploadedFile[];
+  /** Photos rehydrated from consent-form detail `images`. */
+  photos?: PGUploadedFile[];
 }
 
 /**

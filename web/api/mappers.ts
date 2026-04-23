@@ -1,3 +1,4 @@
+import type { UploadingFile } from '~/containers/CreatePostView';
 import type {
   AnnouncementDraftId,
   AnnouncementId,
@@ -161,6 +162,28 @@ export function mapAnnouncementDetail(detail: PGApiAnnouncementDetail): PGAnnoun
       .filter((t): t is PGAnnouncementTarget => t !== null),
     enquiryEmail: detail.enquiryEmailAddress,
     websiteLinks: links.map((l) => ({ url: l.url, title: l.title })),
+    attachments: (detail.attachments ?? []).map((a) => ({
+      localId: `rehydrated-file-${a.attachmentId}`,
+      kind: 'file' as const,
+      name: a.name,
+      size: a.size,
+      mimeType: '',
+      status: 'ready' as const,
+      attachmentId: a.attachmentId,
+      url: a.url,
+    })),
+    photos: (detail.images ?? []).map((img) => ({
+      localId: `rehydrated-photo-${img.imageId}`,
+      kind: 'photo' as const,
+      name: img.name,
+      size: img.size,
+      mimeType: '',
+      status: 'ready' as const,
+      attachmentId: img.imageId,
+      url: img.url,
+      thumbnailUrl: img.thumbnailUrl,
+      isCover: img.isCover,
+    })),
   };
 }
 
@@ -365,6 +388,7 @@ export function mapConsentFormDetail(detail: PGApiConsentFormDetail): PGConsentF
     classLabel: r.student.className,
     response: r.reply,
     respondedAt: r.replyDate,
+    pgStatus: r.onBoardedCategory && r.onBoardedCategory.length > 0 ? 'onboarded' : 'not-onboarded',
   }));
 
   const richTextContent =
@@ -436,6 +460,20 @@ export function mapConsentFormDetail(detail: PGApiConsentFormDetail): PGConsentF
     event,
     history,
     websiteLinks: (detail.webLinkList ?? []).map((l) => ({ url: l.url, title: l.title })),
+    // Consent-form detail currently omits `attachments` (files) — this stays
+    // undefined so edit-mode rehydration can't mislead. Photos are supported.
+    photos: (detail.images ?? []).map((img) => ({
+      localId: `rehydrated-photo-${img.imageId}`,
+      kind: 'photo' as const,
+      name: img.name,
+      size: img.size,
+      mimeType: '',
+      status: 'ready' as const,
+      attachmentId: img.imageId,
+      url: img.url,
+      thumbnailUrl: img.thumbnailUrl,
+      isCover: img.isCover,
+    })),
   };
 }
 
@@ -694,6 +732,45 @@ interface BuildPostPayloadInput {
   websiteLinks: { url: string; title: string }[];
   /** PG shortcut keys the teacher ticked. Forwarded as `shortcutLink[]`. */
   shortcuts: string[];
+  /** File uploads — mapped to `attachments` on the write payload. */
+  attachments: UploadingFile[];
+  /** Photo uploads — mapped to `images` on the write payload. */
+  photos: UploadingFile[];
+}
+
+/**
+ * Project ready-status file uploads into the PG `attachments[]` wire shape.
+ * Errored/in-flight rows are dropped — the caller must gate submit via
+ * `hasPendingUploads` before reaching here.
+ */
+function mapReadyAttachments(attachments: UploadingFile[]) {
+  return attachments
+    .filter((a) => a.status === 'ready' && a.attachmentId != null && a.url)
+    .map((a) => ({
+      attachmentId: a.attachmentId!,
+      name: a.name,
+      size: a.size,
+      url: a.url!,
+    }));
+}
+
+/**
+ * Project ready-status photos into the PG `images[]` wire shape. Ensures at
+ * least one photo carries `isCover: true` (defensive — the reducer already
+ * maintains this invariant, but the mapper is the wire boundary).
+ */
+function mapReadyPhotos(photos: UploadingFile[]) {
+  const ready = photos.filter((p) => p.status === 'ready' && p.attachmentId != null && p.url);
+  if (ready.length === 0) return undefined;
+  const hasCover = ready.some((p) => p.isCover);
+  return ready.map((p, i) => ({
+    imageId: p.attachmentId!,
+    isCover: p.isCover ?? (!hasCover && i === 0),
+    name: p.name,
+    size: p.size,
+    thumbnailUrl: p.thumbnailUrl ?? p.url!,
+    url: p.url!,
+  }));
 }
 
 /**
@@ -754,6 +831,8 @@ export function buildAnnouncementPayload(
   state: BuildPostPayloadInput,
 ): PGApiCreateAnnouncementPayload {
   const doc = state.descriptionDoc ?? textToTiptapDoc(state.description);
+  const attachments = mapReadyAttachments(state.attachments);
+  const images = mapReadyPhotos(state.photos);
   return {
     title: state.title,
     richTextContent: JSON.stringify(doc),
@@ -762,6 +841,8 @@ export function buildAnnouncementPayload(
     staffOwnerIds: state.selectedStaff.map((s) => Number(s.id)),
     websiteLinks: pruneWebsiteLinks(state.websiteLinks),
     shortcutLink: state.shortcuts.length > 0 ? state.shortcuts : undefined,
+    ...(attachments.length > 0 && { attachments }),
+    ...(images && { images }),
   } satisfies PGApiCreateAnnouncementPayload;
 }
 
@@ -808,6 +889,8 @@ export function buildConsentFormPayload(
             },
       )
     : undefined;
+  const attachments = mapReadyAttachments(state.attachments);
+  const images = mapReadyPhotos(state.photos);
   return {
     title: state.title,
     richTextContent: JSON.stringify(doc),
@@ -824,6 +907,8 @@ export function buildConsentFormPayload(
     customQuestions,
     websiteLinks: pruneWebsiteLinks(state.websiteLinks),
     shortcutLink: state.shortcuts.length > 0 ? state.shortcuts : undefined,
+    ...(attachments.length > 0 && { attachments }),
+    ...(images && { images }),
   } satisfies PGApiCreateConsentFormPayload;
 }
 

@@ -1,4 +1,4 @@
-import { ArrowLeft, Eye, EyeOff } from 'lucide-react';
+import { ArrowLeft, Eye, EyeOff, Plus } from 'lucide-react';
 import { useDeferredValue, useMemo, useReducer, useRef, useState } from 'react';
 import type { LoaderFunctionArgs } from 'react-router';
 import { Link, Navigate, useLoaderData, useNavigate, useParams } from 'react-router';
@@ -41,7 +41,7 @@ import { DueDateSection } from '~/components/posts/DueDateSection';
 import { EventScheduleSection } from '~/components/posts/EventScheduleSection';
 import { PostPreview } from '~/components/posts/PostPreview';
 import { PostTypePicker, type PostKind } from '~/components/posts/PostTypePicker';
-import { QuestionBuilder } from '~/components/posts/QuestionBuilder';
+import { MAX_QUESTIONS, QuestionBuilder } from '~/components/posts/QuestionBuilder';
 import { ReminderSection } from '~/components/posts/ReminderSection';
 import { ResponseTypeSelector } from '~/components/posts/ResponseTypeSelector';
 import { RichTextEditor } from '~/components/posts/RichTextEditor';
@@ -84,7 +84,7 @@ import { notify } from '~/lib/notify';
 import { cn } from '~/lib/utils';
 import { reportValidationError } from '~/lib/validation-errors';
 
-import { isCreatePostFormValid } from './createPostValidation';
+import { hasPendingUploads, isCreatePostFormValid } from './createPostValidation';
 
 // ─── Route loader ───────────────────────────────────────────────────────────
 
@@ -154,6 +154,31 @@ export async function loader({
 
 // ─── Form state types ────────────────────────────────────────────────────────
 
+/**
+ * In-flight state for a single uploaded attachment or photo. Same shape for
+ * both — `kind` discriminates which reducer slot (and write-payload slot) it
+ * belongs to. `localId` is a client UUID distinct from the server-issued
+ * `attachmentId` so the React key is stable across the upload lifecycle.
+ */
+export interface UploadingFile {
+  localId: string;
+  kind: 'file' | 'photo';
+  name: string;
+  size: number;
+  mimeType: string;
+  status: 'uploading' | 'verifying' | 'ready' | 'error';
+  /** Server-issued; set after preUploadValidation returns. */
+  attachmentId?: number;
+  /** Download URL PG resolves against; set after S3 POST completes. */
+  url?: string;
+  /** Photos only; used for row thumbnails once the photo is ready. */
+  thumbnailUrl?: string;
+  /** Photos only; exactly one entry carries `isCover: true` when photos is non-empty. */
+  isCover?: boolean;
+  /** Populated on status === 'error'. */
+  error?: string;
+}
+
 interface PostFormState {
   /**
    * Discriminant mirrored from `PGPost.kind`. In create mode it tracks the
@@ -199,6 +224,17 @@ interface PostFormState {
    * stale value into the write.
    */
   shortcuts: string[];
+  /**
+   * File attachments (PDF/Office docs) — max 3. Carries rows in all lifecycle
+   * states (`uploading` / `verifying` / `ready` / `error`); the submit mapper
+   * filters to `ready` before writing to PG.
+   */
+  attachments: UploadingFile[];
+  /**
+   * Photo attachments — max 3, exactly one flagged `isCover: true` when the
+   * list is non-empty (reducer invariant).
+   */
+  photos: UploadingFile[];
 }
 
 type PostFormAction =
@@ -220,7 +256,20 @@ type PostFormAction =
   | { type: 'ADD_WEBSITE_LINK' }
   | { type: 'REMOVE_WEBSITE_LINK'; index: number }
   | { type: 'UPDATE_WEBSITE_LINK'; index: number; field: 'url' | 'title'; value: string }
-  | { type: 'SET_SHORTCUTS'; payload: string[] };
+  | { type: 'SET_SHORTCUTS'; payload: string[] }
+  | {
+      type: 'ADD_UPLOAD';
+      kind: 'file' | 'photo';
+      payload: { localId: string; name: string; size: number; mimeType: string };
+    }
+  | {
+      type: 'UPDATE_UPLOAD';
+      kind: 'file' | 'photo';
+      localId: string;
+      patch: Partial<UploadingFile>;
+    }
+  | { type: 'REMOVE_UPLOAD'; kind: 'file' | 'photo'; localId: string }
+  | { type: 'SET_COVER_PHOTO'; localId: string };
 
 const INITIAL_STATE: PostFormState = {
   // Default matches the type-picker's default selection ("Post"). The picker
@@ -242,6 +291,8 @@ const INITIAL_STATE: PostFormState = {
   venue: '',
   websiteLinks: [],
   shortcuts: [],
+  attachments: [],
+  photos: [],
 };
 
 function formReducer(state: PostFormState, action: PostFormAction): PostFormState {
@@ -367,6 +418,55 @@ function formReducer(state: PostFormState, action: PostFormAction): PostFormStat
 
     case 'SET_SHORTCUTS':
       return { ...state, shortcuts: action.payload };
+
+    case 'ADD_UPLOAD': {
+      const slot: keyof Pick<PostFormState, 'attachments' | 'photos'> =
+        action.kind === 'file' ? 'attachments' : 'photos';
+      const list = state[slot];
+      const entry: UploadingFile = {
+        ...action.payload,
+        kind: action.kind,
+        status: 'uploading',
+        // First photo added becomes the cover; subsequent photos default
+        // to non-cover. File kind leaves `isCover` undefined.
+        ...(action.kind === 'photo' ? { isCover: list.length === 0 } : {}),
+      };
+      return { ...state, [slot]: [...list, entry] };
+    }
+
+    case 'UPDATE_UPLOAD': {
+      const slot: keyof Pick<PostFormState, 'attachments' | 'photos'> =
+        action.kind === 'file' ? 'attachments' : 'photos';
+      return {
+        ...state,
+        [slot]: state[slot].map((f) =>
+          f.localId === action.localId ? { ...f, ...action.patch } : f,
+        ),
+      };
+    }
+
+    case 'REMOVE_UPLOAD': {
+      const slot: keyof Pick<PostFormState, 'attachments' | 'photos'> =
+        action.kind === 'file' ? 'attachments' : 'photos';
+      const before = state[slot];
+      const removed = before.find((f) => f.localId === action.localId);
+      const next = before.filter((f) => f.localId !== action.localId);
+
+      // Cover-photo invariant: if we just removed the covered photo and any
+      // photos remain, promote the first remaining to cover so the submit
+      // mapper never sees a coverless photo list.
+      if (action.kind === 'photo' && removed?.isCover && next.length > 0) {
+        const withCover = next.map((p, i) => ({ ...p, isCover: i === 0 }));
+        return { ...state, photos: withCover };
+      }
+      return { ...state, [slot]: next };
+    }
+
+    case 'SET_COVER_PHOTO':
+      return {
+        ...state,
+        photos: state.photos.map((p) => ({ ...p, isCover: p.localId === action.localId })),
+      };
 
     default:
       return state;
@@ -500,6 +600,11 @@ function postToFormState(
     // teacher re-toggling the checkbox. Safer than guessing a key from a
     // human-label `title`.
     shortcuts: [] as string[],
+    // Rehydrate attachments + photos the mapper pulled off the detail
+    // response. The `PGUploadedFile` shape is intentionally a subset of
+    // `UploadingFile` with `status: 'ready'`, so a spread is wire-compatible.
+    attachments: (post.attachments ?? []).map((f) => ({ ...f })) as UploadingFile[],
+    photos: (post.photos ?? []).map((p) => ({ ...p })) as UploadingFile[],
   };
 
   switch (post.kind) {
@@ -615,6 +720,7 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
   // and these fields will be required by the wire contract; gate in advance so
   // the form-state matches what Phase 2 expects.
   const isFormValid = isCreatePostFormValid(state, selectedType);
+  const uploadsPending = hasPendingUploads(state);
   const recipientCount = state.selectedRecipients.reduce((sum, r) => sum + (r.count ?? 1), 0);
   const isEditing = Boolean(editId);
   const draftIdRef = useRef<{ kind: 'announcement' | 'form'; id: number } | null>(
@@ -836,6 +942,9 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
               onPost={() => setShowSendDialog(true)}
               onSchedule={scheduleEnabled ? () => setShowScheduleDialog(true) : undefined}
             />
+            {uploadsPending && (
+              <span className="text-xs text-muted-foreground">Attachments uploading…</span>
+            )}
           </div>
         </div>
       </div>
@@ -964,7 +1073,12 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
               </div>
 
               {/* Attachments */}
-              <AttachmentSection />
+              <AttachmentSection
+                files={state.attachments}
+                photos={state.photos}
+                dispatch={dispatch}
+                kind={state.kind === 'announcement' ? 'ANNOUNCEMENT' : 'CONSENT_FORM'}
+              />
 
               {/* Website links — available on both kinds. */}
               <WebsiteLinksSection value={state.websiteLinks} dispatch={dispatch} />
@@ -980,13 +1094,18 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
             </CardContent>
           </Card>
 
-          {/* RESPONSE Card (only for post-with-response) */}
+          {/* RESPONSE TYPE Card (only for post-with-response) */}
           {selectedType === 'post-with-response' && (
             <Card>
               <CardContent className="space-y-5 p-6">
-                <p className="text-xs font-medium tracking-widest text-muted-foreground uppercase">
-                  Response
-                </p>
+                <div className="space-y-1">
+                  <p className="text-xs font-medium tracking-widest text-muted-foreground uppercase">
+                    Response Type
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Choose how parents respond to this post.
+                  </p>
+                </div>
 
                 <ResponseTypeSelector
                   value={state.responseType}
@@ -1014,13 +1133,41 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
                       value={state.venue}
                       onChange={(value) => dispatch({ type: 'SET_VENUE', payload: value })}
                     />
-
-                    <QuestionBuilder questions={state.questions} dispatch={dispatch} />
                   </div>
                 </ResponseTypeSelector>
               </CardContent>
             </Card>
           )}
+
+          {/* QUESTIONS Card (only for post-with-response, after a response type is picked) */}
+          {selectedType === 'post-with-response' &&
+            (state.responseType === 'acknowledge' || state.responseType === 'yes-no') && (
+              <Card>
+                <CardContent className="space-y-5 p-6">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium tracking-widest text-muted-foreground uppercase">
+                        Questions
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Custom questions (optional). You may add up to {MAX_QUESTIONS} questions.
+                      </p>
+                    </div>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      disabled={state.questions.length >= MAX_QUESTIONS}
+                      onClick={() => dispatch({ type: 'ADD_QUESTION' })}
+                    >
+                      <Plus className="h-4 w-4" />
+                      Add a Question
+                    </Button>
+                  </div>
+
+                  <QuestionBuilder questions={state.questions} dispatch={dispatch} />
+                </CardContent>
+              </Card>
+            )}
         </div>
 
         {showPreview && (
@@ -1104,6 +1251,7 @@ function CreatePostView() {
 
 export { CreatePostView as Component };
 export type { PostFormAction, PostFormState };
+export { formReducer as __formReducer, INITIAL_STATE as __INITIAL_STATE };
 
 // ─── SaveStatusTicker ────────────────────────────────────────────────────────
 

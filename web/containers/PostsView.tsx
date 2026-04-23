@@ -24,6 +24,7 @@ import {
 } from '~/api/client';
 import { PGError } from '~/api/errors';
 import type { PGApiConfig } from '~/api/types';
+import { DeletePostDialog } from '~/components/posts/DeletePostDialog';
 import { ReadRate, RespondedRate } from '~/components/posts/ReadRate';
 import {
   Badge,
@@ -34,17 +35,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
   Input,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
+  Tabs,
+  TabsList,
+  TabsTrigger,
 } from '~/components/ui';
 import {
   isAnnouncementDraftId,
@@ -103,10 +102,11 @@ const PostsView: React.FC = () => {
   const revalidator = useRevalidator();
   const [tab, setTab] = useState<PostTab>('view-only');
   const [searchQuery, setSearchQuery] = useState('');
-  // `duplicate_announcement_form_post` gates the Duplicate row action — the
-  // endpoint is still safe to call, but hiding the affordance matches the
-  // PG UI when schools have the feature off.
-  const duplicateEnabled = configs.flags.duplicate_announcement_form_post?.enabled === true;
+  // `duplicate_announcement_form_post` gates the Duplicate row action in
+  // production. In dev we surface it unconditionally so internal reviewers can
+  // exercise the flow without flipping the flag.
+  const duplicateEnabled =
+    configs.flags.duplicate_announcement_form_post?.enabled === true || import.meta.env.DEV;
 
   const filtered = useMemo(() => {
     const q = searchQuery.toLowerCase();
@@ -145,29 +145,46 @@ const PostsView: React.FC = () => {
     [revalidator],
   );
 
-  const handleDelete = useCallback(
-    async (row: PostRowData) => {
-      if (!confirm('Delete this post?')) return;
-      try {
-        if (isConsentFormDraftId(row.id)) {
-          await deleteConsentFormDraft(Number(row.id.slice('cfDraft_'.length)));
-        } else if (row.kind === 'form') {
-          await deleteConsentForm(row.id);
-        } else if (isAnnouncementDraftId(row.id)) {
-          await deleteDraft(Number(row.id.slice('annDraft_'.length)));
-        } else {
-          await deleteAnnouncement(row.id as AnnouncementId);
-        }
-        revalidator.revalidate();
-        notify.success('Post deleted.');
-      } catch (err) {
-        if (!(err instanceof PGError)) {
-          notify.error('Failed to delete post.');
-        }
+  const [pendingDelete, setPendingDelete] = useState<PostRowData | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDelete = useCallback((row: PostRowData) => {
+    setPendingDelete(row);
+  }, []);
+
+  const confirmDelete = useCallback(async () => {
+    const row = pendingDelete;
+    if (!row) return;
+    setDeleting(true);
+    try {
+      if (isConsentFormDraftId(row.id)) {
+        await deleteConsentFormDraft(Number(row.id.slice('cfDraft_'.length)));
+      } else if (row.kind === 'form') {
+        await deleteConsentForm(row.id);
+      } else if (isAnnouncementDraftId(row.id)) {
+        await deleteDraft(Number(row.id.slice('annDraft_'.length)));
+      } else {
+        await deleteAnnouncement(row.id as AnnouncementId);
       }
-    },
-    [revalidator],
-  );
+      revalidator.revalidate();
+      notify.success('Post deleted.');
+      setPendingDelete(null);
+    } catch (err) {
+      if (!(err instanceof PGError)) {
+        notify.error('Failed to delete post.');
+      }
+    } finally {
+      setDeleting(false);
+    }
+  }, [pendingDelete, revalidator]);
+
+  const deleteMode: 'draft' | 'posted' | null = !pendingDelete
+    ? null
+    : pendingDelete.status === 'draft' ||
+        (pendingDelete.kind === 'announcement' && isAnnouncementDraftId(pendingDelete.id)) ||
+        isConsentFormDraftId(pendingDelete.id)
+      ? 'draft'
+      : 'posted';
 
   return (
     <div className="flex flex-col">
@@ -195,15 +212,12 @@ const PostsView: React.FC = () => {
       {/* Toolbar: view selector + search + filter */}
       <div className="space-y-4 pt-4">
         <div className="flex flex-wrap items-center justify-between gap-3 px-6">
-          <Select value={tab} onValueChange={(v) => setTab(v as PostTab)}>
-            <SelectTrigger className="w-[200px]" aria-label="View">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="view-only">Posts</SelectItem>
-              <SelectItem value="with-responses">Posts with responses</SelectItem>
-            </SelectContent>
-          </Select>
+          <Tabs value={tab} onValueChange={(v) => setTab(v as PostTab)}>
+            <TabsList>
+              <TabsTrigger value="view-only">Posts</TabsTrigger>
+              <TabsTrigger value="with-responses">Posts with responses</TabsTrigger>
+            </TabsList>
+          </Tabs>
 
           <div className="flex items-center gap-2">
             <div className="relative">
@@ -285,6 +299,19 @@ const PostsView: React.FC = () => {
           )}
         </div>
       </div>
+
+      <DeletePostDialog
+        open={pendingDelete !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingDelete(null);
+        }}
+        mode={deleteMode}
+        title={pendingDelete?.title ?? ''}
+        pending={deleting}
+        onConfirm={() => {
+          void confirmDelete();
+        }}
+      />
     </div>
   );
 };

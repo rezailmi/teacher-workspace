@@ -1,4 +1,5 @@
 import { Check, Clock, X } from 'lucide-react';
+import { useMemo, useState } from 'react';
 
 import {
   Badge,
@@ -16,6 +17,13 @@ import type {
 } from '~/data/mock-pg-announcements';
 import { formatDate } from '~/helpers/dateTime';
 
+import {
+  countActiveFilters,
+  DEFAULT_RECIPIENT_FILTER,
+  RecipientFilterPopover,
+  type RecipientFilterValue,
+} from './RecipientFilterPopover';
+
 type RecipientReadTableProps =
   | {
       kind?: 'announcement';
@@ -28,8 +36,39 @@ type RecipientReadTableProps =
       responseType: 'acknowledge' | 'yes-no';
     };
 
-function Toolbar({ count }: { count: number }) {
-  return <p className="text-sm text-muted-foreground">{count} recipients</p>;
+function Toolbar({
+  count,
+  total,
+  filter,
+  onFilterChange,
+  classOptions,
+  showReadStatus,
+  showPgStatus,
+}: {
+  count: number;
+  total: number;
+  filter: RecipientFilterValue;
+  onFilterChange: (next: RecipientFilterValue) => void;
+  classOptions: string[];
+  showReadStatus: boolean;
+  showPgStatus: boolean;
+}) {
+  const active = countActiveFilters(filter);
+  return (
+    <div className="flex items-center justify-between gap-2">
+      <p className="text-sm text-muted-foreground">
+        {active > 0 ? `${count} of ${total} recipients` : `${total} recipients`}
+      </p>
+      <RecipientFilterPopover
+        value={filter}
+        onChange={onFilterChange}
+        classOptions={classOptions}
+        showReadStatus={showReadStatus}
+        showPgStatus={showPgStatus}
+        activeCount={active}
+      />
+    </div>
+  );
 }
 
 function AnnouncementTable({
@@ -178,19 +217,70 @@ function ConsentFormTable({
 }
 
 export function RecipientReadTable(props: RecipientReadTableProps) {
+  const [filter, setFilter] = useState<RecipientFilterValue>(DEFAULT_RECIPIENT_FILTER);
+  const isForm = props.kind === 'form';
+
+  const classOptions = useMemo(
+    () => Array.from(new Set(props.recipients.map((r) => r.classLabel))).sort(),
+    [props.recipients],
+  );
+
+  const filteredRecipients = useMemo(() => {
+    return props.recipients.filter((r) => {
+      if (filter.classId !== 'all' && r.classLabel !== filter.classId) return false;
+      if (isForm) {
+        if (filter.pg !== 'all' && (r as PGConsentFormRecipient).pgStatus !== filter.pg)
+          return false;
+      } else {
+        if (filter.read !== 'all' && (r as PGRecipient).readStatus !== filter.read) return false;
+      }
+      return true;
+    });
+  }, [props.recipients, filter, isForm]);
+
+  const tableProps = isForm
+    ? {
+        kind: 'form' as const,
+        recipients: filteredRecipients as PGConsentFormRecipient[],
+        responseType: props.responseType,
+      }
+    : {
+        kind: 'announcement' as const,
+        recipients: filteredRecipients as PGRecipient[],
+        responseType: props.responseType,
+      };
+
   return (
     <div className="space-y-4">
       <p className="text-xs font-medium tracking-widest text-muted-foreground uppercase">
-        {props.kind === 'form' ? 'Consent form responses' : 'Recipient read status'}
+        {isForm ? 'Consent form responses' : 'Recipient read status'}
       </p>
 
-      <Toolbar count={props.recipients.length} />
+      <Toolbar
+        count={filteredRecipients.length}
+        total={props.recipients.length}
+        filter={filter}
+        onFilterChange={setFilter}
+        classOptions={classOptions}
+        showReadStatus={!isForm}
+        showPgStatus={isForm}
+      />
 
       <div className="overflow-x-auto rounded-xl border">
-        {props.kind === 'form' ? (
-          <ConsentFormTable recipients={props.recipients} responseType={props.responseType} />
+        {filteredRecipients.length === 0 ? (
+          <p className="px-6 py-12 text-center text-sm text-muted-foreground">
+            No recipients match these filters.
+          </p>
+        ) : tableProps.kind === 'form' ? (
+          <ConsentFormTable
+            recipients={tableProps.recipients}
+            responseType={tableProps.responseType}
+          />
         ) : (
-          <AnnouncementTable recipients={props.recipients} responseType={props.responseType} />
+          <AnnouncementTable
+            recipients={tableProps.recipients}
+            responseType={tableProps.responseType}
+          />
         )}
       </div>
     </div>

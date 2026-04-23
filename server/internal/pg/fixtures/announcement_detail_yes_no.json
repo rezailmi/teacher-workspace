@@ -29,8 +29,30 @@
     "createdAt": "2026-03-11T06:30:00.000Z",
     "postedDate": "2026-03-12T02:00:00.000Z",
     "enquiryEmailAddress": "greenridge_sec@moe.edu.sg",
-    "attachments": [],
-    "images": [],
+    "attachments": [
+      {
+        "attachmentId": 8002,
+        "name": "chalet-itinerary.pdf",
+        "size": 312450,
+        "url": "/api/files/2/handleDownloadAttachment?attachmentId=8002"
+      },
+      {
+        "attachmentId": 8003,
+        "name": "rsvp-form.docx",
+        "size": 45120,
+        "url": "/api/files/2/handleDownloadAttachment?attachmentId=8003"
+      }
+    ],
+    "images": [
+      {
+        "imageId": 9002,
+        "isCover": true,
+        "name": "chalet-venue.jpg",
+        "size": 210112,
+        "thumbnailUrl": "/api/files/2/handleDownloadAttachment?attachmentId=9002",
+        "url": "/api/files/2/handleDownloadAttachment?attachmentId=9002"
+      }
+    ],
     "shortcutLink": [],
     "websiteLinks": [],
     "target": [

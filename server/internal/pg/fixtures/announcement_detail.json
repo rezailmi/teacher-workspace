@@ -34,8 +34,24 @@
     "createdAt": "2026-03-09T06:30:00.000Z",
     "postedDate": "2026-03-10T01:00:00.000Z",
     "enquiryEmailAddress": "greenridge_sec@moe.edu.sg",
-    "attachments": [],
-    "images": [],
+    "attachments": [
+      {
+        "attachmentId": 8001,
+        "name": "term4-letter.pdf",
+        "size": 245678,
+        "url": "/api/files/2/handleDownloadAttachment?attachmentId=8001"
+      }
+    ],
+    "images": [
+      {
+        "imageId": 9001,
+        "isCover": true,
+        "name": "school-banner.jpg",
+        "size": 184320,
+        "thumbnailUrl": "/api/files/2/handleDownloadAttachment?attachmentId=9001",
+        "url": "/api/files/2/handleDownloadAttachment?attachmentId=9001"
+      }
+    ],
     "shortcutLink": [],
     "websiteLinks": [],
     "target": [
