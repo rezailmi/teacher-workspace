@@ -27,7 +27,6 @@ import type {
   PGApiAnnouncementSummary,
   PGApiConsentFormDetail,
   PGApiConsentFormStatus,
-  PGApiConsentFormStudent,
   PGApiConsentFormSummary,
   PGApiCreateAnnouncementPayload,
   PGApiCreateConsentFormDraftPayload,
@@ -35,8 +34,9 @@ import type {
   PGApiReminderType,
 } from './types';
 
-/** Shared recipient fields both detail mappers carry verbatim. */
-function buildRecipientBase(s: PGApiAnnouncementStudent | PGApiConsentFormStudent) {
+/** Shared recipient fields for the announcement detail mapper. Consent forms
+ *  use a nested `student` object and are mapped inline in `mapConsentFormDetail`. */
+function buildRecipientBase(s: PGApiAnnouncementStudent) {
   return {
     studentId: String(s.studentId),
     studentName: s.studentName,
@@ -269,15 +269,29 @@ function mapReminder(type: PGApiReminderType, date: string | null): ReminderConf
  * shape the TW UI consumes.
  */
 export function mapConsentFormDetail(detail: PGApiConsentFormDetail): PGConsentFormPost {
-  const status = toPGConsentFormStatus(detail.status);
-  const totalCount = detail.students.length;
-  const yesCount = detail.students.filter((s) => s.response === 'YES').length;
-  const noCount = detail.students.filter((s) => s.response === 'NO').length;
+  // Detail endpoint doesn't carry `status`; derive from posting/due dates.
+  // - postedDate set + consentByDate in future → OPEN
+  // - postedDate set + consentByDate passed → CLOSED
+  // - no postedDate → DRAFT (shouldn't reach here, but safe fallback)
+  const now = Date.now();
+  const dueAt = detail.consentByDate ? Date.parse(detail.consentByDate) : NaN;
+  const status: PGConsentFormStatus = detail.postedDate
+    ? Number.isFinite(dueAt) && dueAt < now
+      ? 'closed'
+      : 'open'
+    : 'draft';
 
-  const recipients: PGConsentFormRecipient[] = detail.students.map((s) => ({
-    ...buildRecipientBase(s),
-    response: s.response,
-    respondedAt: s.respondedAt,
+  const recipientRows = detail.consentFormRecipients ?? [];
+  const totalCount = recipientRows.length;
+  const yesCount = recipientRows.filter((r) => r.reply === 'YES').length;
+  const noCount = recipientRows.filter((r) => r.reply === 'NO').length;
+
+  const recipients: PGConsentFormRecipient[] = recipientRows.map((r) => ({
+    studentId: String(r.student.studentId),
+    studentName: r.student.studentName,
+    classLabel: r.student.className,
+    response: r.reply,
+    respondedAt: r.replyDate,
   }));
 
   const richTextContent =
@@ -294,22 +308,26 @@ export function mapConsentFormDetail(detail: PGApiConsentFormDetail): PGConsentF
         }
       : undefined;
 
-  const questions = detail.customQuestions.map<PGConsentFormPost['questions'][number]>((q) =>
-    q.type === 'MCQ'
-      ? {
-          id: String(q.questionId),
-          text: q.text,
-          type: 'mcq',
-          options: (q.options && q.options.length > 0 ? q.options : ['']) as [string, ...string[]],
-        }
-      : {
-          id: String(q.questionId),
-          text: q.text,
-          type: 'free-text',
-        },
+  const questions = (detail.customQuestions ?? []).map<PGConsentFormPost['questions'][number]>(
+    (q) =>
+      q.type === 'MCQ'
+        ? {
+            id: String(q.questionId),
+            text: q.text,
+            type: 'mcq',
+            options: (q.options && q.options.length > 0 ? q.options : ['']) as [
+              string,
+              ...string[],
+            ],
+          }
+        : {
+            id: String(q.questionId),
+            text: q.text,
+            type: 'free-text',
+          },
   );
 
-  const history: PGConsentFormHistoryEntry[] = detail.consentFormHistory;
+  const history: PGConsentFormHistoryEntry[] = detail.consentFormHistory ?? [];
 
   return {
     kind: 'form',
@@ -332,7 +350,7 @@ export function mapConsentFormDetail(detail: PGApiConsentFormDetail): PGConsentF
     postedAt: detail.postedDate ?? undefined,
     staffInCharge: detail.staffOwners[0]?.staffName,
     staffOwnerIds: detail.staffOwners.map((s) => s.staffID),
-    targets: (detail.target ?? [])
+    targets: (detail.targets ?? [])
       .map<PGAnnouncementTarget | null>((t) => {
         const type = toPGTargetType(t.targetType);
         return type ? { type, id: t.targetId, label: t.targetName } : null;
@@ -344,7 +362,7 @@ export function mapConsentFormDetail(detail: PGApiConsentFormDetail): PGConsentF
     reminder: mapReminder(detail.addReminderType, detail.reminderDate),
     event,
     history,
-    websiteLinks: detail.websiteLinks.map((l) => ({ url: l.url, title: l.title })),
+    websiteLinks: (detail.webLinkList ?? []).map((l) => ({ url: l.url, title: l.title })),
   };
 }
 
@@ -409,13 +427,32 @@ interface PGWritePayload {
   shortcutLink?: string[];
 }
 
-interface PGConsentFormWritePayload extends PGWritePayload {
+/** Shape for `POST /consentForms` (publish). PGW uses ISO strings for event
+ *  dates and `inAppShortcutLink` here — different from the draft shape. See
+ *  `pgw-web/src/server/apiv2/staff/controllers/consent-form/create.staff.consent-form.controller.ts`. */
+interface PGConsentFormPublishPayload extends Omit<PGWritePayload, 'shortcutLink'> {
   responseType: 'ACKNOWLEDGEMENT' | 'YES_NO';
   consentByDate: string;
   addReminderType: PGApiReminderType;
   reminderDate?: string | null;
-  eventStartDate?: string | null;
-  eventEndDate?: string | null;
+  startDateTime?: string | null;
+  endDateTime?: string | null;
+  venue?: string | null;
+  inAppShortcutLink?: string[];
+  customQuestions?: { questionText: string; questionType: 'TEXT' | 'MCQ'; options?: string[] }[];
+}
+
+/** Shape for `POST /consentForms/drafts` and PUT update. PGW uses
+ *  `{ date, time }` objects for event dates and `shortcutLink` is ignored via
+ *  `allowUnknown: true`. See
+ *  `pgw-web/src/server/modules/consent-form/consent-form-draft.service.ts#L326`. */
+interface PGConsentFormDraftWritePayload extends PGWritePayload {
+  responseType: 'ACKNOWLEDGEMENT' | 'YES_NO';
+  consentByDate: string;
+  addReminderType: PGApiReminderType;
+  reminderDate?: string | null;
+  eventStartDate?: { date: string; time: string } | null;
+  eventEndDate?: { date: string; time: string } | null;
   venue?: string | null;
   customQuestions?: { questionText: string; questionType: 'TEXT' | 'MCQ'; options?: string[] }[];
   scheduledSendAt?: string | null;
@@ -448,9 +485,22 @@ export function toPGCreatePayload(
   } satisfies PGWritePayload;
 }
 
+function dateTimeToIso(dt: { date: string; time: string } | null | undefined): string | null {
+  if (!dt) return null;
+  return `${dt.date}T${dt.time}:00+08:00`;
+}
+
+function mapCustomQuestions(qs: PGApiCreateConsentFormPayload['customQuestions']) {
+  return qs?.map((q) => ({
+    questionText: q.text,
+    questionType: q.type === 'MCQ' ? ('MCQ' as const) : ('TEXT' as const),
+    ...(q.options && { options: q.options }),
+  }));
+}
+
 export function toPGConsentFormCreatePayload(
   p: PGApiCreateConsentFormPayload,
-): PGConsentFormWritePayload {
+): PGConsentFormPublishPayload {
   if (!p.enquiryEmailAddress) {
     throw new Error('enquiryEmailAddress is required');
   }
@@ -458,6 +508,28 @@ export function toPGConsentFormCreatePayload(
     title: p.title,
     content: p.richTextContent,
     enquiryEmailAddress: p.enquiryEmailAddress,
+    targets: buildTargets(p.recipients),
+    staffInCharge: p.staffOwnerIds,
+    webLinkList: p.websiteLinks?.map((l) => ({ webLink: l.url, linkDescription: l.title })),
+    inAppShortcutLink: p.shortcutLink,
+    responseType: p.responseType,
+    consentByDate: p.consentByDate,
+    addReminderType: p.addReminderType,
+    reminderDate: p.reminderDate,
+    startDateTime: dateTimeToIso(p.eventStartDate),
+    endDateTime: dateTimeToIso(p.eventEndDate),
+    venue: p.venue,
+    customQuestions: mapCustomQuestions(p.customQuestions),
+  } satisfies PGConsentFormPublishPayload;
+}
+
+export function toPGConsentFormDraftPayload(
+  p: PGApiCreateConsentFormDraftPayload,
+): PGConsentFormDraftWritePayload {
+  return {
+    title: p.title,
+    content: p.richTextContent,
+    enquiryEmailAddress: p.enquiryEmailAddress ?? '',
     targets: buildTargets(p.recipients),
     staffInCharge: p.staffOwnerIds,
     webLinkList: p.websiteLinks?.map((l) => ({ webLink: l.url, linkDescription: l.title })),
@@ -469,21 +541,9 @@ export function toPGConsentFormCreatePayload(
     eventStartDate: p.eventStartDate,
     eventEndDate: p.eventEndDate,
     venue: p.venue,
-    customQuestions: p.customQuestions?.map((q) => ({
-      questionText: q.text,
-      questionType: q.type === 'MCQ' ? 'MCQ' : 'TEXT',
-      ...(q.options && { options: q.options }),
-    })),
-  } satisfies PGConsentFormWritePayload;
-}
-
-export function toPGConsentFormDraftPayload(
-  p: PGApiCreateConsentFormDraftPayload,
-): PGConsentFormWritePayload {
-  return {
-    ...toPGConsentFormCreatePayload(p),
+    customQuestions: mapCustomQuestions(p.customQuestions),
     scheduledSendAt: p.scheduledSendAt,
-  } satisfies PGConsentFormWritePayload;
+  } satisfies PGConsentFormDraftWritePayload;
 }
 
 // ─── Post-creation dispatcher ───────────────────────────────────────────────
@@ -504,13 +564,19 @@ export function toPGConsentFormDraftPayload(
  * browser typing "09:00" will have it stamped as `09:00+08:00` — numerically
  * lossless on round-trip, but they should know they're picking SGT time.
  */
-function localDateTimeToSgtIso(localDateTime: string): string {
+/**
+ * Split a local `YYYY-MM-DDTHH:mm` datetime into PGW's expected
+ * `{ date: 'YYYY-MM-DD', time: 'HH:mm' }` shape for consent-form event fields.
+ * Returns `null` for an unparseable / empty input so callers can pass it
+ * straight into the wire payload.
+ */
+function splitLocalDateTime(localDateTime: string): { date: string; time: string } | null {
   const [datePart, timePart] = localDateTime.split('T');
-  if (!datePart || !timePart) return localDateTime;
+  if (!datePart || !timePart) return null;
   const [hh, mm] = timePart.split(':');
   const hhPadded = (hh ?? '00').padStart(2, '0');
   const mmPadded = (mm ?? '00').padStart(2, '0');
-  return `${datePart}T${hhPadded}:${mmPadded}:00+08:00`;
+  return { date: datePart, time: `${hhPadded}:${mmPadded}` };
 }
 
 /**
@@ -640,14 +706,19 @@ export function buildConsentFormPayload(
     );
   }
   const responseType = FE_TO_PG_CONSENT_RESPONSE_TYPE[state.responseType];
+  // PGW's consent-form schema accepts empty strings for reminderDate /
+  // consentByDate / venue, but event dates must be `{ date, time }` or null
+  // (Joi rejects `""` with "eventStartDate is not allowed"). See
+  // `pgw-web/src/server/modules/consent-form/consent-form-draft.service.ts`.
   const reminderDate =
-    state.reminder.type === 'NONE' ? null : localDateToSgtIso(state.reminder.date);
-  const eventStartDate = state.event ? localDateTimeToSgtIso(state.event.start) : null;
-  const eventEndDate = state.event ? localDateTimeToSgtIso(state.event.end) : null;
+    state.reminder.type === 'NONE' ? '' : (localDateToSgtIso(state.reminder.date) ?? '');
+  const eventStartDate = state.event ? splitLocalDateTime(state.event.start) : null;
+  const eventEndDate = state.event ? splitLocalDateTime(state.event.end) : null;
+  const consentByDate = state.dueDate.trim() ? (localDateToSgtIso(state.dueDate) ?? '') : '';
   // Venue is tracked both on `state.venue` (independently editable) and as a
   // child of `state.event.venue` when PGEvent is populated. Prefer the
   // free-standing field so a user can type a venue before setting dates.
-  const venue = state.venue?.trim() ? state.venue.trim() : (state.event?.venue ?? null);
+  const venue = state.venue?.trim() ? state.venue.trim() : (state.event?.venue ?? '');
   const customQuestions = state.questions.length
     ? state.questions.map((q) =>
         q.type === 'mcq'
@@ -669,7 +740,7 @@ export function buildConsentFormPayload(
     richTextContent: JSON.stringify(doc),
     enquiryEmailAddress: state.enquiryEmail,
     responseType,
-    consentByDate: localDateToSgtIso(state.dueDate),
+    consentByDate,
     addReminderType: state.reminder.type,
     reminderDate,
     eventStartDate,

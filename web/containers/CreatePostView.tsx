@@ -80,6 +80,9 @@ import { useAutoSave, type AutoSaveStatus } from '~/hooks/useAutoSave';
 import { useUnsavedChangesGuard } from '~/hooks/useUnsavedChangesGuard';
 import { notify } from '~/lib/notify';
 import { cn } from '~/lib/utils';
+import { reportValidationError } from '~/lib/validation-errors';
+
+import { isCreatePostFormValid } from './createPostValidation';
 
 // ─── Route loader ───────────────────────────────────────────────────────────
 
@@ -608,18 +611,15 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
   // and a non-None reminder type. Phase 2 will flip routing to `/consentForms`
   // and these fields will be required by the wire contract; gate in advance so
   // the form-state matches what Phase 2 expects.
-  const baseFormValid =
-    state.title.trim().length > 0 &&
-    state.enquiryEmail.trim().length > 0 &&
-    state.selectedRecipients.length > 0;
-  const consentFormValid =
-    selectedType !== 'post-with-response' ||
-    (state.dueDate.trim().length > 0 && state.reminder.type !== 'NONE');
-  const isFormValid = baseFormValid && consentFormValid;
+  const isFormValid = isCreatePostFormValid(state, selectedType);
   const recipientCount = state.selectedRecipients.reduce((sum, r) => sum + (r.count ?? 1), 0);
   const isEditing = Boolean(editId);
-  const draftIdRef = useRef<number | null>(
-    editId && editId.startsWith('annDraft_') ? Number(editId.slice('annDraft_'.length)) : null,
+  const draftIdRef = useRef<{ kind: 'announcement' | 'form'; id: number } | null>(
+    editId?.startsWith('annDraft_')
+      ? { kind: 'announcement', id: Number(editId.slice('annDraft_'.length)) }
+      : editId?.startsWith('cf_')
+        ? { kind: 'form', id: Number(editId.slice('cf_'.length)) }
+        : null,
   );
   const autoSave = useAutoSave({
     payload: state,
@@ -655,24 +655,42 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
 
   async function handleSaveDraft(opts: { signal?: AbortSignal } = {}): Promise<void> {
     try {
-      const payload = buildAnnouncementPayload(state);
-      if (draftIdRef.current == null) {
-        const { announcementDraftId } = await createDraft(payload, { signal: opts.signal });
-        draftIdRef.current = announcementDraftId;
-        // Don't navigate: the draft-detail mapper doesn't yet re-hydrate
-        // recipients/staff/attachments (pgw `studentGroups`/`staffGroups`
-        // mapping is a follow-up), so navigating would remount the form into
-        // a partial state. `draftIdRef` keeps the id in-memory so subsequent
-        // saves call `updateDraft`. Trade-off: a browser refresh loses the
-        // link to the in-flight draft (it's still saved in PGW — the user
-        // can find it from `/posts` and click through).
+      // Branch by kind: announcements and consent forms are separate PGW
+      // endpoint families with non-overlapping field sets. Sending consent-form
+      // fields (eventStartDate, venue, etc.) to /announcements/drafts produces
+      // `"eventStartDate" is not allowed`. Routing here mirrors
+      // `handleScheduleConfirm` / `handleSendConfirm`.
+      if (state.kind === 'form') {
+        const payload = buildConsentFormPayload(state);
+        if (draftIdRef.current?.kind === 'form') {
+          await updateConsentFormDraft(draftIdRef.current.id, payload, {
+            signal: opts.signal,
+          });
+        } else {
+          const { consentFormDraftId } = await createConsentFormDraft(payload, {
+            signal: opts.signal,
+          });
+          draftIdRef.current = { kind: 'form', id: consentFormDraftId };
+        }
       } else {
-        await updateDraft(draftIdRef.current, payload, { signal: opts.signal });
+        const payload = buildAnnouncementPayload(state);
+        if (draftIdRef.current?.kind === 'announcement') {
+          await updateDraft(draftIdRef.current.id, payload, { signal: opts.signal });
+        } else {
+          const { announcementDraftId } = await createDraft(payload, { signal: opts.signal });
+          draftIdRef.current = { kind: 'announcement', id: announcementDraftId };
+        }
       }
+      // Don't navigate: the draft-detail mapper doesn't yet re-hydrate
+      // recipients/staff/attachments, so navigating would remount the form
+      // into a partial state. `draftIdRef` keeps the id in-memory so
+      // subsequent saves call the correct update endpoint. Trade-off: a
+      // browser refresh loses the link to the in-flight draft (it's still
+      // saved in PGW — the user can find it from `/posts` and click through).
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') return;
       if (err instanceof PGValidationError) {
-        notify.error(err.message);
+        notify.error(reportValidationError(err));
       } else if (err instanceof Error && !(err instanceof PGError)) {
         // Plain `Error`s from the outbound mapper (e.g. payload-builder
         // guards) carry a useful message; surface it verbatim rather than a
@@ -701,10 +719,10 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
         }
       } else {
         const draftPayload = { ...buildAnnouncementPayload(state), scheduledSendAt };
-        if (isEditing && draftIdRef.current != null) {
+        if (draftIdRef.current?.kind === 'announcement') {
           // Editing an existing draft: keep the same draft, just push the new
           // `scheduledSendAt` with the other field updates.
-          await updateDraft(draftIdRef.current, draftPayload);
+          await updateDraft(draftIdRef.current.id, draftPayload);
         } else {
           // New post → schedule in a single round-trip. `scheduleDraft` (which
           // targets a pre-saved draft) is deferred; we don't need it for this
@@ -718,7 +736,7 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
     } catch (err) {
       setSaveState('idle');
       if (err instanceof PGValidationError) {
-        notify.error(err.message);
+        notify.error(reportValidationError(err));
       } else if (!(err instanceof PGError)) {
         notify.error('Failed to schedule post. Please try again.');
       }
@@ -741,7 +759,7 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
     } catch (err) {
       setSaveState('idle');
       if (err instanceof PGValidationError) {
-        notify.error(err.message);
+        notify.error(reportValidationError(err));
       } else if (err instanceof Error && !(err instanceof PGError)) {
         // Plain `Error`s from the outbound mapper (e.g. missing email) carry
         // a useful message; surface it verbatim rather than a generic toast.
@@ -863,7 +881,9 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
 
               {/* Enquiry email */}
               <div className="space-y-1.5">
-                <Label>Enquiry email</Label>
+                <Label>
+                  Enquiry email <span className="text-destructive">*</span>
+                </Label>
                 <p className="text-sm text-muted-foreground">
                   Select the preferred email address to receive enquiries from parents.
                 </p>
@@ -917,7 +937,9 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
               {/* Description with counter and toolbar */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <Label id="post-description-label">Description</Label>
+                  <Label id="post-description-label">
+                    Description <span className="text-destructive">*</span>
+                  </Label>
                   <span className="text-xs text-muted-foreground tabular-nums">
                     {state.description.length}/2000
                   </span>

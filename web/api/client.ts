@@ -312,10 +312,14 @@ function fetchSharedConsentForms() {
   return fetchApi<PGApiConsentFormList>('/consentForms/shared');
 }
 
-export function fetchConsentFormDetail(formId: ConsentFormId) {
-  // pgw strips the `cf_` prefix when addressing the detail endpoint.
+export async function fetchConsentFormDetail(
+  formId: ConsentFormId,
+): Promise<PGApiConsentFormDetail> {
+  // pgw strips the `cf_` prefix when addressing the detail endpoint. The
+  // response shape is `body: [<detail>]` (single-element array) — unwrap.
   const numericId = formId.slice(3);
-  return fetchApi<PGApiConsentFormDetail>(`/consentForms/${numericId}`);
+  const arr = await fetchApi<PGApiConsentFormDetail[]>(`/consentForms/${numericId}`);
+  return arr[0];
 }
 
 // ─── Write ──────────────────────────────────────────────────────────────────
@@ -330,11 +334,15 @@ export function createConsentForm(payload: PGApiCreateConsentFormPayload) {
 }
 
 /** Save a consent form as draft (optionally with a scheduled send-at). */
-export function createConsentFormDraft(payload: PGApiCreateConsentFormDraftPayload) {
+export function createConsentFormDraft(
+  payload: PGApiCreateConsentFormDraftPayload,
+  options: { signal?: AbortSignal } = {},
+) {
   return mutateApi<{ consentFormDraftId: number }>(
     'POST',
     '/consentForms/drafts',
     toPGConsentFormDraftPayload(payload),
+    options,
   );
 }
 
@@ -342,11 +350,13 @@ export function createConsentFormDraft(payload: PGApiCreateConsentFormDraftPaylo
 export function updateConsentFormDraft(
   draftId: number,
   payload: PGApiCreateConsentFormDraftPayload,
+  options: { signal?: AbortSignal } = {},
 ) {
   return mutateApi<void>(
     'PUT',
     `/consentForms/drafts/${draftId}`,
     toPGConsentFormDraftPayload(payload),
+    options,
   );
 }
 
