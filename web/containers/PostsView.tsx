@@ -17,6 +17,7 @@ import {
   deleteConsentFormDraft,
   deleteDraft,
   duplicateAnnouncement,
+  duplicateConsentForm,
   getConfigs,
   loadConsentPostsList,
   loadPostsList,
@@ -124,18 +125,21 @@ const PostsView: React.FC = () => {
 
   const handleDuplicate = useCallback(
     (row: PostRowData) => {
-      if (row.kind !== 'announcement') return;
-      duplicateAnnouncement({ postId: Number(row.id) })
+      const promise =
+        row.kind === 'announcement'
+          ? duplicateAnnouncement({ postId: Number(row.id) })
+          : duplicateConsentForm({ consentFormId: Number(row.id.slice(3)) });
+
+      promise
         .then(() => {
           revalidator.revalidate();
           notify.success('Post duplicated.');
         })
-        .catch((err: unknown) => {
-          // Known PG errors are toasted globally;
-          // only fall back for unknown/network failures.
-          if (!(err instanceof PGError)) {
-            notify.error('Failed to duplicate post.');
-          }
+        .catch(() => {
+          // Surface every failure, including PGError — the global handler
+          // doesn't toast for this path, so a swallowed error leaves the
+          // user clicking with no feedback.
+          notify.error('Failed to duplicate post.');
         });
     },
     [revalidator],
@@ -289,7 +293,7 @@ const PostsView: React.FC = () => {
 
 interface PostRowProps {
   row: PostRowData;
-  /** When false, the Duplicate dropdown item is hidden (announcement rows only). */
+  /** When false, the Duplicate dropdown item is hidden. Single gate across both kinds. */
   duplicateEnabled: boolean;
   onDuplicate: (row: PostRowData) => void;
   onDelete: (row: PostRowData) => void;
@@ -298,7 +302,7 @@ interface PostRowProps {
 const PostRowInner: React.FC<PostRowProps> = ({ row, duplicateEnabled, onDuplicate, onDelete }) => {
   const navigate = useNavigate();
   const isShared = row.ownership === 'shared';
-  const showDuplicate = row.kind === 'announcement' && duplicateEnabled;
+  const showDuplicate = duplicateEnabled;
 
   const statusBadge =
     row.kind === 'form' ? PG_CONSENT_FORM_STATUS_BADGE[row.status] : PG_STATUS_BADGE[row.status];

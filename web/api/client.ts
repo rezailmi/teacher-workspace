@@ -367,6 +367,11 @@ export function updateConsentFormDueDate(formId: number, payload: { consentByDat
   return mutateApi<void>('PUT', `/consentForms/${formId}/updateDueDate`, payload);
 }
 
+/** Duplicate an existing consent form. Returns the new draft id. */
+export function duplicateConsentForm(payload: { consentFormId: number }) {
+  return mutateApi<{ consentFormDraftId: number }>('POST', '/consentForms/duplicate', payload);
+}
+
 export function deleteConsentForm(formId: ConsentFormId) {
   const numericId = formId.slice(3);
   return deleteApi(`/consentForms/${numericId}`);
