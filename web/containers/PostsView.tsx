@@ -125,10 +125,22 @@ const PostsView: React.FC = () => {
 
   const handleDuplicate = useCallback(
     (row: PostRowData) => {
+      // Row IDs are branded with a type-specific prefix (`cf_`, `cfDraft_`,
+      // `annDraft_`, or bare digits for posted announcements). Strip the prefix
+      // per brand so the numeric id we send upstream is never NaN.
+      const numericTail = (id: string, prefix: string) => Number(id.slice(prefix.length));
       const promise =
         row.kind === 'announcement'
-          ? duplicateAnnouncement({ postId: Number(row.id) })
-          : duplicateConsentForm({ consentFormId: Number(row.id.slice(3)) });
+          ? duplicateAnnouncement({
+              postId: isAnnouncementDraftId(row.id)
+                ? numericTail(row.id, 'annDraft_')
+                : Number(row.id),
+            })
+          : duplicateConsentForm({
+              consentFormId: isConsentFormDraftId(row.id)
+                ? numericTail(row.id, 'cfDraft_')
+                : numericTail(row.id, 'cf_'),
+            });
 
       promise
         .then(() => {
