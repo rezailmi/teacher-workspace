@@ -1,6 +1,7 @@
 import type {
   AnnouncementDraftId,
   AnnouncementId,
+  ConsentFormDraftId,
   ConsentFormId,
   FormQuestion,
   PGAnnouncementPost,
@@ -26,6 +27,7 @@ import type {
   PGApiAnnouncementStudent,
   PGApiAnnouncementSummary,
   PGApiConsentFormDetail,
+  PGApiConsentFormDraft,
   PGApiConsentFormStatus,
   PGApiConsentFormSummary,
   PGApiCreateAnnouncementPayload,
@@ -89,17 +91,31 @@ export function mapAnnouncementSummary(
 }
 
 /**
- * PG's detail embeds read status on `students[].isRead`; per-student `readAt`
- * is not exposed by PG, so `respondedAt` is left undefined.
+ * Map the announcement-detail response to `PGAnnouncementPost`.
+ *
+ * The wire response (verified via curl 2026-04-23) differs from what our
+ * declared type assumed — tolerate the drift defensively:
+ * - `websiteLinks` → real field is `webLinkList`
+ * - `status`/`responseType`/`scheduledSendAt` → null at the wire; derive
+ * - `students[].readStatus` → real field (not `isRead`)
+ * - `staffOwners`/`target`/`students` → treat as optional, default to `[]`
  */
 export function mapAnnouncementDetail(detail: PGApiAnnouncementDetail): PGAnnouncementPost {
-  const status = toPGStatus(detail.status);
-  const totalCount = detail.students.length;
-  const readCount = detail.students.filter((s) => s.isRead).length;
+  // Detail endpoint doesn't always carry `status`; derive from date fields.
+  const derivedStatus: PGStatus = detail.scheduledSendAt
+    ? 'scheduled'
+    : detail.postedDate
+      ? 'posted'
+      : 'draft';
+  const status = detail.status ? toPGStatus(detail.status) : derivedStatus;
 
-  const recipients: PGRecipient[] = detail.students.map((s) => ({
+  const students = detail.students ?? [];
+  const totalCount = students.length;
+  const readCount = students.filter((s) => s.isRead || s.readStatus === 'READ').length;
+
+  const recipients: PGRecipient[] = students.map((s) => ({
     ...buildRecipientBase(s),
-    readStatus: s.isRead ? ('read' as const) : ('unread' as const),
+    readStatus: s.isRead || s.readStatus === 'READ' ? ('read' as const) : ('unread' as const),
     respondedAt: undefined,
   }));
 
@@ -109,6 +125,10 @@ export function mapAnnouncementDetail(detail: PGApiAnnouncementDetail): PGAnnoun
     detail.richTextContent && typeof detail.richTextContent === 'object'
       ? (detail.richTextContent as Record<string, unknown>)
       : null;
+
+  const targetsRaw = detail.target ?? (detail as { targets?: typeof detail.target }).targets ?? [];
+  const links = detail.webLinkList ?? detail.websiteLinks ?? [];
+  const staffOwners = detail.staffOwners ?? [];
 
   return {
     kind: 'announcement',
@@ -131,16 +151,16 @@ export function mapAnnouncementDetail(detail: PGApiAnnouncementDetail): PGAnnoun
     createdBy: detail.staffName,
     postedAt: detail.postedDate ?? undefined,
     scheduledAt: detail.scheduledSendAt ?? undefined,
-    staffInCharge: detail.staffOwners[0]?.staffName,
-    staffOwnerIds: detail.staffOwners.map((s) => s.staffID),
-    targets: detail.target
+    staffInCharge: staffOwners[0]?.staffName,
+    staffOwnerIds: staffOwners.map((s) => s.staffID),
+    targets: targetsRaw
       .map<PGAnnouncementTarget | null>((t) => {
         const type = toPGTargetType(t.targetType);
         return type ? { type, id: t.targetId, label: t.targetName } : null;
       })
       .filter((t): t is PGAnnouncementTarget => t !== null),
     enquiryEmail: detail.enquiryEmailAddress,
-    websiteLinks: detail.websiteLinks.map((l) => ({ url: l.url, title: l.title })),
+    websiteLinks: links.map((l) => ({ url: l.url, title: l.title })),
   };
 }
 
@@ -178,6 +198,54 @@ export function mapAnnouncementDraftDetail(draft: PGApiAnnouncementDraft): PGAnn
     createdAt: draft.updatedAt,
     createdBy: '',
     scheduledAt: draft.scheduledDateTime ?? undefined,
+  };
+}
+
+/**
+ * Map a consent-form draft-detail response into the unified `PGConsentFormPost`
+ * shape. Minimal mapping — populates title/richText/email/dueDate so the form
+ * hydrates on reload. Recipients, staff, and attachments are left empty because
+ * the `staffGroups`/`studentGroups` shape on the draft endpoint is not yet
+ * documented (arrays were empty in observed samples). Extend as shapes become
+ * verifiable. Mirrors `mapAnnouncementDraftDetail` in structure.
+ */
+export function mapConsentFormDraftDetail(draft: PGApiConsentFormDraft): PGConsentFormPost {
+  // richTextContent arrives as a JSON-encoded string on the draft endpoint
+  // (unlike the posted-form detail which can be an already-parsed object).
+  const richTextContent =
+    draft.richTextContent && typeof draft.richTextContent === 'string'
+      ? (JSON.parse(draft.richTextContent) as Record<string, unknown>)
+      : null;
+
+  const addReminderType: PGApiReminderType =
+    draft.addReminderType === 'ONE_TIME' || draft.addReminderType === 'DAILY'
+      ? draft.addReminderType
+      : 'NONE';
+
+  return {
+    kind: 'form',
+    id: `cfDraft_${draft.consentFormDraftId}` as ConsentFormDraftId,
+    title: draft.title,
+    description: richTextContent ? extractTextFromTiptap(richTextContent) : '',
+    richTextContent,
+    status: 'draft',
+    responseType: draft.responseType === 'YES_NO' ? 'yes-no' : 'acknowledge',
+    ownership: 'mine',
+    recipients: [],
+    stats: {
+      totalCount: 0,
+      yesCount: 0,
+      noCount: 0,
+      pendingCount: 0,
+    },
+    createdAt: draft.updatedAt,
+    createdBy: '',
+    scheduledAt: draft.scheduledDateTime ?? undefined,
+    enquiryEmail: draft.enquiryEmailAddress,
+    consentByDate: draft.consentByDate ?? '',
+    reminder: mapReminder(addReminderType, draft.reminderDate || null),
+    questions: [],
+    history: [],
   };
 }
 
@@ -221,9 +289,14 @@ export function mapConsentFormSummaryToPost(
     ? Math.round(api.respondedMetrics.respondedPerStudent * totalCount)
     : 0;
 
+  const id =
+    status === 'draft'
+      ? (`cfDraft_${api.postId}` as ConsentFormDraftId)
+      : (`cf_${api.postId}` as ConsentFormId);
+
   return {
     kind: 'form',
-    id: `cf_${api.postId}` as ConsentFormId,
+    id,
     title: api.title,
     description: '',
     status,
@@ -381,7 +454,7 @@ const RESPONSE_TYPE_MAP: Record<string, ResponseType> = {
   YES_NO: 'yes-no',
 };
 
-function mapResponseType(apiType?: string): ResponseType {
+function mapResponseType(apiType?: string | null): ResponseType {
   if (!apiType) return 'view-only';
   return RESPONSE_TYPE_MAP[apiType] ?? 'view-only';
 }

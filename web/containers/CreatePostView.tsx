@@ -16,6 +16,7 @@ import {
   fetchSession,
   getConfigs,
   loadAnnouncementDraftDetail,
+  loadConsentFormDraftDetail,
   loadConsentPostDetail,
   loadPostDetail,
   updateConsentFormDraft,
@@ -65,6 +66,7 @@ import {
 } from '~/components/ui';
 import {
   isAnnouncementDraftId,
+  isConsentFormDraftId,
   isConsentFormId,
   validatePostRoute,
   type FormQuestion,
@@ -115,6 +117,7 @@ interface CreatePostLoaderData {
 async function loadPostByKind(rawId: string, kindParam: string | null): Promise<PGPost | null> {
   const parsed = validatePostRoute(rawId, kindParam);
   if (!parsed) return null;
+  if (isConsentFormDraftId(parsed)) return loadConsentFormDraftDetail(parsed);
   if (isConsentFormId(parsed)) return loadConsentPostDetail(parsed);
   if (isAnnouncementDraftId(parsed)) return loadAnnouncementDraftDetail(parsed);
   return loadPostDetail(parsed);
@@ -617,9 +620,11 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
   const draftIdRef = useRef<{ kind: 'announcement' | 'form'; id: number } | null>(
     editId?.startsWith('annDraft_')
       ? { kind: 'announcement', id: Number(editId.slice('annDraft_'.length)) }
-      : editId?.startsWith('cf_')
-        ? { kind: 'form', id: Number(editId.slice('cf_'.length)) }
-        : null,
+      : editId?.startsWith('cfDraft_')
+        ? { kind: 'form', id: Number(editId.slice('cfDraft_'.length)) }
+        : editId?.startsWith('cf_')
+          ? { kind: 'form', id: Number(editId.slice('cf_'.length)) }
+          : null,
   );
   const autoSave = useAutoSave({
     payload: state,

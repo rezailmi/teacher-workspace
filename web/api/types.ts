@@ -15,7 +15,10 @@ export interface PGApiAnnouncementStudent {
   studentId: number;
   studentName: string;
   className: string;
-  isRead: boolean;
+  /** Older pgw-web shape (boolean). */
+  isRead?: boolean;
+  /** Current pgw-web shape — `'READ' | null` on each recipient. */
+  readStatus?: 'READ' | null;
 }
 
 /**
@@ -111,12 +114,20 @@ export interface PGApiAnnouncementSummary {
   createdByName: string;
 }
 
+/**
+ * Shape of `GET /announcements/:id` as returned by pgw-web (verified by curl
+ * 2026-04-23). Several fields our older code assumed were always present are
+ * actually optional/nullable on the wire:
+ * - `status`, `responseType`, `scheduledSendAt` → null for posted rows
+ * - Web links live on `webLinkList`; `websiteLinks` is the (absent) older name
+ * - `target` / `staffOwners` / `students` may be absent on minimal responses
+ */
 export interface PGApiAnnouncementDetail {
   announcementId: number;
   title: string;
   content: string | null;
   richTextContent: Record<string, unknown> | string | null;
-  responseType?: PGApiResponseType;
+  responseType?: PGApiResponseType | null;
   staffName: string;
   createdBy: number;
   createdAt: string | null;
@@ -125,13 +136,15 @@ export interface PGApiAnnouncementDetail {
   attachments: PGApiAttachment[];
   images: PGApiImage[];
   shortcutLink: PGApiShortcutLink[];
-  websiteLinks: PGApiWebsiteLink[];
-  target: PGApiAnnouncementTarget[];
-  staffOwners: PGApiStaffOwner[];
-  students: PGApiAnnouncementStudent[];
-  status: PGApiAnnouncementStatus;
-  scheduledSendAt: string | null;
-  scheduledSendFailureCode: string | null;
+  /** pgw-web's current field name. Mapper also accepts the legacy `websiteLinks`. */
+  webLinkList?: PGApiWebsiteLink[];
+  websiteLinks?: PGApiWebsiteLink[];
+  target?: PGApiAnnouncementTarget[];
+  staffOwners?: PGApiStaffOwner[];
+  students?: PGApiAnnouncementStudent[];
+  status?: PGApiAnnouncementStatus | null;
+  scheduledSendAt?: string | null;
+  scheduledSendFailureCode?: string | null;
 }
 
 export interface PGApiAnnouncementDraft {
@@ -142,6 +155,32 @@ export interface PGApiAnnouncementDraft {
   content: string | null;
   richTextContent: string | null;
   enquiryEmailAddress: string;
+  staffGroups: unknown[];
+  studentGroups: unknown[];
+  images: { images: unknown[]; imagesOrigin: string };
+  attachments: unknown[];
+  urls: unknown[];
+  shortcuts: unknown[];
+  updatedAt: string;
+  scheduledDateTime: string | null;
+}
+
+export interface PGApiConsentFormDraft {
+  consentFormDraftId: number;
+  status: 'DRAFT';
+  postedConsentFormId: number | null;
+  title: string;
+  content: string | null;
+  richTextContent: string | null;
+  venue: string;
+  eventStartDate: { date: string; time: string } | null;
+  eventEndDate: { date: string; time: string } | null;
+  reminderDate: string;
+  addReminderType: 'NONE' | 'ONE_TIME' | 'DAILY' | '';
+  enquiryEmailAddress: string;
+  consentByDate: string | null;
+  responseType: 'ACKNOWLEDGEMENT' | 'YES_NO' | '';
+  questions: unknown[];
   staffGroups: unknown[];
   studentGroups: unknown[];
   images: { images: unknown[]; imagesOrigin: string };
