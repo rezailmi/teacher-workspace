@@ -6,6 +6,7 @@ import {
   mapAnnouncementSummary,
   mapConsentFormDetail,
   mapConsentFormSummaryToPost,
+  mapReminder,
   toPGCreatePayload,
 } from './mappers';
 import type {
@@ -208,5 +209,46 @@ describe('mapConsentFormSummaryToPost — status branching', () => {
     const out = mapConsentFormSummaryToPost(scheduled, 'mine');
     expect(out.id).toBe('cf_42');
     expect(out.status).toBe('scheduled');
+  });
+});
+
+describe('mapReminder', () => {
+  it('returns NONE for type NONE regardless of date', () => {
+    expect(mapReminder('NONE', null)).toEqual({ type: 'NONE' });
+    expect(mapReminder('NONE', '2026-05-15T00:00:00.000Z')).toEqual({ type: 'NONE' });
+  });
+
+  it('returns ONE_TIME with the date in YYYY-MM-DD form from an ISO timestamp', () => {
+    expect(mapReminder('ONE_TIME', '2026-05-15T00:00:00.000Z')).toEqual({
+      type: 'ONE_TIME',
+      date: '2026-05-15',
+    });
+  });
+
+  it('returns ONE_TIME with the date in YYYY-MM-DD form from a bare date string', () => {
+    expect(mapReminder('ONE_TIME', '2026-05-15')).toEqual({
+      type: 'ONE_TIME',
+      date: '2026-05-15',
+    });
+  });
+
+  it('returns DAILY with the date in YYYY-MM-DD form', () => {
+    expect(mapReminder('DAILY', '2026-05-15T00:00:00.000Z')).toEqual({
+      type: 'DAILY',
+      date: '2026-05-15',
+    });
+  });
+
+  it('falls back to NONE when type is unknown / addReminderType is empty string', () => {
+    // Cast to silence TS — real-world guard against unexpected wire values.
+    expect(mapReminder('' as 'NONE', null)).toEqual({ type: 'NONE' });
+  });
+
+  it('falls back to NONE when type is ONE_TIME but reminderDate is null', () => {
+    expect(mapReminder('ONE_TIME', null)).toEqual({ type: 'NONE' });
+  });
+
+  it('falls back to NONE when type is DAILY but reminderDate is null', () => {
+    expect(mapReminder('DAILY', null)).toEqual({ type: 'NONE' });
   });
 });
