@@ -276,6 +276,13 @@ export interface PGApiConsentFormDetail {
   createdBy: number;
   createdAt: string | null;
   images: PGApiImage[];
+  /**
+   * File attachments on the consent-form detail. Marked optional because the
+   * real PGW endpoint didn't expose this field until recently (tracked in the
+   * plan under U6 + PG-team ask #2); mock fixtures already seed it. Callers
+   * should default to `[]` before mapping.
+   */
+  attachments?: PGApiAttachment[];
   /** Web links field is named `webLinkList` on the detail endpoint (not `websiteLinks`). */
   webLinkList: PGApiWebsiteLink[];
   /** Present but structure differs from writes; kept as opaque `unknown[]`. */

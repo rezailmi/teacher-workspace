@@ -93,6 +93,33 @@ export function mapAnnouncementSummary(
 }
 
 /**
+ * Rehydrate wire `attachments[]` into the form's `UploadingFile[]` file slot.
+ * Identical shape on announcement and consent-form details — one helper keeps
+ * the two mappers from drifting in how they materialise the same wire payload.
+ */
+function rehydrateAttachments(
+  attachments:
+    | {
+        attachmentId: number;
+        name: string;
+        size: number;
+        url: string;
+      }[]
+    | undefined,
+): UploadingFile[] {
+  return (attachments ?? []).map((a) => ({
+    localId: `rehydrated-file-${a.attachmentId}`,
+    kind: 'file' as const,
+    name: a.name,
+    size: a.size,
+    mimeType: '',
+    status: 'ready' as const,
+    attachmentId: a.attachmentId,
+    url: a.url,
+  }));
+}
+
+/**
  * Rehydrate wire `images[]` into the form's `UploadingFile[]` photo slot,
  * preserving the reducer invariant that a non-empty photo list always has
  * exactly one `isCover: true`. PG may return images with no cover flagged
@@ -200,16 +227,7 @@ export function mapAnnouncementDetail(detail: PGApiAnnouncementDetail): PGAnnoun
       .filter((t): t is PGAnnouncementTarget => t !== null),
     enquiryEmail: detail.enquiryEmailAddress,
     websiteLinks: links.map((l) => ({ url: l.url, title: l.title })),
-    attachments: (detail.attachments ?? []).map((a) => ({
-      localId: `rehydrated-file-${a.attachmentId}`,
-      kind: 'file' as const,
-      name: a.name,
-      size: a.size,
-      mimeType: '',
-      status: 'ready' as const,
-      attachmentId: a.attachmentId,
-      url: a.url,
-    })),
+    attachments: rehydrateAttachments(detail.attachments),
     photos: rehydratePhotos(detail.images),
   };
 }
@@ -488,8 +506,7 @@ export function mapConsentFormDetail(detail: PGApiConsentFormDetail): PGConsentF
     event,
     history,
     websiteLinks: (detail.webLinkList ?? []).map((l) => ({ url: l.url, title: l.title })),
-    // Consent-form detail currently omits `attachments` (files) — this stays
-    // undefined so edit-mode rehydration can't mislead. Photos are supported.
+    attachments: rehydrateAttachments(detail.attachments),
     photos: rehydratePhotos(detail.images),
   };
 }

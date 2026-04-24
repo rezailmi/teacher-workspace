@@ -2,9 +2,15 @@ import { describe, expect, it } from 'vitest';
 
 import { describeScheduledSendFailure } from '~/data/mock-pg-announcements';
 
-import { mapAnnouncementSummary, mapConsentFormSummaryToPost, toPGCreatePayload } from './mappers';
+import {
+  mapAnnouncementSummary,
+  mapConsentFormDetail,
+  mapConsentFormSummaryToPost,
+  toPGCreatePayload,
+} from './mappers';
 import type {
   PGApiAnnouncementSummary,
+  PGApiConsentFormDetail,
   PGApiConsentFormSummary,
   PGApiCreateAnnouncementPayload,
 } from './types';
@@ -119,6 +125,64 @@ describe('mapConsentFormSummaryToPost', () => {
     };
     const out = mapConsentFormSummaryToPost(summary, 'mine');
     expect(out.scheduledSendFailureCode).toBe('RECIPIENT_INVALID');
+  });
+});
+
+const baseConsentFormDetail: PGApiConsentFormDetail = {
+  consentFormId: 1038,
+  title: 'Consent Form',
+  content: null,
+  richTextContent: null,
+  responseType: 'YES_NO',
+  eventStartDate: null,
+  eventEndDate: null,
+  consentByDate: null,
+  addReminderType: 'NONE',
+  reminderDate: null,
+  postedDate: '2026-04-01T00:00:00.000Z',
+  venue: null,
+  enquiryEmailAddress: 'teacher@moe.edu.sg',
+  staffName: 'Teacher A',
+  createdBy: 1013,
+  createdAt: '2026-04-01T00:00:00.000Z',
+  images: [],
+  webLinkList: [],
+  customQuestions: null,
+  staffOwners: [],
+  consentFormRecipients: [],
+  consentFormHistory: [],
+};
+
+describe('mapConsentFormDetail — attachments rehydration', () => {
+  it('rehydrates non-empty attachments into UploadingFile shape', () => {
+    const detail: PGApiConsentFormDetail = {
+      ...baseConsentFormDetail,
+      attachments: [
+        { attachmentId: 8100, name: 'briefing.pdf', size: 213456, url: '/dl/8100' },
+        { attachmentId: 8101, name: 'itinerary.pdf', size: 98765, url: '/dl/8101' },
+      ],
+    };
+    const out = mapConsentFormDetail(detail);
+    expect(out.attachments).toHaveLength(2);
+    expect(out.attachments?.[0]).toMatchObject({
+      kind: 'file',
+      status: 'ready',
+      attachmentId: 8100,
+      name: 'briefing.pdf',
+      size: 213456,
+      url: '/dl/8100',
+    });
+    expect(out.attachments?.[1]?.localId).toBe('rehydrated-file-8101');
+  });
+
+  it('returns an empty array when attachments are omitted', () => {
+    const out = mapConsentFormDetail(baseConsentFormDetail);
+    expect(out.attachments).toEqual([]);
+  });
+
+  it('returns an empty array when attachments is an empty list', () => {
+    const out = mapConsentFormDetail({ ...baseConsentFormDetail, attachments: [] });
+    expect(out.attachments).toEqual([]);
   });
 });
 
