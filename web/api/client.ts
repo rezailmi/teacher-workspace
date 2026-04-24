@@ -456,6 +456,17 @@ export function rescheduleAnnouncementDraft(
   return mutateApi<void>('PUT', `/announcements/drafts/schedule/${draftId}`, payload, options);
 }
 
+/**
+ * Cancel a scheduled announcement draft (U9). Leaves the draft intact — the
+ * post returns to DRAFT so the user can edit and reschedule.
+ */
+export function cancelAnnouncementSchedule(
+  draftId: number,
+  options: { signal?: AbortSignal } = {},
+) {
+  return mutateApi<void>('POST', `/announcements/drafts/${draftId}/cancelSchedule`, {}, options);
+}
+
 /** Update an existing draft. PGW allows partial data on drafts. */
 export function updateDraft(
   draftId: number,
@@ -582,6 +593,11 @@ export function rescheduleConsentFormDraft(
   options: { signal?: AbortSignal } = {},
 ) {
   return mutateApi<void>('PUT', `/consentForms/drafts/schedule/${draftId}`, payload, options);
+}
+
+/** Cancel a scheduled consent-form draft (U9). Mirrors `cancelAnnouncementSchedule`. */
+export function cancelConsentFormSchedule(draftId: number, options: { signal?: AbortSignal } = {}) {
+  return mutateApi<void>('POST', `/consentForms/drafts/${draftId}/cancelSchedule`, {}, options);
 }
 
 /** Duplicate an existing consent form. Returns the new draft id. */

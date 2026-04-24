@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  cancelAnnouncementSchedule,
+  cancelConsentFormSchedule,
   createDraft,
   rescheduleAnnouncementDraft,
   rescheduleConsentFormDraft,
@@ -92,6 +94,31 @@ describe('rescheduleConsentFormDraft (U3)', () => {
     const call = (globalThis.fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0];
     expect(call[0]).toMatch(/\/consentForms\/drafts\/schedule\/401$/);
     expect(call[1].method).toBe('PUT');
+  });
+});
+
+describe('cancelAnnouncementSchedule (U9)', () => {
+  beforeEach(() => {
+    vi.stubGlobal('fetch', mockFetch({}, 200));
+  });
+
+  it('POSTs to /announcements/drafts/:id/cancelSchedule', async () => {
+    await cancelAnnouncementSchedule(123);
+    const call = (globalThis.fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(call[0]).toMatch(/\/announcements\/drafts\/123\/cancelSchedule$/);
+    expect(call[1].method).toBe('POST');
+  });
+});
+
+describe('cancelConsentFormSchedule (U9)', () => {
+  beforeEach(() => {
+    vi.stubGlobal('fetch', mockFetch({}, 200));
+  });
+
+  it('POSTs to /consentForms/drafts/:id/cancelSchedule', async () => {
+    await cancelConsentFormSchedule(401);
+    const call = (globalThis.fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(call[0]).toMatch(/\/consentForms\/drafts\/401\/cancelSchedule$/);
   });
 });
 

@@ -9,7 +9,13 @@ import {
   useRouteError,
 } from 'react-router';
 
-import { getConfigs, rescheduleAnnouncementDraft, rescheduleConsentFormDraft } from '~/api/client';
+import {
+  cancelAnnouncementSchedule,
+  cancelConsentFormSchedule,
+  getConfigs,
+  rescheduleAnnouncementDraft,
+  rescheduleConsentFormDraft,
+} from '~/api/client';
 import { PGError, PGNotFoundError } from '~/api/errors';
 import type { PGApiConfig } from '~/api/types';
 import { ConsentFormHistoryList } from '~/components/posts/ConsentFormHistoryList';
@@ -147,6 +153,7 @@ function DetailHeader({ post }: { post: PGPost }) {
   const revalidator = useRevalidator();
   const [rescheduleOpen, setRescheduleOpen] = useState(false);
   const [rescheduling, setRescheduling] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const canReschedule = post.status === 'scheduled';
 
   async function handleRescheduleConfirm(scheduledSendAt: string) {
@@ -171,6 +178,34 @@ function DetailHeader({ post }: { post: PGPost }) {
       }
     } finally {
       setRescheduling(false);
+    }
+  }
+
+  async function handleCancelSchedule() {
+    const draftId = extractDraftNumericId(post.id);
+    if (draftId === null) {
+      notify.error('Could not resolve the scheduled post id.');
+      return;
+    }
+    const confirmed = window.confirm(
+      'Cancel the scheduled send? The post will return to Draft so you can edit or reschedule it.',
+    );
+    if (!confirmed) return;
+    setCancelling(true);
+    try {
+      if (post.kind === 'form') {
+        await cancelConsentFormSchedule(draftId);
+      } else {
+        await cancelAnnouncementSchedule(draftId);
+      }
+      notify.success('Scheduled send cancelled.');
+      revalidator.revalidate();
+    } catch (err) {
+      if (!(err instanceof PGError)) {
+        notify.error('Failed to cancel the scheduled send.');
+      }
+    } finally {
+      setCancelling(false);
     }
   }
 
@@ -202,9 +237,24 @@ function DetailHeader({ post }: { post: PGPost }) {
 
       <div className="flex items-center gap-2">
         {canReschedule && (
-          <Button variant="secondary" size="sm" onClick={() => setRescheduleOpen(true)}>
-            Reschedule
-          </Button>
+          <>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleCancelSchedule}
+              disabled={cancelling || rescheduling}
+            >
+              Cancel schedule
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setRescheduleOpen(true)}
+              disabled={cancelling || rescheduling}
+            >
+              Reschedule
+            </Button>
+          </>
         )}
         <Button variant="secondary" size="sm" render={<Link to={editHref} />} nativeButton={false}>
           Edit
