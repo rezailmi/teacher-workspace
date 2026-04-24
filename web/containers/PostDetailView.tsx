@@ -1,10 +1,16 @@
 import { ArrowLeft } from 'lucide-react';
 import React, { useMemo, useState } from 'react';
 import type { LoaderFunctionArgs } from 'react-router';
-import { isRouteErrorResponse, Link, useLoaderData, useRouteError } from 'react-router';
+import {
+  isRouteErrorResponse,
+  Link,
+  useLoaderData,
+  useRevalidator,
+  useRouteError,
+} from 'react-router';
 
-import { getConfigs } from '~/api/client';
-import { PGNotFoundError } from '~/api/errors';
+import { getConfigs, rescheduleAnnouncementDraft, rescheduleConsentFormDraft } from '~/api/client';
+import { PGError, PGNotFoundError } from '~/api/errors';
 import type { PGApiConfig } from '~/api/types';
 import { ConsentFormHistoryList } from '~/components/posts/ConsentFormHistoryList';
 import { PostCard } from '~/components/posts/PostCard';
@@ -14,6 +20,7 @@ import {
   type RecipientFilterValue,
 } from '~/components/posts/RecipientFilterPopover';
 import { RecipientReadTable } from '~/components/posts/RecipientReadTable';
+import { SchedulePickerDialog } from '~/components/posts/SchedulePickerDialog';
 import { Badge, Button } from '~/components/ui';
 import {
   describeScheduledSendFailure,
@@ -32,6 +39,7 @@ import {
 import { POST_REGISTRY } from '~/data/posts-registry';
 import { assertNever } from '~/helpers/assertNever';
 import { formatDate, formatDateTime } from '~/helpers/dateTime';
+import { notify } from '~/lib/notify';
 
 interface PostDetailLoaderData {
   post: PGPost;
@@ -113,11 +121,58 @@ function statusBadge(post: PGPost) {
   }
 }
 
+/**
+ * Strip any branded prefix from a post id and return the bare numeric id
+ * PGW's draft endpoints expect (U3). Returns `null` when the id doesn't
+ * parse \u2014 the Reschedule action surfaces a toast rather than issuing a
+ * malformed request.
+ */
+function extractDraftNumericId(id: string): number | null {
+  const bare = id.startsWith('annDraft_')
+    ? id.slice('annDraft_'.length)
+    : id.startsWith('cfDraft_')
+      ? id.slice('cfDraft_'.length)
+      : id.startsWith('cf_')
+        ? id.slice('cf_'.length)
+        : id;
+  const n = Number(bare);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
 function DetailHeader({ post }: { post: PGPost }) {
   const badge = statusBadge(post);
   const iso = post.postedAt ?? post.createdAt;
   const postedDate = formatDateTime(iso) ?? formatDate(iso);
   const editHref = postHref(post, { edit: true });
+  const revalidator = useRevalidator();
+  const [rescheduleOpen, setRescheduleOpen] = useState(false);
+  const [rescheduling, setRescheduling] = useState(false);
+  const canReschedule = post.status === 'scheduled';
+
+  async function handleRescheduleConfirm(scheduledSendAt: string) {
+    const draftId = extractDraftNumericId(post.id);
+    if (draftId === null) {
+      notify.error('Could not resolve the scheduled post id.');
+      return;
+    }
+    setRescheduling(true);
+    try {
+      if (post.kind === 'form') {
+        await rescheduleConsentFormDraft(draftId, { scheduledSendAt });
+      } else {
+        await rescheduleAnnouncementDraft(draftId, { scheduledSendAt });
+      }
+      notify.success('Post rescheduled.');
+      setRescheduleOpen(false);
+      revalidator.revalidate();
+    } catch (err) {
+      if (!(err instanceof PGError)) {
+        notify.error('Failed to reschedule. Please try again.');
+      }
+    } finally {
+      setRescheduling(false);
+    }
+  }
 
   return (
     <div className="flex items-start justify-between gap-4">
@@ -145,9 +200,25 @@ function DetailHeader({ post }: { post: PGPost }) {
         </div>
       </div>
 
-      <Button variant="secondary" size="sm" render={<Link to={editHref} />} nativeButton={false}>
-        Edit
-      </Button>
+      <div className="flex items-center gap-2">
+        {canReschedule && (
+          <Button variant="secondary" size="sm" onClick={() => setRescheduleOpen(true)}>
+            Reschedule
+          </Button>
+        )}
+        <Button variant="secondary" size="sm" render={<Link to={editHref} />} nativeButton={false}>
+          Edit
+        </Button>
+      </div>
+
+      {canReschedule && (
+        <SchedulePickerDialog
+          open={rescheduleOpen}
+          onOpenChange={setRescheduleOpen}
+          onConfirm={handleRescheduleConfirm}
+          busy={rescheduling}
+        />
+      )}
     </div>
   );
 }

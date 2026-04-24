@@ -1,6 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { createDraft, updateDraft } from './client';
+import {
+  createDraft,
+  rescheduleAnnouncementDraft,
+  rescheduleConsentFormDraft,
+  updateDraft,
+} from './client';
 import { PGCsrfError, PGRedirectError, PGTimeoutError } from './errors';
 import type { PGApiCreateDraftPayload } from './types';
 
@@ -58,6 +63,35 @@ describe('createDraft', () => {
     expect(call[1].signal.aborted).toBe(false);
     controller.abort();
     expect(call[1].signal.aborted).toBe(true);
+  });
+});
+
+describe('rescheduleAnnouncementDraft (U3)', () => {
+  beforeEach(() => {
+    vi.stubGlobal('fetch', mockFetch(undefined, 204));
+  });
+
+  it('PUTs to /announcements/drafts/schedule/:id with the new scheduledSendAt', async () => {
+    await rescheduleAnnouncementDraft(123, { scheduledSendAt: '2026-05-01T09:15:00+08:00' });
+    const call = (globalThis.fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(call[0]).toMatch(/\/announcements\/drafts\/schedule\/123$/);
+    expect(call[1].method).toBe('PUT');
+    expect(JSON.parse(call[1].body as string)).toEqual({
+      scheduledSendAt: '2026-05-01T09:15:00+08:00',
+    });
+  });
+});
+
+describe('rescheduleConsentFormDraft (U3)', () => {
+  beforeEach(() => {
+    vi.stubGlobal('fetch', mockFetch(undefined, 204));
+  });
+
+  it('PUTs to /consentForms/drafts/schedule/:id with the new scheduledSendAt', async () => {
+    await rescheduleConsentFormDraft(401, { scheduledSendAt: '2026-05-02T10:00:00+08:00' });
+    const call = (globalThis.fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(call[0]).toMatch(/\/consentForms\/drafts\/schedule\/401$/);
+    expect(call[1].method).toBe('PUT');
   });
 });
 

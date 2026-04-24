@@ -443,6 +443,19 @@ export function scheduleDraft(payload: PGApiScheduleDraftPayload) {
   return mutateApi<void>('POST', '/announcements/drafts/schedule', payload);
 }
 
+/**
+ * Reschedule an already-scheduled announcement draft (U3). Distinct from
+ * `updateDraft` — PGW exposes a dedicated endpoint so reschedule-in-window
+ * races don't collide with generic field updates.
+ */
+export function rescheduleAnnouncementDraft(
+  draftId: number,
+  payload: { scheduledSendAt: string },
+  options: { signal?: AbortSignal } = {},
+) {
+  return mutateApi<void>('PUT', `/announcements/drafts/schedule/${draftId}`, payload, options);
+}
+
 /** Update an existing draft. PGW allows partial data on drafts. */
 export function updateDraft(
   draftId: number,
@@ -556,6 +569,19 @@ export function updateConsentFormDraft(
 
 export function updateConsentFormDueDate(formId: number, payload: { consentByDate: string }) {
   return mutateApi<void>('PUT', `/consentForms/${formId}/updateDueDate`, payload);
+}
+
+/**
+ * Reschedule an already-scheduled consent-form draft (U3). Mirrors
+ * `rescheduleAnnouncementDraft`; PGW keeps these as two endpoint families,
+ * so containers pick the right helper by the post's `kind`.
+ */
+export function rescheduleConsentFormDraft(
+  draftId: number,
+  payload: { scheduledSendAt: string },
+  options: { signal?: AbortSignal } = {},
+) {
+  return mutateApi<void>('PUT', `/consentForms/drafts/schedule/${draftId}`, payload, options);
 }
 
 /** Duplicate an existing consent form. Returns the new draft id. */
