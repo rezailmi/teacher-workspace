@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createDraft, updateDraft } from './client';
+import { PGTimeoutError } from './errors';
 import type { PGApiCreateDraftPayload } from './types';
 
 const base: PGApiCreateDraftPayload = {
@@ -47,11 +48,88 @@ describe('createDraft', () => {
     });
   });
 
-  it('forwards an AbortSignal to fetch', async () => {
+  it('passes an AbortSignal to fetch that aborts when the caller aborts', async () => {
     const controller = new AbortController();
     await createDraft(base, { signal: controller.signal });
     const call = (globalThis.fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0];
-    expect(call[1].signal).toBe(controller.signal);
+    // The composed signal is a child of the caller's signal — aborting the
+    // caller cascades to the fetch's signal (compound AbortController pattern).
+    expect(call[1].signal).toBeInstanceOf(AbortSignal);
+    expect(call[1].signal.aborted).toBe(false);
+    controller.abort();
+    expect(call[1].signal.aborted).toBe(true);
+  });
+});
+
+describe('mutateApi timeout (U8)', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('rejects with PGTimeoutError when fetch never resolves within the budget', async () => {
+    // A fetch that never resolves. The `signal` passed in by mutateApi is the
+    // composed timeout signal — hook into it to resolve with an AbortError
+    // when the internal timeout fires, mimicking a real fetch implementation.
+    const fetchMock = vi.fn().mockImplementation((_url: string, init: RequestInit) => {
+      return new Promise((_resolve, reject) => {
+        const signal = init.signal;
+        if (signal) {
+          signal.addEventListener('abort', () => {
+            reject(new DOMException('Aborted', 'AbortError'));
+          });
+        }
+      });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const pending = createDraft(base, { timeoutMs: 100 });
+    // Catch the rejection now so there's no "unhandled promise" noise.
+    const assertion = expect(pending).rejects.toBeInstanceOf(PGTimeoutError);
+    await vi.advanceTimersByTimeAsync(200);
+    await assertion;
+  });
+
+  it('surfaces a caller-initiated abort as AbortError, not PGTimeoutError', async () => {
+    const fetchMock = vi.fn().mockImplementation((_url: string, init: RequestInit) => {
+      return new Promise((_resolve, reject) => {
+        const signal = init.signal;
+        if (signal) {
+          signal.addEventListener('abort', () => {
+            reject(new DOMException('Aborted', 'AbortError'));
+          });
+        }
+      });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const controller = new AbortController();
+    const pending = createDraft(base, { signal: controller.signal, timeoutMs: 30_000 });
+    const assertion = expect(pending).rejects.toSatisfy(
+      (err: unknown) =>
+        err instanceof DOMException &&
+        err.name === 'AbortError' &&
+        !(err instanceof PGTimeoutError),
+    );
+    controller.abort();
+    await assertion;
+  });
+
+  it('does not reject fast fetches with a timeout', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ body: { announcementDraftId: 7 }, resultCode: 1 }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        }),
+      ),
+    );
+    const out = await createDraft(base, { timeoutMs: 30_000 });
+    expect(out).toEqual({ announcementDraftId: 7 });
   });
 });
 

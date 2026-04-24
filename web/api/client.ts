@@ -8,7 +8,13 @@ import type {
 } from '~/data/mock-pg-announcements';
 import { notify } from '~/lib/notify';
 
-import { PGError, PGNotFoundError, PGSessionExpiredError, PGValidationError } from './errors';
+import {
+  PGError,
+  PGNotFoundError,
+  PGSessionExpiredError,
+  PGTimeoutError,
+  PGValidationError,
+} from './errors';
 import {
   mapAnnouncementDetail,
   mapAnnouncementDraftDetail,
@@ -140,24 +146,88 @@ async function fetchApiRoot<T>(path: string): Promise<T> {
   return unwrapEnvelope<T>(await res.json());
 }
 
+/**
+ * Default deadlines for write + upload paths (U8). Write mutations get the
+ * shorter budget because they're the tightest feedback loop (teacher waits on
+ * the Send / Schedule button); uploads widen it because AV scan + S3 round
+ * trips push past the 30-second mark in normal conditions.
+ */
+const DEFAULT_WRITE_TIMEOUT_MS = 30_000;
+const DEFAULT_UPLOAD_TIMEOUT_MS = 60_000;
+
+/**
+ * Compose a caller's `AbortSignal` with a client-side timeout. The returned
+ * `signal` aborts when either the caller aborts or the timeout elapses;
+ * `didTimeout()` disambiguates so callers can surface a distinct
+ * `PGTimeoutError` vs. re-throwing the caller's `AbortError`. The `dispose`
+ * hook clears the timer once the request settles so pending timeouts don't
+ * keep the event loop alive after success.
+ */
+function withTimeout(
+  callerSignal: AbortSignal | undefined,
+  timeoutMs: number,
+): { signal: AbortSignal; dispose: () => void; didTimeout: () => boolean } {
+  const controller = new AbortController();
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, timeoutMs);
+  const disposeTimer = () => clearTimeout(timer);
+
+  if (callerSignal) {
+    if (callerSignal.aborted) {
+      disposeTimer();
+      controller.abort();
+    } else {
+      callerSignal.addEventListener(
+        'abort',
+        () => {
+          disposeTimer();
+          controller.abort();
+        },
+        { once: true },
+      );
+    }
+  }
+
+  return {
+    signal: controller.signal,
+    dispose: disposeTimer,
+    didTimeout: () => timedOut,
+  };
+}
+
 async function mutateApi<T>(
   method: 'POST' | 'PUT',
   path: string,
   body: unknown,
-  options: { signal?: AbortSignal } = {},
+  options: { signal?: AbortSignal; timeoutMs?: number } = {},
 ): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
-    method,
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-    signal: options.signal,
-  });
-  if (!res.ok) await handleErrorResponse(res);
-  // Handle empty responses (204 No Content or empty body)
-  if (res.status === 204) return undefined as T;
-  const text = await res.text();
-  if (!text) return undefined as T;
-  return unwrapEnvelope<T>(JSON.parse(text));
+  const timeout = withTimeout(options.signal, options.timeoutMs ?? DEFAULT_WRITE_TIMEOUT_MS);
+  try {
+    const res = await fetch(`${API_BASE}${path}`, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: timeout.signal,
+    });
+    if (!res.ok) await handleErrorResponse(res);
+    // Handle empty responses (204 No Content or empty body)
+    if (res.status === 204) return undefined as T;
+    const text = await res.text();
+    if (!text) return undefined as T;
+    return unwrapEnvelope<T>(JSON.parse(text));
+  } catch (err) {
+    if (err instanceof DOMException && err.name === 'AbortError' && timeout.didTimeout()) {
+      throw new PGTimeoutError(
+        `Request to ${path} timed out after ${options.timeoutMs ?? DEFAULT_WRITE_TIMEOUT_MS}ms.`,
+      );
+    }
+    throw err;
+  } finally {
+    timeout.dispose();
+  }
 }
 
 async function deleteApi(path: string): Promise<void> {
@@ -171,13 +241,33 @@ async function deleteApi(path: string): Promise<void> {
  * not JSON. Shares `handleErrorResponse` and `unwrapEnvelope` with the JSON
  * helpers so errors surface the same way.
  */
-async function postMultipart<T>(path: string, formData: FormData): Promise<T> {
-  const res = await fetch(`/api${path}`, { method: 'POST', body: formData });
-  if (!res.ok) await handleErrorResponse(res);
-  if (res.status === 204) return undefined as T;
-  const text = await res.text();
-  if (!text) return undefined as T;
-  return unwrapEnvelope<T>(JSON.parse(text));
+async function postMultipart<T>(
+  path: string,
+  formData: FormData,
+  options: { signal?: AbortSignal; timeoutMs?: number } = {},
+): Promise<T> {
+  const timeout = withTimeout(options.signal, options.timeoutMs ?? DEFAULT_UPLOAD_TIMEOUT_MS);
+  try {
+    const res = await fetch(`/api${path}`, {
+      method: 'POST',
+      body: formData,
+      signal: timeout.signal,
+    });
+    if (!res.ok) await handleErrorResponse(res);
+    if (res.status === 204) return undefined as T;
+    const text = await res.text();
+    if (!text) return undefined as T;
+    return unwrapEnvelope<T>(JSON.parse(text));
+  } catch (err) {
+    if (err instanceof DOMException && err.name === 'AbortError' && timeout.didTimeout()) {
+      throw new PGTimeoutError(
+        `Upload to ${path} timed out after ${options.timeoutMs ?? DEFAULT_UPLOAD_TIMEOUT_MS}ms.`,
+      );
+    }
+    throw err;
+  } finally {
+    timeout.dispose();
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

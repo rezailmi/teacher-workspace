@@ -38,6 +38,19 @@ export class PGNotFoundError extends PGError {
 }
 
 /**
+ * Client-side timeout (U8). `resultCode` is synthetic (`-999`) and
+ * `httpStatus` is `0` because the server never replied. Callers that need to
+ * distinguish a hung request from an in-flight caller-initiated abort should
+ * use `instanceof PGTimeoutError`.
+ */
+export class PGTimeoutError extends PGError {
+  constructor(message = 'Request timed out.') {
+    super(message, -999, 0);
+    this.name = 'PGTimeoutError';
+  }
+}
+
+/**
  * -400 / -4001 / -4003 / -4004 — client-side validation failure.
  * Container code should catch this and render as inline field errors; do not
  * toast from the global handler. Optional `fieldPath` / `subCode` are reserved
