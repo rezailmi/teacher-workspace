@@ -1,3 +1,4 @@
+import { CalendarClock } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 import {
@@ -16,6 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '~/components/ui';
+import { cn } from '~/lib/utils';
 
 export interface ScheduleWindow {
   /** Window start as `HH:MM`, 24-hour, 15-min aligned. */
@@ -85,12 +87,18 @@ function toSgtIso(date: Date, time: string): string {
   return `${y}-${m}-${d}T${hh}:${mm}:00+08:00`;
 }
 
-function formatWhen(iso: string): string {
+function formatWhenDate(iso: string): string {
   return new Date(iso).toLocaleString('en-SG', {
     weekday: 'short',
     day: 'numeric',
     month: 'short',
     year: 'numeric',
+    timeZone: 'Asia/Singapore',
+  });
+}
+
+function formatWhenTime(iso: string): string {
+  return new Date(iso).toLocaleString('en-SG', {
     hour: 'numeric',
     minute: '2-digit',
     hour12: true,
@@ -171,7 +179,7 @@ export function SchedulePickerDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[540px]">
+      <DialogContent className="sm:max-w-[620px]">
         <DialogHeader>
           <DialogTitle>Schedule post</DialogTitle>
           <DialogDescription>
@@ -180,7 +188,7 @@ export function SchedulePickerDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex flex-col gap-4 py-2">
+        <div className="grid gap-5 sm:grid-cols-[auto_1fr]">
           <Calendar
             mode="single"
             selected={date}
@@ -189,40 +197,72 @@ export function SchedulePickerDialog({
             className="rounded-xl border"
           />
 
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="schedule-time-select" className="text-muted-foreground">
-              Time (Asia/Singapore)
-            </Label>
-            <Select
-              value={time}
-              onValueChange={(v) => {
-                if (v != null) setTime(v);
-              }}
-            >
-              <SelectTrigger id="schedule-time-select" className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {slots.map((slot) => (
-                  <SelectItem key={slot.value} value={slot.value}>
-                    {slot.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-baseline justify-between gap-2">
+                <Label htmlFor="schedule-time-select">Time</Label>
+                <span className="text-xs text-muted-foreground">
+                  {scheduleWindow.start}–{scheduleWindow.end} SGT
+                </span>
+              </div>
+              <Select
+                value={time}
+                onValueChange={(v) => {
+                  if (v != null) setTime(v);
+                }}
+              >
+                <SelectTrigger id="schedule-time-select" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {slots.map((slot) => (
+                    <SelectItem key={slot.value} value={slot.value}>
+                      {slot.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-          {scheduledSendAt && validation.ok && (
-            <p className="text-sm text-muted-foreground">
-              Will send on{' '}
-              <span className="font-medium text-foreground">{formatWhen(scheduledSendAt)}</span>.
-            </p>
-          )}
-          {(showWindowError || showDateError) && (
-            <p className="text-sm text-destructive" role="alert">
-              {validation.ok ? '' : validation.reason}
-            </p>
-          )}
+            <div
+              className="flex gap-3 rounded-xl border bg-muted/40 p-3"
+              aria-live="polite"
+              data-slot="schedule-summary"
+            >
+              <CalendarClock
+                className={cn(
+                  'mt-0.5 size-4 shrink-0',
+                  scheduledSendAt && validation.ok ? 'text-foreground' : 'text-muted-foreground',
+                )}
+                aria-hidden="true"
+              />
+              <div className="min-w-0 flex-1">
+                <div className="text-[10px] font-medium tracking-wide text-muted-foreground uppercase">
+                  Sending on
+                </div>
+                {scheduledSendAt && validation.ok ? (
+                  <>
+                    <div className="mt-0.5 text-sm font-medium text-foreground">
+                      {formatWhenDate(scheduledSendAt)}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {formatWhenTime(scheduledSendAt)} · Asia/Singapore
+                    </div>
+                  </>
+                ) : (
+                  <div className="mt-0.5 text-sm text-muted-foreground">
+                    {date ? 'Adjust your time to continue.' : 'Select a date to continue.'}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {(showWindowError || showDateError) && !validation.ok && (
+              <p className="text-xs text-destructive" role="alert">
+                {validation.reason}
+              </p>
+            )}
+          </div>
         </div>
 
         <DialogFooter>
