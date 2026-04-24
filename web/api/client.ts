@@ -12,6 +12,7 @@ import {
   PGCsrfError,
   PGError,
   PGNotFoundError,
+  PGRedirectError,
   PGSessionExpiredError,
   PGTimeoutError,
   PGValidationError,
@@ -131,8 +132,37 @@ async function handleErrorResponse(res: Response): Promise<never> {
   }
 }
 
+/**
+ * Opaqueredirect (`type: 'opaqueredirect'`, status 0) or a bare 3xx with
+ * `redirect: 'manual'` indicates a PG -4031 session-redirect. The browser
+ * hides the Location header for opaqueredirects, but in jsdom / same-origin
+ * / non-CORS contexts it's often still readable. Try it; navigate the window
+ * when a Location is available, and always throw `PGRedirectError` so
+ * callers (esp. route boundaries) can surface a terminal state instead of
+ * silently parsing HTML as JSON.
+ */
+function handleRedirectResponse(res: Response): never {
+  const location = res.headers.get('location');
+  if (location && typeof window !== 'undefined') {
+    try {
+      // Accept absolute URLs and relative paths — PG confirmation pending (ask #9).
+      new URL(location, window.location.origin);
+      window.location.href = location;
+    } catch {
+      // Invalid URL — fall through to the thrown error below; the caller
+      // decides how to recover.
+    }
+  }
+  throw new PGRedirectError(location);
+}
+
+function isRedirectResponse(res: Response): boolean {
+  return res.type === 'opaqueredirect' || (res.status >= 300 && res.status < 400);
+}
+
 async function fetchApi<T>(path: string): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`);
+  const res = await fetch(`${API_BASE}${path}`, { redirect: 'manual' });
+  if (isRedirectResponse(res)) handleRedirectResponse(res);
   if (!res.ok) await handleErrorResponse(res);
   return unwrapEnvelope<T>(await res.json());
 }
@@ -144,7 +174,8 @@ async function fetchApi<T>(path: string): Promise<T> {
  * for the staff-scoped surface.
  */
 async function fetchApiRoot<T>(path: string): Promise<T> {
-  const res = await fetch(`/api${path}`);
+  const res = await fetch(`/api${path}`, { redirect: 'manual' });
+  if (isRedirectResponse(res)) handleRedirectResponse(res);
   if (!res.ok) await handleErrorResponse(res);
   return unwrapEnvelope<T>(await res.json());
 }
@@ -232,7 +263,9 @@ async function mutateApi<T>(
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
       signal: timeout.signal,
+      redirect: 'manual',
     });
+    if (isRedirectResponse(res)) handleRedirectResponse(res);
     if (!res.ok) await handleErrorResponse(res);
     // Handle empty responses (204 No Content or empty body)
     if (res.status === 204) return undefined as T;
@@ -266,7 +299,8 @@ async function mutateApi<T>(
 }
 
 async function deleteApi(path: string): Promise<void> {
-  const res = await fetch(`${API_BASE}${path}`, { method: 'DELETE' });
+  const res = await fetch(`${API_BASE}${path}`, { method: 'DELETE', redirect: 'manual' });
+  if (isRedirectResponse(res)) handleRedirectResponse(res);
   if (!res.ok) await handleErrorResponse(res);
 }
 
@@ -287,7 +321,9 @@ async function postMultipart<T>(
       method: 'POST',
       body: formData,
       signal: timeout.signal,
+      redirect: 'manual',
     });
+    if (isRedirectResponse(res)) handleRedirectResponse(res);
     if (!res.ok) await handleErrorResponse(res);
     if (res.status === 204) return undefined as T;
     const text = await res.text();

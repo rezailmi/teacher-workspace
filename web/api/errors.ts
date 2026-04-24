@@ -65,6 +65,25 @@ export class PGCsrfError extends PGError {
 }
 
 /**
+ * -4031 — PG redirects with a 302 + Location header rather than a JSON
+ * envelope (e.g. login-required). Fetch is called with `redirect: 'manual'`
+ * so the redirect surfaces here instead of being silently followed into an
+ * HTML response the JSON parser can't handle. The client helper reads
+ * Location when possible and navigates the window; if the browser hid the
+ * header (opaqueredirect), this error still fires so callers can surface
+ * a terminal "session invalid" state.
+ */
+export class PGRedirectError extends PGError {
+  readonly location: string | null;
+
+  constructor(location: string | null) {
+    super('Request redirected (PG -4031).', -4031, 302);
+    this.name = 'PGRedirectError';
+    this.location = location;
+  }
+}
+
+/**
  * -400 / -4001 / -4003 / -4004 — client-side validation failure.
  * Container code should catch this and render as inline field errors; do not
  * toast from the global handler. Optional `fieldPath` / `subCode` are reserved

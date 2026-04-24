@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createDraft, updateDraft } from './client';
-import { PGCsrfError, PGTimeoutError } from './errors';
+import { PGCsrfError, PGRedirectError, PGTimeoutError } from './errors';
 import type { PGApiCreateDraftPayload } from './types';
 
 const base: PGApiCreateDraftPayload = {
@@ -108,6 +108,54 @@ describe('mutateApi CSRF retry (U7)', () => {
 
     await expect(createDraft(base)).rejects.toBeInstanceOf(PGCsrfError);
     expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+});
+
+describe('mutateApi redirect handling (U10)', () => {
+  it('throws PGRedirectError when PG returns a 302 with Location', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        new Response(null, {
+          status: 302,
+          headers: { location: '/login?reason=-4031' },
+        }),
+      ),
+    );
+    // Stub navigation so the assertion doesn't try to actually relocate jsdom.
+    const locationHref = vi.fn();
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: {
+        get href() {
+          return '';
+        },
+        set href(v: string) {
+          locationHref(v);
+        },
+        origin: 'http://localhost',
+        pathname: '/',
+      },
+    });
+
+    const err = await createDraft(base).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(PGRedirectError);
+    expect((err as PGRedirectError).location).toBe('/login?reason=-4031');
+    expect(locationHref).toHaveBeenCalledWith('/login?reason=-4031');
+  });
+
+  it('throws PGRedirectError with a null location when the browser hid the header', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        // Emulate an opaqueredirect — Response headers are empty but status < 400
+        // so isRedirectResponse still fires via the 3xx branch.
+        new Response(null, { status: 302 }),
+      ),
+    );
+    const err = await createDraft(base).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(PGRedirectError);
+    expect((err as PGRedirectError).location).toBeNull();
   });
 });
 
