@@ -58,6 +58,7 @@ import { formatDate, getRelevantDate, isLowReadRate } from '~/helpers/dateTime';
 import { notify } from '~/lib/notify';
 
 type PostTab = 'view-only' | 'with-responses';
+type OwnershipTab = 'mine' | 'shared';
 
 // Row augmented with `_date` and `_dateTs` so sorts/renders don't allocate
 // a new `Date` per keystroke. Precomputed once in the loader.
@@ -96,12 +97,30 @@ function comparePosts(a: PostRowData, b: PostRowData): number {
   return a.id.localeCompare(b.id);
 }
 
+/**
+ * Pure predicate for the two-axis filter (kind × ownership) + substring search.
+ * Exported for unit testing; callers should wrap it in a `useMemo` alongside
+ * their sort pass (see `PostsView` body).
+ */
+export function matchesPostFilters(
+  row: PostRowData,
+  filters: { tab: PostTab; ownership: OwnershipTab; query: string },
+): boolean {
+  if (filters.tab === 'view-only' && row.kind === 'form') return false;
+  if (filters.tab === 'with-responses' && row.kind !== 'form') return false;
+  if (filters.ownership === 'mine' && row.ownership !== 'mine') return false;
+  if (filters.ownership === 'shared' && row.ownership !== 'shared') return false;
+  if (filters.query && !row.title.toLowerCase().includes(filters.query.toLowerCase())) return false;
+  return true;
+}
+
 // ─── Component ──────────────────────────────────────────────────────────────
 
 const PostsView: React.FC = () => {
   const { rows: posts, configs } = useLoaderData<PostsLoaderData>();
   const revalidator = useRevalidator();
   const [tab, setTab] = useState<PostTab>('view-only');
+  const [ownership, setOwnership] = useState<OwnershipTab>('mine');
   const [searchQuery, setSearchQuery] = useState('');
   // `duplicate_announcement_form_post` gates the Duplicate row action in
   // production. In dev we surface it unconditionally so internal reviewers can
@@ -110,17 +129,11 @@ const PostsView: React.FC = () => {
     configs.flags.duplicate_announcement_form_post?.enabled === true || import.meta.env.DEV;
 
   const filtered = useMemo(() => {
-    const q = searchQuery.toLowerCase();
     return posts
-      .filter((p) => {
-        if (tab === 'view-only' && p.kind === 'form') return false;
-        if (tab === 'with-responses' && p.kind !== 'form') return false;
-        if (q && !p.title.toLowerCase().includes(q)) return false;
-        return true;
-      })
+      .filter((p) => matchesPostFilters(p, { tab, ownership, query: searchQuery }))
       .slice()
       .sort(comparePosts);
-  }, [posts, searchQuery, tab]);
+  }, [posts, searchQuery, tab, ownership]);
 
   const showResponseColumn = tab === 'with-responses';
 
@@ -225,12 +238,20 @@ const PostsView: React.FC = () => {
       {/* Toolbar: view selector + search + filter */}
       <div className="space-y-4 pt-4">
         <div className="flex flex-wrap items-center justify-between gap-3 px-6">
-          <Tabs value={tab} onValueChange={(v) => setTab(v as PostTab)}>
-            <TabsList>
-              <TabsTrigger value="view-only">Posts</TabsTrigger>
-              <TabsTrigger value="with-responses">Posts with responses</TabsTrigger>
-            </TabsList>
-          </Tabs>
+          <div className="flex flex-wrap items-center gap-3">
+            <Tabs value={tab} onValueChange={(v) => setTab(v as PostTab)}>
+              <TabsList>
+                <TabsTrigger value="view-only">Posts</TabsTrigger>
+                <TabsTrigger value="with-responses">Posts with responses</TabsTrigger>
+              </TabsList>
+            </Tabs>
+            <Tabs value={ownership} onValueChange={(v) => setOwnership(v as OwnershipTab)}>
+              <TabsList>
+                <TabsTrigger value="mine">Mine</TabsTrigger>
+                <TabsTrigger value="shared">Shared with me</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
 
           <div className="flex items-center gap-2">
             <div className="relative">
@@ -260,6 +281,13 @@ const PostsView: React.FC = () => {
                   <p className="text-base text-foreground">No posts match your search.</p>
                   <p className="mt-1 text-sm text-muted-foreground">
                     Try adjusting your search terms.
+                  </p>
+                </>
+              ) : ownership === 'shared' ? (
+                <>
+                  <p className="text-base text-foreground">No posts shared with you.</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    When a colleague adds you as staff-in-charge, their post will appear here.
                   </p>
                 </>
               ) : (
