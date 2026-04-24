@@ -35,6 +35,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
   Input,
+  Label,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+  RadioGroup,
+  RadioGroupItem,
   Table,
   TableBody,
   TableCell,
@@ -59,6 +65,8 @@ import { notify } from '~/lib/notify';
 
 type PostTab = 'view-only' | 'with-responses';
 type OwnershipTab = 'mine' | 'shared';
+
+const DEFAULT_OWNERSHIP: OwnershipTab = 'mine';
 
 // Row augmented with `_date` and `_dateTs` so sorts/renders don't allocate
 // a new `Date` per keystroke. Precomputed once in the loader.
@@ -120,7 +128,7 @@ const PostsView: React.FC = () => {
   const { rows: posts, configs } = useLoaderData<PostsLoaderData>();
   const revalidator = useRevalidator();
   const [tab, setTab] = useState<PostTab>('view-only');
-  const [ownership, setOwnership] = useState<OwnershipTab>('mine');
+  const [ownership, setOwnership] = useState<OwnershipTab>(DEFAULT_OWNERSHIP);
   const [searchQuery, setSearchQuery] = useState('');
   // `duplicate_announcement_form_post` gates the Duplicate row action in
   // production. In dev we surface it unconditionally so internal reviewers can
@@ -238,20 +246,12 @@ const PostsView: React.FC = () => {
       {/* Toolbar: view selector + search + filter */}
       <div className="space-y-4 pt-4">
         <div className="flex flex-wrap items-center justify-between gap-3 px-6">
-          <div className="flex flex-wrap items-center gap-3">
-            <Tabs value={tab} onValueChange={(v) => setTab(v as PostTab)}>
-              <TabsList>
-                <TabsTrigger value="view-only">Posts</TabsTrigger>
-                <TabsTrigger value="with-responses">Posts with responses</TabsTrigger>
-              </TabsList>
-            </Tabs>
-            <Tabs value={ownership} onValueChange={(v) => setOwnership(v as OwnershipTab)}>
-              <TabsList>
-                <TabsTrigger value="mine">Mine</TabsTrigger>
-                <TabsTrigger value="shared">Shared with me</TabsTrigger>
-              </TabsList>
-            </Tabs>
-          </div>
+          <Tabs value={tab} onValueChange={(v) => setTab(v as PostTab)}>
+            <TabsList>
+              <TabsTrigger value="view-only">Posts</TabsTrigger>
+              <TabsTrigger value="with-responses">Posts with responses</TabsTrigger>
+            </TabsList>
+          </Tabs>
 
           <div className="flex items-center gap-2">
             <div className="relative">
@@ -265,10 +265,43 @@ const PostsView: React.FC = () => {
                 aria-label="Search posts"
               />
             </div>
-            <Button variant="secondary" size="sm">
-              <SlidersHorizontal className="h-4 w-4" />
-              Filter
-            </Button>
+            <Popover>
+              <PopoverTrigger
+                render={
+                  <Button variant="secondary" size="sm" aria-label="Filter posts">
+                    <SlidersHorizontal className="h-4 w-4" />
+                    Filter
+                    {ownership !== DEFAULT_OWNERSHIP && (
+                      <span className="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[11px] font-medium text-primary-foreground">
+                        1
+                      </span>
+                    )}
+                  </Button>
+                }
+              />
+              <PopoverContent align="end" className="w-56 gap-5">
+                <p className="text-xs font-medium tracking-widest text-muted-foreground uppercase">
+                  Filters
+                </p>
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">Ownership</p>
+                  <RadioGroup
+                    value={ownership}
+                    onValueChange={(v) => setOwnership(v as OwnershipTab)}
+                    className="gap-2"
+                  >
+                    <label className="flex cursor-pointer items-center gap-2">
+                      <RadioGroupItem value="mine" />
+                      <Label className="cursor-pointer text-sm font-normal">Mine</Label>
+                    </label>
+                    <label className="flex cursor-pointer items-center gap-2">
+                      <RadioGroupItem value="shared" />
+                      <Label className="cursor-pointer text-sm font-normal">Shared with me</Label>
+                    </label>
+                  </RadioGroup>
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
         </div>
 
