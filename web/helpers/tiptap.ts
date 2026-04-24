@@ -19,6 +19,12 @@ export function createRichTextExtensions(opts?: { maxLength?: number }) {
     // rejects. The final allowlist matches `pgw-web` exactly:
     // doc, paragraph, text, bold, italic, underline, bulletList, orderedList,
     // listItem, hardBreak, history.
+    //
+    // TODO: widen this set once PGW's allowlist opens up. Candidates the
+    // toolbar used to expose (see commit 6fe31cb that narrowed it): headings
+    // (h1–h3), strike, inline code, blockquote, highlight, link. Re-enabling
+    // here requires a matching change in `pgw-web/src/server/utils/richTextUtil.ts`
+    // or prod submits will be rejected.
     StarterKit.configure({
       // Use the standalone Underline extension below for consistency with pgw-web.
       underline: false,
