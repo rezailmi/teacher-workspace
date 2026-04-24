@@ -82,7 +82,11 @@ import { useAutoSave, type AutoSaveStatus } from '~/hooks/useAutoSave';
 import { useUnsavedChangesGuard } from '~/hooks/useUnsavedChangesGuard';
 import { notify } from '~/lib/notify';
 import { cn } from '~/lib/utils';
-import { reportValidationError } from '~/lib/validation-errors';
+import {
+  fieldForValidationError,
+  reportValidationError,
+  type PostFormField,
+} from '~/lib/validation-errors';
 
 import { hasPendingUploads, isCreatePostFormValid } from './createPostValidation';
 
@@ -696,6 +700,22 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
   // `submitted` lives until the browser unmounts us on navigate — that's what
   // debounces a rapid double-tap on the Post button without a setTimeout race.
   const [saveState, setSaveState] = useState<'idle' | 'submitting' | 'submitted'>('idle');
+  // Per-field inline error stamps populated from explicit send/schedule paths
+  // (U5). Autosave failures don't write here — we don't want field red-rings on
+  // inputs the teacher hasn't touched since the last autosave tick.
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<PostFormField, string>>>({});
+  const clearFieldError = (field: PostFormField) =>
+    setFieldErrors((prev) => {
+      if (!(field in prev)) return prev;
+      const { [field]: _removed, ...rest } = prev;
+      return rest;
+    });
+  const stampValidationError = (err: PGValidationError): boolean => {
+    const field = fieldForValidationError(err);
+    if (!field) return false;
+    setFieldErrors((prev) => ({ ...prev, [field]: reportValidationError(err) }));
+    return true;
+  };
   const isSaving = saveState !== 'idle';
 
   // Enquiry-email options derived from the logged-in staff profile.
@@ -865,7 +885,8 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
     } catch (err) {
       setSaveState('idle');
       if (err instanceof PGValidationError) {
-        notify.error(reportValidationError(err));
+        const stamped = stampValidationError(err);
+        if (!stamped) notify.error(reportValidationError(err));
       } else if (!(err instanceof PGError)) {
         notify.error('Failed to schedule post. Please try again.');
       }
@@ -888,7 +909,8 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
     } catch (err) {
       setSaveState('idle');
       if (err instanceof PGValidationError) {
-        notify.error(reportValidationError(err));
+        const stamped = stampValidationError(err);
+        if (!stamped) notify.error(reportValidationError(err));
       } else if (err instanceof Error && !(err instanceof PGError)) {
         // Plain `Error`s from the outbound mapper (e.g. missing email) carry
         // a useful message; surface it verbatim rather than a generic toast.
@@ -1021,11 +1043,12 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
                 </p>
                 <Select
                   value={state.enquiryEmail ?? ''}
-                  onValueChange={(value) =>
-                    dispatch({ type: 'SET_EMAIL', payload: value as string })
-                  }
+                  onValueChange={(value) => {
+                    clearFieldError('enquiryEmail');
+                    dispatch({ type: 'SET_EMAIL', payload: value as string });
+                  }}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger aria-invalid={fieldErrors.enquiryEmail ? true : undefined}>
                     <SelectValue placeholder="Select or add an email..." />
                   </SelectTrigger>
                   <SelectContent>
@@ -1036,6 +1059,11 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
                     ))}
                   </SelectContent>
                 </Select>
+                {fieldErrors.enquiryEmail && (
+                  <p role="alert" className="text-sm text-destructive">
+                    {fieldErrors.enquiryEmail}
+                  </p>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -1062,8 +1090,17 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
                   placeholder="e.g. Term 3 School Camp Consent & Payment"
                   value={state.title}
                   maxLength={120}
-                  onChange={(e) => dispatch({ type: 'SET_TITLE', payload: e.target.value })}
+                  aria-invalid={fieldErrors.title ? true : undefined}
+                  onChange={(e) => {
+                    clearFieldError('title');
+                    dispatch({ type: 'SET_TITLE', payload: e.target.value });
+                  }}
                 />
+                {fieldErrors.title && (
+                  <p role="alert" className="text-sm text-destructive">
+                    {fieldErrors.title}
+                  </p>
+                )}
               </div>
 
               {/* Description with counter and toolbar */}
@@ -1081,13 +1118,19 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
                   maxLength={2000}
                   placeholder="Write your announcement here. Use the toolbar to format text and insert inline links."
                   ariaLabelledBy="post-description-label"
-                  onChange={(doc, text) =>
+                  onChange={(doc, text) => {
+                    clearFieldError('description');
                     dispatch({
                       type: 'SET_DESCRIPTION_DOC',
                       payload: { doc, text },
-                    })
-                  }
+                    });
+                  }}
                 />
+                {fieldErrors.description && (
+                  <p role="alert" className="text-sm text-destructive">
+                    {fieldErrors.description}
+                  </p>
+                )}
               </div>
 
               {/* Attachments */}

@@ -73,14 +73,18 @@ function unwrapEnvelope<T>(json: unknown): T {
 async function handleErrorResponse(res: Response): Promise<never> {
   let resultCode: number | undefined;
   let errorReason: string | undefined;
+  let fieldPath: string | undefined;
+  let subCode: string | undefined;
   try {
     const body = (await res.clone().json()) as {
       resultCode?: number;
       message?: string;
-      error?: { errorReason?: string };
+      error?: { errorReason?: string; fieldPath?: string; subCode?: string };
     };
     resultCode = body.resultCode;
     errorReason = body.error?.errorReason ?? body.message;
+    fieldPath = body.error?.fieldPath;
+    subCode = body.error?.subCode;
   } catch {
     // Non-JSON body (e.g. HTML error page) — fall through with undefined fields.
   }
@@ -101,7 +105,7 @@ async function handleErrorResponse(res: Response): Promise<never> {
     case -4001:
     case -4003:
     case -4004:
-      throw new PGValidationError(message, code, res.status);
+      throw new PGValidationError(message, code, res.status, { fieldPath, subCode });
     case -429:
       notify.error('Too many requests. Please slow down and try again.');
       throw new PGError(message, code, res.status);

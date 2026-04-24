@@ -40,11 +40,24 @@ export class PGNotFoundError extends PGError {
 /**
  * -400 / -4001 / -4003 / -4004 — client-side validation failure.
  * Container code should catch this and render as inline field errors; do not
- * toast from the global handler.
+ * toast from the global handler. Optional `fieldPath` / `subCode` are reserved
+ * for richer PG error payloads that identify the offending field explicitly;
+ * callers should continue to infer via `fieldForValidationError` when
+ * `fieldPath` is absent.
  */
 export class PGValidationError extends PGError {
-  constructor(message: string, resultCode: number, httpStatus: number) {
+  readonly fieldPath?: string;
+  readonly subCode?: string;
+
+  constructor(
+    message: string,
+    resultCode: number,
+    httpStatus: number,
+    extras?: { fieldPath?: string; subCode?: string },
+  ) {
     super(message, resultCode, httpStatus);
     this.name = 'PGValidationError';
+    this.fieldPath = extras?.fieldPath;
+    this.subCode = extras?.subCode;
   }
 }
