@@ -45,7 +45,7 @@ import { MAX_QUESTIONS, QuestionBuilder } from '~/components/posts/QuestionBuild
 import { ReminderSection } from '~/components/posts/ReminderSection';
 import { ResponseTypeSelector } from '~/components/posts/ResponseTypeSelector';
 import { RichTextEditor } from '~/components/posts/RichTextEditor';
-import { SchedulePickerDialog } from '~/components/posts/SchedulePickerDialog';
+import { SchedulePickerDialog, type ScheduleWindow } from '~/components/posts/SchedulePickerDialog';
 import { SendConfirmationDialog } from '~/components/posts/SendConfirmationDialog';
 import { ShortcutsSection } from '~/components/posts/ShortcutsSection';
 import { SplitPostButton } from '~/components/posts/SplitPostButton';
@@ -150,6 +150,19 @@ export async function loader({
     customGroups: customGroupsList.customGroups,
     configs,
   };
+}
+
+/**
+ * Narrow `configs.configs.schedule_window` into a `ScheduleWindow` the picker
+ * can consume. Config is typed as `Record<string, unknown>` because PG keeps
+ * the shape loose; anything unexpected falls back to the component default.
+ */
+function parseScheduleWindow(raw: unknown): ScheduleWindow | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const maybe = raw as { start?: unknown; end?: unknown };
+  if (typeof maybe.start !== 'string' || typeof maybe.end !== 'string') return undefined;
+  if (!/^\d{2}:\d{2}$/.test(maybe.start) || !/^\d{2}:\d{2}$/.test(maybe.end)) return undefined;
+  return { start: maybe.start, end: maybe.end };
 }
 
 // ─── Form state types ────────────────────────────────────────────────────────
@@ -666,6 +679,11 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
   // yet, so we treat it as always available until PG names one.
   const declareTravelsEnabled = configs.flags.absence_submission?.enabled === true;
   const editContactEnabled = true;
+  // PG ask #4 is unresolved — is the 7:00–21:45 SGT window hard-coded upstream
+  // or school-configurable. Sourcing through `configs.configs.schedule_window`
+  // makes a later flip a config change, not a code change. Shape is validated
+  // defensively; anything unexpected falls back to the component's default.
+  const scheduleWindow = parseScheduleWindow(configs.configs.schedule_window);
   const [showSendDialog, setShowSendDialog] = useState(false);
   const [showScheduleDialog, setShowScheduleDialog] = useState(false);
   // Preview defaults to visible on desktop, hidden on mobile. Once the user
@@ -1237,6 +1255,7 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
         onOpenChange={setShowScheduleDialog}
         onConfirm={handleScheduleConfirm}
         busy={isSaving}
+        scheduleWindow={scheduleWindow}
       />
     </div>
   );
