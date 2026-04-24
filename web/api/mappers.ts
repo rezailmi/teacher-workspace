@@ -92,6 +92,42 @@ export function mapAnnouncementSummary(
 }
 
 /**
+ * Rehydrate wire `images[]` into the form's `UploadingFile[]` photo slot,
+ * preserving the reducer invariant that a non-empty photo list always has
+ * exactly one `isCover: true`. PG may return images with no cover flagged
+ * (draft-only; contract silent); promote the first entry so the submit
+ * mapper and cover-radio UI never see a coverless list.
+ */
+function rehydratePhotos(
+  images:
+    | {
+        imageId: number;
+        name: string;
+        size: number;
+        url: string;
+        thumbnailUrl?: string;
+        isCover?: boolean;
+      }[]
+    | undefined,
+): UploadingFile[] {
+  const list = (images ?? []).map((img) => ({
+    localId: `rehydrated-photo-${img.imageId}`,
+    kind: 'photo' as const,
+    name: img.name,
+    size: img.size,
+    mimeType: '',
+    status: 'ready' as const,
+    attachmentId: img.imageId,
+    url: img.url,
+    thumbnailUrl: img.thumbnailUrl,
+    isCover: img.isCover,
+  }));
+  if (list.length === 0) return list;
+  if (list.some((p) => p.isCover)) return list;
+  return list.map((p, i) => ({ ...p, isCover: i === 0 }));
+}
+
+/**
  * Map the announcement-detail response to `PGAnnouncementPost`.
  *
  * The wire response (verified via curl 2026-04-23) differs from what our
@@ -172,18 +208,7 @@ export function mapAnnouncementDetail(detail: PGApiAnnouncementDetail): PGAnnoun
       attachmentId: a.attachmentId,
       url: a.url,
     })),
-    photos: (detail.images ?? []).map((img) => ({
-      localId: `rehydrated-photo-${img.imageId}`,
-      kind: 'photo' as const,
-      name: img.name,
-      size: img.size,
-      mimeType: '',
-      status: 'ready' as const,
-      attachmentId: img.imageId,
-      url: img.url,
-      thumbnailUrl: img.thumbnailUrl,
-      isCover: img.isCover,
-    })),
+    photos: rehydratePhotos(detail.images),
   };
 }
 
@@ -462,18 +487,7 @@ export function mapConsentFormDetail(detail: PGApiConsentFormDetail): PGConsentF
     websiteLinks: (detail.webLinkList ?? []).map((l) => ({ url: l.url, title: l.title })),
     // Consent-form detail currently omits `attachments` (files) — this stays
     // undefined so edit-mode rehydration can't mislead. Photos are supported.
-    photos: (detail.images ?? []).map((img) => ({
-      localId: `rehydrated-photo-${img.imageId}`,
-      kind: 'photo' as const,
-      name: img.name,
-      size: img.size,
-      mimeType: '',
-      status: 'ready' as const,
-      attachmentId: img.imageId,
-      url: img.url,
-      thumbnailUrl: img.thumbnailUrl,
-      isCover: img.isCover,
-    })),
+    photos: rehydratePhotos(detail.images),
   };
 }
 

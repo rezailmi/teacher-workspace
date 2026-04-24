@@ -133,8 +133,9 @@ export interface PGApiAnnouncementDetail {
   createdAt: string | null;
   postedDate: string | null;
   enquiryEmailAddress: string;
-  attachments: PGApiAttachment[];
-  images: PGApiImage[];
+  /** PG omits these on posts with no uploads; the mapper defaults to `[]`. */
+  attachments?: PGApiAttachment[];
+  images?: PGApiImage[];
   shortcutLink: PGApiShortcutLink[];
   /** pgw-web's current field name. Mapper also accepts the legacy `websiteLinks`. */
   webLinkList?: PGApiWebsiteLink[];

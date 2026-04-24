@@ -577,7 +577,10 @@ export async function uploadAttachment(
   await uploadToPresignedUrl(pre.presignedUrl, pre.fields, file);
   onProgress?.('verifying');
   await verifyAttachmentUpload(pre.attachmentId);
-  onProgress?.('ready');
+  // NOTE: do NOT emit `onProgress('ready')` here. The caller's `.then`
+  // dispatches the atomic `{status:'ready', attachmentId, url, thumbnailUrl}`
+  // patch — emitting an early `ready` would leave a one-microtask window
+  // where a photo renders without its `thumbnailUrl`.
   // The real PG write payload needs the S3 location PG resolves via
   // `handleDownloadAttachment`. Mock doesn't return one, so synthesize a
   // stable URL pointing at the download endpoint — keeps the wire payload

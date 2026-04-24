@@ -51,7 +51,7 @@ describe('formReducer — uploads', () => {
     expect(two.photos[1].isCover).toBe(false);
   });
 
-  it('UPDATE_UPLOAD shallow-merges the patch by localId', () => {
+  it('merges a patch into the matching upload by localId', () => {
     const withOne = formReducer(INITIAL_STATE, {
       type: 'ADD_UPLOAD',
       kind: 'file',
@@ -71,7 +71,7 @@ describe('formReducer — uploads', () => {
     });
   });
 
-  it('UPDATE_UPLOAD with unknown localId leaves state unchanged', () => {
+  it('leaves state unchanged when the patch targets an unknown localId', () => {
     const withOne = formReducer(INITIAL_STATE, {
       type: 'ADD_UPLOAD',
       kind: 'file',
@@ -86,7 +86,7 @@ describe('formReducer — uploads', () => {
     expect(next.attachments[0].status).toBe('uploading');
   });
 
-  it('REMOVE_UPLOAD drops the matching entry', () => {
+  it('drops the matching entry by localId', () => {
     const withTwo = [makeFileUpload({ localId: 'a' }), makeFileUpload({ localId: 'b' })];
     const state = { ...INITIAL_STATE, attachments: withTwo };
     const next = formReducer(state, { type: 'REMOVE_UPLOAD', kind: 'file', localId: 'a' });
@@ -94,7 +94,7 @@ describe('formReducer — uploads', () => {
     expect(next.attachments[0].localId).toBe('b');
   });
 
-  it('REMOVE_UPLOAD on the cover photo promotes the first remaining photo to cover', () => {
+  it('promotes the first remaining photo to cover when the current cover is removed', () => {
     const state = {
       ...INITIAL_STATE,
       photos: [
@@ -110,7 +110,7 @@ describe('formReducer — uploads', () => {
     expect(next.photos[1].isCover).toBe(false);
   });
 
-  it('REMOVE_UPLOAD on the only photo leaves photos empty without error', () => {
+  it('leaves photos empty when the only photo is removed', () => {
     const state = {
       ...INITIAL_STATE,
       photos: [{ ...makeFileUpload({ localId: 'p1' }), kind: 'photo' as const, isCover: true }],
@@ -119,7 +119,7 @@ describe('formReducer — uploads', () => {
     expect(next.photos).toHaveLength(0);
   });
 
-  it('SET_COVER_PHOTO moves isCover to the targeted entry and unsets others', () => {
+  it('moves isCover to the targeted photo and unsets others', () => {
     const state = {
       ...INITIAL_STATE,
       photos: [

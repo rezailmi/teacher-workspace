@@ -62,8 +62,16 @@ export function downloadCsv(filename: string, csv: string): void {
 }
 
 function escapeField(value: string): string {
-  if (value.includes(',') || value.includes('"') || value.includes('\n') || value.includes('\r')) {
-    return `"${value.replace(/"/g, '""')}"`;
+  // Defeat Excel / LibreOffice / Google Sheets formula injection: any field
+  // starting with `=`, `+`, `-`, or `@` is treated as a formula unless we
+  // neutralise it with a leading tab. The tab is stripped visually but
+  // prevents execution on open.
+  let safe = value;
+  if (/^[=+\-@\t\r]/.test(safe)) {
+    safe = `\t${safe}`;
   }
-  return value;
+  if (safe.includes(',') || safe.includes('"') || safe.includes('\n') || safe.includes('\r')) {
+    return `"${safe.replace(/"/g, '""')}"`;
+  }
+  return safe;
 }

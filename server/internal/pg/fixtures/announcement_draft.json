@@ -1,37 +1,42 @@
-{
-  "announcementDraftId": 201,
-  "title": "Term 3 Letter to Parents (Draft)",
-  "content": null,
-  "richTextContent": {
-    "type": "doc",
-    "content": [
-      {
-        "type": "paragraph",
-        "attrs": { "textAlign": "left" },
-        "content": [{ "type": "text", "text": "Dear Parents," }]
-      },
-      {
-        "type": "paragraph",
-        "attrs": { "textAlign": "left" },
-        "content": [
-          { "type": "text", "text": "Please find attached information about Term 3 arrangements." }
-        ]
-      }
-    ]
-  },
-  "enquiryEmailAddress": "greenridge_sec@moe.edu.sg",
-  "attachments": [],
-  "images": [],
-  "shortcutLink": [],
-  "websiteLinks": [],
-  "staffOwners": [{ "staffID": 1013, "staffName": "TAN GUANG SHIN" }],
-  "recipients": {
-    "classIds": [101],
-    "customGroupIds": [],
-    "ccaIds": [],
-    "levelIds": []
-  },
-  "scheduledSendAt": null,
-  "createdAt": "2026-04-01T09:00:00.000Z",
-  "updatedAt": "2026-04-01T09:30:00.000Z"
-}
+[
+  {
+    "announcementDraftId": 201,
+    "title": "Term 3 Letter to Parents (Draft)",
+    "content": null,
+    "richTextContent": {
+      "type": "doc",
+      "content": [
+        {
+          "type": "paragraph",
+          "attrs": { "textAlign": "left" },
+          "content": [{ "type": "text", "text": "Dear Parents," }]
+        },
+        {
+          "type": "paragraph",
+          "attrs": { "textAlign": "left" },
+          "content": [
+            {
+              "type": "text",
+              "text": "Please find attached information about Term 3 arrangements."
+            }
+          ]
+        }
+      ]
+    },
+    "enquiryEmailAddress": "greenridge_sec@moe.edu.sg",
+    "attachments": [],
+    "images": [],
+    "shortcutLink": [],
+    "websiteLinks": [],
+    "staffOwners": [{ "staffID": 1013, "staffName": "TAN GUANG SHIN" }],
+    "recipients": {
+      "classIds": [101],
+      "customGroupIds": [],
+      "ccaIds": [],
+      "levelIds": []
+    },
+    "scheduledSendAt": null,
+    "createdAt": "2026-04-01T09:00:00.000Z",
+    "updatedAt": "2026-04-01T09:30:00.000Z"
+  }
+]

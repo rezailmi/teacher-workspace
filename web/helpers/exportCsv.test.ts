@@ -66,6 +66,25 @@ describe('toCsv', () => {
     expect(result.replace(/^\uFEFF/, '')).toBe(['A,B', 'x,', ',y'].join('\r\n') + '\r\n');
   });
 
+  it('neutralises fields starting with formula characters (= + - @)', () => {
+    const result = toCsv({
+      columns: [{ key: 'name', header: 'Name' }],
+      rows: [
+        { name: '=HYPERLINK("http://evil","click")' },
+        { name: '+1+1' },
+        { name: '-cmd' },
+        { name: '@SUM(A1:A10)' },
+      ],
+    });
+    // Each formula-leading row should get a tab prefix; the '=' contains no
+    // comma/quote/newline so it'd normally bypass quoting — the tab prefix is
+    // what neutralises Excel.
+    expect(result).toContain('\t=HYPERLINK');
+    expect(result).toContain('\t+1+1');
+    expect(result).toContain('\t-cmd');
+    expect(result).toContain('\t@SUM(A1:A10)');
+  });
+
   it('supports a column formatter for non-string values', () => {
     const result = toCsv({
       columns: [

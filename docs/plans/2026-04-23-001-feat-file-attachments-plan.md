@@ -520,14 +520,31 @@ Actions:
 
 Tracked here so it's not buried in "Deferred". When pgw-web ships the real endpoints:
 
+**PG contract verification (blocking on pgw-web):**
+
 - [ ] Confirm real PGW response shape for `preUploadValidation` matches our client parsing (field names, case). Update if drift.
 - [ ] Confirm real S3 presigned POST policy fields ordering requirement (`fields` before `file` is standard; verify).
 - [ ] Confirm real `postUploadVerification` returns `{ verified: true }` vs `{ verified: true, ready: true }` or similar.
-- [ ] Tune the poll backoff + timeout on `uploadAttachment` — real AV scans likely take longer than the mock's instant `{verified:true}`. Suggest: 500ms initial, linear to 2s, cap at 60s total.
+- [ ] **Confirm `PGApiAttachment.url` + `PGApiImage.thumbnailUrl` real-wire shapes.** Client currently synthesises `/api/files/2/handleDownloadAttachment?attachmentId=N` for mock round-trip. Real PG may return verbatim S3 / CDN URLs — if so, parent-app click-through still works; if PG itself generates these local-ish URLs on read, our synthesis is correct. Verify on staging. _(code-review #6)_
+- [ ] **Confirm `postUploadVerification` terminal semantics.** Does `{ verified: false }` mean "still scanning, keep polling" or "AV rejected, stop"? Our client polls until `true` or 30s timeout — if PG ever returns `false` with a terminal reason, we burn the full deadline. Add an explicit terminal check once shape is known. _(code-review #11)_
+- [ ] **Server-side validation parity.** Client MIME check uses browser-reported `file.type` (spoofable) and size cap is client-only. Confirm real PG re-validates MIME + size server-side and returns a usable error code so we can surface a clean toast. _(code-review #10)_
+
+**Client polish after PG lands (non-blocking, tune against real latency):**
+
+- [ ] Tune the poll backoff + timeout on `uploadAttachment` — real AV scans likely take longer than the mock's instant `{verified:true}`. Suggest: 500ms initial, linear to 2s, cap at 60s total. Add jitter on retries to avoid thundering herd. _(code-review #12)_
+- [ ] Handle `429 Too Many Requests` with `Retry-After` on the poll loop — PG's real rate limits are unknown. _(code-review #12)_
+- [ ] **Thread `AbortController` through `uploadAttachment` / `verifyAttachmentUpload`.** Teacher navigating away mid-upload (or removing an uploading row) currently leaves fetchers + pollers running until natural completion. Wire the upload hook to create a controller per file, abort on unmount and on `REMOVE_UPLOAD`. _(code-review #7, #8)_
+- [ ] **Add `fetch` timeout to `uploadToPresignedUrl`.** No wall-clock cap today — a stalled S3 connection hangs the pipeline until the tab closes. Suggest 60s per file. _(code-review #8)_
 - [ ] Error-code taxonomy: catalog PG's error codes for 413 (too big), 415 (unsupported MIME), malware rejection, timeout. Map into user-facing copy via `web/lib/validation-errors.ts`.
 - [ ] Remove the mock `POST /api/files/2/mockUpload` route and its handler (kept only for local dev).
 - [ ] Verify real cutover in staging with a real PDF + a real JPEG before rolling to prod.
 - [ ] Add a PG feature flag (e.g. `real_file_upload`) if rollout needs to be gated.
+
+**Code-review follow-ups unrelated to PG cutover:**
+
+- [ ] Move `UploadingFile` type out of `web/containers/CreatePostView.tsx` into `web/data/mock-pg-announcements.ts` (or a new `web/data/attachments.ts`) so the API layer no longer depends on a UI container. Touches ~5 files; deferred to a dedicated refactor PR. _(code-review #5)_
+- [ ] Extract `formReducer` + `INITIAL_STATE` from `CreatePostView.tsx` into `CreatePostView.reducer.ts` and drop the `__` test-hatch prefix. _(code-review #16)_
+- [ ] Cover the new async pipeline with integration tests: `AttachmentSection` upload lifecycle, `uploadAttachment` composer progress callbacks, mapper rehydration round-trip, `handleDuplicate` branded-id stripping, stat-card click-through filter sync. _(code-review testing gaps)_
 
 ## Documentation Plan
 

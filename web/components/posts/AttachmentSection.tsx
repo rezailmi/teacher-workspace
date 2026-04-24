@@ -95,12 +95,19 @@ function UploadSubSection({
     // Copy the FileList into a plain array before we start dispatching —
     // the input's .files reference is mutated when we reset it below.
     const candidates = Array.from(picked);
+    // Track accepted count locally: `items.length` is the stale prop value
+    // captured at render, so picking 3 files with 2 already present would
+    // validate all 5 against count=2 and blow past MAX_ITEMS. The reducer
+    // dispatches are asynchronous-ish (React may batch), so we can't rely on
+    // re-reading the prop mid-loop.
+    let accepted = 0;
     for (const file of candidates) {
-      const result = validateUploadFile(file, uploadKind, items.length);
+      const result = validateUploadFile(file, uploadKind, items.length + accepted);
       if (!result.ok) {
         notify.error(result.reason);
         continue;
       }
+      accepted += 1;
 
       const localId =
         typeof crypto !== 'undefined' && crypto.randomUUID
