@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createDraft, updateDraft } from './client';
-import { PGTimeoutError } from './errors';
+import { PGCsrfError, PGTimeoutError } from './errors';
 import type { PGApiCreateDraftPayload } from './types';
 
 const base: PGApiCreateDraftPayload = {
@@ -58,6 +58,56 @@ describe('createDraft', () => {
     expect(call[1].signal.aborted).toBe(false);
     controller.abort();
     expect(call[1].signal.aborted).toBe(true);
+  });
+});
+
+describe('mutateApi CSRF retry (U7)', () => {
+  function csrfErrorResponse() {
+    return new Response(JSON.stringify({ resultCode: -4013, error: { errorReason: 'CSRF' } }), {
+      status: 403,
+      headers: { 'content-type': 'application/json' },
+    });
+  }
+  function okResponse() {
+    return new Response(JSON.stringify({ body: { announcementDraftId: 42 }, resultCode: 1 }), {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+    });
+  }
+
+  it('replays the request once after a -4013 CSRF rejection', async () => {
+    const fetchMock = vi
+      .fn()
+      // First call: the write endpoint returns -4013.
+      .mockResolvedValueOnce(csrfErrorResponse())
+      // Second call: the CSRF refresh probe against /session/current.
+      .mockResolvedValueOnce(
+        new Response('{}', { status: 200, headers: { 'content-type': 'application/json' } }),
+      )
+      // Third call: the write endpoint replay succeeds.
+      .mockResolvedValueOnce(okResponse());
+    vi.stubGlobal('fetch', fetchMock);
+
+    const out = await createDraft(base);
+    expect(out).toEqual({ announcementDraftId: 42 });
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    // Replay hits the same write URL with the same body as the original attempt.
+    expect(fetchMock.mock.calls[0][0]).toMatch(/\/announcements\/drafts$/);
+    expect(fetchMock.mock.calls[2][0]).toMatch(/\/announcements\/drafts$/);
+  });
+
+  it('throws PGCsrfError when the replay also returns -4013 (no infinite loop)', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(csrfErrorResponse())
+      .mockResolvedValueOnce(
+        new Response('{}', { status: 200, headers: { 'content-type': 'application/json' } }),
+      )
+      .mockResolvedValueOnce(csrfErrorResponse());
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(createDraft(base)).rejects.toBeInstanceOf(PGCsrfError);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 });
 

@@ -9,6 +9,7 @@ import type {
 import { notify } from '~/lib/notify';
 
 import {
+  PGCsrfError,
   PGError,
   PGNotFoundError,
   PGSessionExpiredError,
@@ -107,6 +108,8 @@ async function handleErrorResponse(res: Response): Promise<never> {
       throw new PGSessionExpiredError(message, code, res.status);
     case -404:
       throw new PGNotFoundError(message, code, res.status);
+    case -4013:
+      throw new PGCsrfError(message, code, res.status);
     case -400:
     case -4001:
     case -4003:
@@ -198,6 +201,24 @@ function withTimeout(
   };
 }
 
+/**
+ * Refresh the CSRF token after a -4013 rejection. The real contract is still
+ * pending PG confirmation (ask #6); as a pragmatic first pass, a lightweight
+ * GET to the session endpoint is expected to bump PG's CSRF cookie via
+ * Set-Cookie. If PG exposes a dedicated refresh endpoint later, swap the URL
+ * here — callers in `mutateApi` / `postMultipart` are unaffected. Swallowed
+ * errors keep the retry path functioning: if the refresh itself fails, the
+ * replay will resurface a terminal `PGCsrfError` the caller can handle.
+ */
+async function refreshCsrfToken(): Promise<void> {
+  try {
+    await fetch(`${API_BASE}/session/current`, { method: 'GET' });
+  } catch {
+    // Ignore — the replay below will surface a terminal failure if the token
+    // truly can't be refreshed.
+  }
+}
+
 async function mutateApi<T>(
   method: 'POST' | 'PUT',
   path: string,
@@ -205,7 +226,7 @@ async function mutateApi<T>(
   options: { signal?: AbortSignal; timeoutMs?: number } = {},
 ): Promise<T> {
   const timeout = withTimeout(options.signal, options.timeoutMs ?? DEFAULT_WRITE_TIMEOUT_MS);
-  try {
+  const attempt = async (): Promise<T> => {
     const res = await fetch(`${API_BASE}${path}`, {
       method,
       headers: { 'Content-Type': 'application/json' },
@@ -218,6 +239,20 @@ async function mutateApi<T>(
     const text = await res.text();
     if (!text) return undefined as T;
     return unwrapEnvelope<T>(JSON.parse(text));
+  };
+  try {
+    try {
+      return await attempt();
+    } catch (err) {
+      // One-shot CSRF retry (U7). A second consecutive -4013 rethrows the
+      // original `PGCsrfError` so callers can surface a terminal "please
+      // refresh" state instead of looping forever.
+      if (err instanceof PGCsrfError) {
+        await refreshCsrfToken();
+        return await attempt();
+      }
+      throw err;
+    }
   } catch (err) {
     if (err instanceof DOMException && err.name === 'AbortError' && timeout.didTimeout()) {
       throw new PGTimeoutError(
@@ -247,7 +282,7 @@ async function postMultipart<T>(
   options: { signal?: AbortSignal; timeoutMs?: number } = {},
 ): Promise<T> {
   const timeout = withTimeout(options.signal, options.timeoutMs ?? DEFAULT_UPLOAD_TIMEOUT_MS);
-  try {
+  const attempt = async (): Promise<T> => {
     const res = await fetch(`/api${path}`, {
       method: 'POST',
       body: formData,
@@ -258,6 +293,17 @@ async function postMultipart<T>(
     const text = await res.text();
     if (!text) return undefined as T;
     return unwrapEnvelope<T>(JSON.parse(text));
+  };
+  try {
+    try {
+      return await attempt();
+    } catch (err) {
+      if (err instanceof PGCsrfError) {
+        await refreshCsrfToken();
+        return await attempt();
+      }
+      throw err;
+    }
   } catch (err) {
     if (err instanceof DOMException && err.name === 'AbortError' && timeout.didTimeout()) {
       throw new PGTimeoutError(

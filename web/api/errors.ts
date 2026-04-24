@@ -51,6 +51,20 @@ export class PGTimeoutError extends PGError {
 }
 
 /**
+ * -4013 — invalid CSRF token. The fetch helpers (`mutateApi`,
+ * `postMultipart`) catch this *once*, refresh the token via
+ * `refreshCsrfToken`, and replay the request. A second consecutive
+ * `PGCsrfError` means the refresh didn't work; callers should surface a
+ * terminal "please refresh" banner rather than a silent failure.
+ */
+export class PGCsrfError extends PGError {
+  constructor(message: string, resultCode: number, httpStatus: number) {
+    super(message, resultCode, httpStatus);
+    this.name = 'PGCsrfError';
+  }
+}
+
+/**
  * -400 / -4001 / -4003 / -4004 — client-side validation failure.
  * Container code should catch this and render as inline field errors; do not
  * toast from the global handler. Optional `fieldPath` / `subCode` are reserved
