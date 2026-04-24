@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { DEFAULT_POST_FILTERS } from '~/components/posts/PostFilterPopover';
 import type {
   AnnouncementId,
   ConsentFormId,
@@ -10,10 +11,15 @@ import type {
 
 import { matchesPostFilters } from './PostsView';
 
-function announcement(partial: Partial<PGAnnouncementPost> & { id: string }): PGAnnouncementPost {
+const baseFilter = { ...DEFAULT_POST_FILTERS, tab: 'view-only' as const, query: '' };
+
+function announcement(
+  partial: Partial<Omit<PGAnnouncementPost, 'id'>> & { id: string },
+): PGAnnouncementPost {
+  const { id, ...rest } = partial;
   return {
     kind: 'announcement',
-    id: partial.id as AnnouncementId,
+    id: id as AnnouncementId,
     title: 'Untitled',
     description: '',
     status: 'posted',
@@ -22,14 +28,17 @@ function announcement(partial: Partial<PGAnnouncementPost> & { id: string }): PG
     recipients: [],
     stats: { totalCount: 0, readCount: 0, responseCount: 0, yesCount: 0, noCount: 0 },
     createdBy: 'Teacher A',
-    ...partial,
+    ...rest,
   };
 }
 
-function consentForm(partial: Partial<PGConsentFormPost> & { id: string }): PGConsentFormPost {
+function consentForm(
+  partial: Partial<Omit<PGConsentFormPost, 'id'>> & { id: string },
+): PGConsentFormPost {
+  const { id, ...rest } = partial;
   return {
     kind: 'form',
-    id: partial.id as ConsentFormId,
+    id: id as ConsentFormId,
     title: 'Untitled form',
     description: '',
     status: 'open',
@@ -42,7 +51,7 @@ function consentForm(partial: Partial<PGConsentFormPost> & { id: string }): PGCo
     consentByDate: '',
     reminder: { type: 'NONE' },
     history: [],
-    ...partial,
+    ...rest,
   };
 }
 
@@ -56,45 +65,43 @@ describe('matchesPostFilters', () => {
   const mineForm = consentForm({ id: 'cf_1', title: 'Field trip', ownership: 'mine' });
   const sharedForm = consentForm({ id: 'cf_2', title: 'Outreach', ownership: 'shared' });
 
-  it('keeps only mine-owned rows on the Mine tab', () => {
-    expect(matchesPostFilters(row(mine), { tab: 'view-only', ownership: 'mine', query: '' })).toBe(
-      true,
-    );
-    expect(
-      matchesPostFilters(row(shared), { tab: 'view-only', ownership: 'mine', query: '' }),
-    ).toBe(false);
+  it('keeps only mine-owned rows when ownership filter is ["mine"]', () => {
+    expect(matchesPostFilters(row(mine), { ...baseFilter, ownership: ['mine'] })).toBe(true);
+    expect(matchesPostFilters(row(shared), { ...baseFilter, ownership: ['mine'] })).toBe(false);
+  });
+
+  it('empty ownership filter keeps everything (no default narrowing)', () => {
+    expect(matchesPostFilters(row(mine), baseFilter)).toBe(true);
+    expect(matchesPostFilters(row(shared), baseFilter)).toBe(true);
   });
 
   it('AND-composes ownership with search query', () => {
     expect(
-      matchesPostFilters(row(shared), { tab: 'view-only', ownership: 'shared', query: 'shared' }),
+      matchesPostFilters(row(shared), {
+        ...baseFilter,
+        ownership: ['shared'],
+        query: 'shared',
+      }),
     ).toBe(true);
-    // Shared tab + non-matching search → filtered out even though ownership matches
     expect(
       matchesPostFilters(row(shared), {
-        tab: 'view-only',
-        ownership: 'shared',
+        ...baseFilter,
+        ownership: ['shared'],
         query: 'nonexistent',
       }),
     ).toBe(false);
   });
 
   it('hides forms on the Posts tab and announcements on the Posts-with-responses tab', () => {
-    expect(
-      matchesPostFilters(row(mineForm), { tab: 'view-only', ownership: 'mine', query: '' }),
-    ).toBe(false);
-    expect(
-      matchesPostFilters(row(mine), { tab: 'with-responses', ownership: 'mine', query: '' }),
-    ).toBe(false);
-    expect(
-      matchesPostFilters(row(mineForm), { tab: 'with-responses', ownership: 'mine', query: '' }),
-    ).toBe(true);
+    expect(matchesPostFilters(row(mineForm), baseFilter)).toBe(false);
+    expect(matchesPostFilters(row(mine), { ...baseFilter, tab: 'with-responses' })).toBe(false);
+    expect(matchesPostFilters(row(mineForm), { ...baseFilter, tab: 'with-responses' })).toBe(true);
   });
 
-  it('produces 4 non-overlapping filtered sets across the two axes', () => {
+  it('produces 4 non-overlapping filtered sets across tab × ownership', () => {
     const all = [mine, shared, mineForm, sharedForm].map(row);
-    const filter = (tab: 'view-only' | 'with-responses', ownership: 'mine' | 'shared') =>
-      all.filter((r) => matchesPostFilters(r, { tab, ownership, query: '' }));
+    const filter = (tab: 'view-only' | 'with-responses', who: 'mine' | 'shared') =>
+      all.filter((r) => matchesPostFilters(r, { ...baseFilter, tab, ownership: [who] }));
 
     expect(filter('view-only', 'mine').map((r) => r.id)).toEqual(['ann_1']);
     expect(filter('view-only', 'shared').map((r) => r.id)).toEqual(['ann_2']);
@@ -103,8 +110,56 @@ describe('matchesPostFilters', () => {
   });
 
   it('search query is case-insensitive', () => {
+    expect(matchesPostFilters(row(mine), { ...baseFilter, query: 'MATHS' })).toBe(true);
+  });
+
+  it('buckets posting/open/closed under "posted" status', () => {
+    const postingAnn = announcement({ id: 'ann_p', status: 'posting', ownership: 'mine' });
+    const openForm = consentForm({ id: 'cf_o', status: 'open', ownership: 'mine' });
+    const closedForm = consentForm({ id: 'cf_c', status: 'closed', ownership: 'mine' });
+    expect(matchesPostFilters(row(postingAnn), { ...baseFilter, status: ['posted'] })).toBe(true);
     expect(
-      matchesPostFilters(row(mine), { tab: 'view-only', ownership: 'mine', query: 'MATHS' }),
+      matchesPostFilters(row(openForm), {
+        ...baseFilter,
+        tab: 'with-responses',
+        status: ['posted'],
+      }),
     ).toBe(true);
+    expect(
+      matchesPostFilters(row(closedForm), {
+        ...baseFilter,
+        tab: 'with-responses',
+        status: ['posted'],
+      }),
+    ).toBe(true);
+  });
+
+  it('filters by response type', () => {
+    const ack = consentForm({ id: 'cf_ack', responseType: 'acknowledge' });
+    const yn = consentForm({ id: 'cf_yn', responseType: 'yes-no' });
+    expect(
+      matchesPostFilters(row(ack), {
+        ...baseFilter,
+        tab: 'with-responses',
+        response: ['acknowledge'],
+      }),
+    ).toBe(true);
+    expect(
+      matchesPostFilters(row(yn), {
+        ...baseFilter,
+        tab: 'with-responses',
+        response: ['acknowledge'],
+      }),
+    ).toBe(false);
+  });
+
+  it('filters by inclusive date range on `_dateTs`', () => {
+    const dated = { ...row(mine), _dateTs: new Date('2026-04-15T10:00:00').getTime() };
+    expect(matchesPostFilters(dated, { ...baseFilter, dateFrom: '2026-04-15' })).toBe(true);
+    expect(matchesPostFilters(dated, { ...baseFilter, dateFrom: '2026-04-16' })).toBe(false);
+    expect(matchesPostFilters(dated, { ...baseFilter, dateTo: '2026-04-15' })).toBe(true);
+    expect(matchesPostFilters(dated, { ...baseFilter, dateTo: '2026-04-14' })).toBe(false);
+    // Rows with no date are excluded when any bound is set
+    expect(matchesPostFilters(row(mine), { ...baseFilter, dateFrom: '2026-04-01' })).toBe(false);
   });
 });

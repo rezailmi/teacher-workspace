@@ -1,13 +1,4 @@
-import {
-  AlertTriangle,
-  Copy,
-  MoreHorizontal,
-  Plus,
-  Search,
-  SlidersHorizontal,
-  Trash2,
-  Users,
-} from 'lucide-react';
+import { AlertTriangle, Copy, MoreHorizontal, Plus, Search, Trash2, Users } from 'lucide-react';
 import React, { useCallback, useMemo, useState } from 'react';
 import { Link, useLoaderData, useNavigate, useRevalidator } from 'react-router';
 
@@ -25,6 +16,14 @@ import {
 import { PGError } from '~/api/errors';
 import type { PGApiConfig } from '~/api/types';
 import { DeletePostDialog } from '~/components/posts/DeletePostDialog';
+import {
+  DEFAULT_POST_FILTERS,
+  PostFilterPopover,
+  type PostFilters,
+  type PostOwnershipFilter,
+  type PostResponseFilter,
+  type PostStatusFilter,
+} from '~/components/posts/PostFilterPopover';
 import { ReadRate, RespondedRate } from '~/components/posts/ReadRate';
 import {
   Badge,
@@ -35,12 +34,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
   Input,
-  Label,
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-  RadioGroup,
-  RadioGroupItem,
   Table,
   TableBody,
   TableCell,
@@ -64,9 +57,6 @@ import { formatDate, getRelevantDate, isLowReadRate } from '~/helpers/dateTime';
 import { notify } from '~/lib/notify';
 
 type PostTab = 'view-only' | 'with-responses';
-type OwnershipTab = 'mine' | 'shared';
-
-const DEFAULT_OWNERSHIP: OwnershipTab = 'mine';
 
 // Row augmented with `_date` and `_dateTs` so sorts/renders don't allocate
 // a new `Date` per keystroke. Precomputed once in the loader.
@@ -106,19 +96,58 @@ function comparePosts(a: PostRowData, b: PostRowData): number {
 }
 
 /**
- * Pure predicate for the two-axis filter (kind × ownership) + substring search.
- * Exported for unit testing; callers should wrap it in a `useMemo` alongside
- * their sort pass (see `PostsView` body).
+ * Map raw post status (announcements + consent forms) to the three user-facing
+ * buckets exposed by the filter popover. `posting`/`open`/`closed` collapse
+ * into "Posted" because that's how PG_*_STATUS_BADGE already presents them.
  */
-export function matchesPostFilters(
-  row: PostRowData,
-  filters: { tab: PostTab; ownership: OwnershipTab; query: string },
-): boolean {
+function statusBucket(row: Pick<PGPost, 'status'>): PostStatusFilter | null {
+  const s = row.status;
+  if (s === 'posted' || s === 'posting' || s === 'open' || s === 'closed') return 'posted';
+  if (s === 'scheduled') return 'scheduled';
+  if (s === 'draft') return 'draft';
+  return null;
+}
+
+export interface PostFilterQuery extends PostFilters {
+  tab: PostTab;
+  query: string;
+}
+
+/**
+ * Pure predicate for the posts-list filter. AND-composes kind tab + title
+ * search + the four popover axes (status, ownership, response, date range).
+ * Empty arrays mean "no constraint"; date bounds are inclusive on `_dateTs`.
+ */
+export function matchesPostFilters(row: PostRowData, filters: PostFilterQuery): boolean {
   if (filters.tab === 'view-only' && row.kind === 'form') return false;
   if (filters.tab === 'with-responses' && row.kind !== 'form') return false;
-  if (filters.ownership === 'mine' && row.ownership !== 'mine') return false;
-  if (filters.ownership === 'shared' && row.ownership !== 'shared') return false;
   if (filters.query && !row.title.toLowerCase().includes(filters.query.toLowerCase())) return false;
+
+  if (
+    filters.ownership.length > 0 &&
+    !filters.ownership.includes(row.ownership as PostOwnershipFilter)
+  ) {
+    return false;
+  }
+
+  if (filters.status.length > 0) {
+    const bucket = statusBucket(row);
+    if (bucket == null || !filters.status.includes(bucket)) return false;
+  }
+
+  if (
+    filters.response.length > 0 &&
+    !filters.response.includes(row.responseType as PostResponseFilter)
+  ) {
+    return false;
+  }
+
+  if (filters.dateFrom || filters.dateTo) {
+    if (row._dateTs === 0) return false;
+    if (filters.dateFrom && row._dateTs < Date.parse(`${filters.dateFrom}T00:00:00`)) return false;
+    if (filters.dateTo && row._dateTs > Date.parse(`${filters.dateTo}T23:59:59.999`)) return false;
+  }
+
   return true;
 }
 
@@ -128,7 +157,7 @@ const PostsView: React.FC = () => {
   const { rows: posts, configs } = useLoaderData<PostsLoaderData>();
   const revalidator = useRevalidator();
   const [tab, setTab] = useState<PostTab>('view-only');
-  const [ownership, setOwnership] = useState<OwnershipTab>(DEFAULT_OWNERSHIP);
+  const [filters, setFilters] = useState<PostFilters>(DEFAULT_POST_FILTERS);
   const [searchQuery, setSearchQuery] = useState('');
   // `duplicate_announcement_form_post` gates the Duplicate row action in
   // production. In dev we surface it unconditionally so internal reviewers can
@@ -138,10 +167,17 @@ const PostsView: React.FC = () => {
 
   const filtered = useMemo(() => {
     return posts
-      .filter((p) => matchesPostFilters(p, { tab, ownership, query: searchQuery }))
+      .filter((p) => matchesPostFilters(p, { tab, query: searchQuery, ...filters }))
       .slice()
       .sort(comparePosts);
-  }, [posts, searchQuery, tab, ownership]);
+  }, [posts, searchQuery, tab, filters]);
+
+  const filtersActive =
+    filters.status.length > 0 ||
+    filters.ownership.length > 0 ||
+    filters.response.length > 0 ||
+    filters.dateFrom != null ||
+    filters.dateTo != null;
 
   const showResponseColumn = tab === 'with-responses';
 
@@ -265,43 +301,21 @@ const PostsView: React.FC = () => {
                 aria-label="Search posts"
               />
             </div>
-            <Popover>
-              <PopoverTrigger
-                render={
-                  <Button variant="secondary" size="sm" aria-label="Filter posts">
-                    <SlidersHorizontal className="h-4 w-4" />
-                    Filter
-                    {ownership !== DEFAULT_OWNERSHIP && (
-                      <span className="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[11px] font-medium text-primary-foreground">
-                        1
-                      </span>
-                    )}
-                  </Button>
-                }
-              />
-              <PopoverContent align="end" className="w-56 gap-5">
-                <p className="text-xs font-medium tracking-widest text-muted-foreground uppercase">
-                  Filters
-                </p>
-                <div className="space-y-2">
-                  <p className="text-sm font-medium">Ownership</p>
-                  <RadioGroup
-                    value={ownership}
-                    onValueChange={(v) => setOwnership(v as OwnershipTab)}
-                    className="gap-2"
-                  >
-                    <label className="flex cursor-pointer items-center gap-2">
-                      <RadioGroupItem value="mine" />
-                      <Label className="cursor-pointer text-sm font-normal">Mine</Label>
-                    </label>
-                    <label className="flex cursor-pointer items-center gap-2">
-                      <RadioGroupItem value="shared" />
-                      <Label className="cursor-pointer text-sm font-normal">Shared with me</Label>
-                    </label>
-                  </RadioGroup>
-                </div>
-              </PopoverContent>
-            </Popover>
+            <PostFilterPopover
+              value={filters}
+              onChange={setFilters}
+              // "Posts" tab is view-only-only — the response axis is fixed and
+              // showing Acknowledge/Yes/No chips would produce empty results.
+              // "Posts with responses" keeps only the two form response types.
+              responseOptions={
+                tab === 'view-only'
+                  ? null
+                  : [
+                      { value: 'acknowledge', label: 'Acknowledge' },
+                      { value: 'yes-no', label: 'Yes / No' },
+                    ]
+              }
+            />
           </div>
         </div>
 
@@ -316,12 +330,20 @@ const PostsView: React.FC = () => {
                     Try adjusting your search terms.
                   </p>
                 </>
-              ) : ownership === 'shared' ? (
+              ) : filtersActive ? (
                 <>
-                  <p className="text-base text-foreground">No posts shared with you.</p>
+                  <p className="text-base text-foreground">No posts match these filters.</p>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    When a colleague adds you as staff-in-charge, their post will appear here.
+                    Loosen a filter or reset them to see more posts.
                   </p>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="mt-4"
+                    onClick={() => setFilters(DEFAULT_POST_FILTERS)}
+                  >
+                    Reset filters
+                  </Button>
                 </>
               ) : (
                 <>
