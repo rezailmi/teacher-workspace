@@ -46,6 +46,7 @@ import {
   TabsTrigger,
 } from '~/components/ui';
 import {
+  describeScheduledSendFailure,
   isAnnouncementDraftId,
   isConsentFormDraftId,
   PG_CONSENT_FORM_STATUS_BADGE,
@@ -380,7 +381,14 @@ const PostRowInner: React.FC<PostRowProps> = ({ row, duplicateEnabled, onDuplica
 
       {/* Status */}
       <TableCell>
-        <Badge variant={statusBadge.variant}>{statusBadge.label}</Badge>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <Badge variant={statusBadge.variant}>{statusBadge.label}</Badge>
+          {row.status === 'scheduled' && row.scheduledSendFailureCode ? (
+            <Badge variant="destructive" aria-label="Scheduled send failed">
+              {describeScheduledSendFailure(row.scheduledSendFailureCode)}
+            </Badge>
+          ) : null}
+        </div>
       </TableCell>
 
       {/* Owner */}
@@ -469,6 +477,7 @@ const PostRow = React.memo(PostRowInner, (prev, next) => {
   if (a.title !== b.title) return false;
   if (a.description !== b.description) return false;
   if (a._date !== b._date) return false;
+  if ((a.scheduledSendFailureCode ?? null) !== (b.scheduledSendFailureCode ?? null)) return false;
   if (a.stats.totalCount !== b.stats.totalCount) return false;
   if (a.kind === 'announcement' && b.kind === 'announcement') {
     if (a.stats.readCount !== b.stats.readCount) return false;

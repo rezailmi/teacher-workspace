@@ -16,6 +16,7 @@ import {
 import { RecipientReadTable } from '~/components/posts/RecipientReadTable';
 import { Badge, Button } from '~/components/ui';
 import {
+  describeScheduledSendFailure,
   isAnnouncementDraftId,
   isConsentFormDraftId,
   isConsentFormId,
@@ -235,10 +236,20 @@ function ConsentFormDetail({ post }: { post: PGConsentFormPost }) {
 
 const PostDetailView: React.FC = () => {
   const { post } = useLoaderData<PostDetailLoaderData>();
+  const failureReason = describeScheduledSendFailure(post.scheduledSendFailureCode);
 
   return (
     <div className="space-y-6 px-6 py-6">
       <DetailHeader post={post} />
+      {failureReason && (
+        <div
+          role="alert"
+          className="rounded-lg border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm text-destructive"
+        >
+          <span className="font-medium">Scheduled send failed.</span> {failureReason}. Reschedule or
+          cancel this post to try again.
+        </div>
+      )}
       {renderDetail(post)}
     </div>
   );

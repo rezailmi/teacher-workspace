@@ -140,6 +140,13 @@ export interface PGAnnouncementPost {
   attachments?: PGUploadedFile[];
   /** Photos rehydrated from `detail.images` (if surfaced by the detail endpoint). */
   photos?: PGUploadedFile[];
+  /**
+   * Upstream-reported failure when a scheduled send could not be delivered.
+   * `null` or `undefined` means the scheduled send is still on track (or the
+   * post was never scheduled). A non-empty string — an opaque PG failure code
+   * — surfaces as a red pill on the list row and a banner on the detail view.
+   */
+  scheduledSendFailureCode?: string | null;
 }
 
 // ─── Consent form variant ─────────────────────────────────────────────────────
@@ -252,6 +259,8 @@ export interface PGConsentFormPost {
   attachments?: PGUploadedFile[];
   /** Photos rehydrated from consent-form detail `images`. */
   photos?: PGUploadedFile[];
+  /** @see PGAnnouncementPost.scheduledSendFailureCode */
+  scheduledSendFailureCode?: string | null;
 }
 
 /**
@@ -259,6 +268,30 @@ export interface PGConsentFormPost {
  * endpoint, render shape, and payload mapper by narrowing on `kind`.
  */
 export type PGPost = PGAnnouncementPost | PGConsentFormPost;
+
+/**
+ * Human-readable reasons keyed by the opaque PG failure-code strings surfaced
+ * via `scheduledSendFailureCode`. The catalogue is best-effort — unknown codes
+ * fall back to a generic label (see `describeScheduledSendFailure`). Extend
+ * this dictionary as PG documents more reasons (ask #6 in
+ * `docs/references/pg-team-asks.md`).
+ */
+export const SCHEDULED_FAILURE_REASON: Record<string, string> = {
+  UPSTREAM_TIMEOUT: 'Upstream timeout',
+  RECIPIENT_INVALID: 'Recipients no longer valid',
+  ATTACHMENT_REJECTED: 'Attachment rejected by scan',
+};
+
+/**
+ * Resolve a `scheduledSendFailureCode` into a display label. Returns `null`
+ * when there is no failure (the common case). Unknown codes fall back to
+ * `'Delivery failed'` — the chip still renders so the teacher notices the
+ * condition.
+ */
+export function describeScheduledSendFailure(code: string | null | undefined): string | null {
+  if (!code) return null;
+  return SCHEDULED_FAILURE_REASON[code] ?? 'Delivery failed';
+}
 
 /** @deprecated Use `PGAnnouncementPost`. */
 export type PGAnnouncement = PGAnnouncementPost;

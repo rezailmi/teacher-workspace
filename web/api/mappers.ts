@@ -85,6 +85,7 @@ export function mapAnnouncementSummary(
     },
     createdAt: api.date,
     createdBy: api.createdByName,
+    scheduledSendFailureCode: api.scheduledSendFailureCode ?? null,
     // Route the single `date` field to the correct timestamp based on status
     ...(status === 'posted' && { postedAt: api.date }),
     ...(status === 'scheduled' && { scheduledAt: api.date }),
@@ -188,6 +189,7 @@ export function mapAnnouncementDetail(detail: PGApiAnnouncementDetail): PGAnnoun
     createdBy: detail.staffName,
     postedAt: detail.postedDate ?? undefined,
     scheduledAt: detail.scheduledSendAt ?? undefined,
+    scheduledSendFailureCode: detail.scheduledSendFailureCode ?? null,
     staffInCharge: staffOwners[0]?.staffName,
     staffOwnerIds: staffOwners.map((s) => s.staffID),
     targets: targetsRaw
@@ -360,6 +362,7 @@ export function mapConsentFormSummaryToPost(
     },
     createdAt: api.date,
     createdBy: api.createdByName,
+    scheduledSendFailureCode: api.scheduledSendFailureCode ?? null,
     consentByDate: api.consentByDate ?? '',
     reminder: { type: 'NONE' },
     questions: [],

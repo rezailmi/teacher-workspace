@@ -32,7 +32,7 @@
     "responseType": "ACKNOWLEDGE",
     "toParentsOf": ["4A"],
     "readMetrics": { "readPerStudent": 0, "totalStudents": 3 },
-    "scheduledSendFailureCode": null,
+    "scheduledSendFailureCode": "UPSTREAM_TIMEOUT",
     "createdByName": "MS TAN WEI LING"
   },
   {
