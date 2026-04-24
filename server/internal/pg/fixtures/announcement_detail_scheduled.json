@@ -55,6 +55,6 @@
     ],
     "status": "SCHEDULED",
     "scheduledSendAt": "2026-04-05T00:00:00.000Z",
-    "scheduledSendFailureCode": null
+    "scheduledSendFailureCode": "UPSTREAM_TIMEOUT"
   }
 ]
