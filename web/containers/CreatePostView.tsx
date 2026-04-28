@@ -1183,6 +1183,7 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
                     <ReminderSection
                       value={state.reminder}
                       onChange={(value) => dispatch({ type: 'SET_REMINDER', payload: value })}
+                      consentByDate={state.dueDate}
                     />
 
                     <EventScheduleSection

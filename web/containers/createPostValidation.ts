@@ -8,7 +8,9 @@ import type { PostFormState } from './CreatePostView';
  *
  * Gate 1 — common: title, enquiry email, recipients, and description are
  * required for all post types.
- * Gate 2 — post-with-response only: due date is required.
+ * Gate 2 — post-with-response only: due date is required; if a reminder is
+ * configured, its date must fall in `[tomorrow, dueDate - 1]` (matches
+ * pgw-web's reminder window).
  */
 export function isCreatePostFormValid(
   state: PostFormState,
@@ -36,17 +38,48 @@ export function isCreatePostFormValid(
   );
   if (!allUploadsResolved) return false;
 
+  if (selectedType !== 'post-with-response') return true;
+
+  // Due date must be today or later. Past dates make the reminder window empty
+  // and are rejected by pgw-web business rules.
+  const today = todayIso();
+  if (state.dueDate < today) return false;
+
+  // Reminder-date window: when ONE_TIME or DAILY, date must sit between
+  // tomorrow and `dueDate - 1` (inclusive). Otherwise PGW returns a generic
+  // "Bad request" at submit time.
+  if (state.reminder.type === 'ONE_TIME' || state.reminder.type === 'DAILY') {
+    const r = state.reminder.date;
+    if (!r) return false;
+    const min = addDaysIso(today, 1);
+    const max = addDaysIso(state.dueDate, -1);
+    if (r < min || r > max) return false;
+  }
+
   return true;
 }
 
-/**
- * True when at least one attachment or photo is actively uploading or
- * verifying. Used by the Send button handler to surface a toast when the
- * user tries to submit too early — distinct from `isCreatePostFormValid`
- * so the caller can tell "form unfilled" from "upload pending" apart.
- */
 export function hasPendingUploads(state: PostFormState): boolean {
   return [...state.attachments, ...state.photos].some(
     (u) => u.status === 'uploading' || u.status === 'verifying',
   );
+}
+
+function todayIso(): string {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function addDaysIso(iso: string, days: number): string {
+  const [y, m, d] = iso.split('-').map(Number);
+  if (!y || !m || !d) return iso;
+  const date = new Date(y, m - 1, d);
+  date.setDate(date.getDate() + days);
+  const yy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const dd = String(date.getDate()).padStart(2, '0');
+  return `${yy}-${mm}-${dd}`;
 }

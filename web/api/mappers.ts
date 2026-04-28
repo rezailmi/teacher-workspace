@@ -401,9 +401,12 @@ function mapConsentFormResponseType(raw: string): PGConsentFormPost['responseTyp
   return CONSENT_FORM_RESPONSE_TYPE_MAP[raw] ?? 'yes-no';
 }
 
-function mapReminder(type: PGApiReminderType, date: string | null): ReminderConfig {
-  if (type === 'NONE' || !date) return { type: 'NONE' };
-  return { type, date };
+export function mapReminder(type: PGApiReminderType, date: string | null): ReminderConfig {
+  if (type !== 'ONE_TIME' && type !== 'DAILY') return { type: 'NONE' };
+  if (!date) return { type: 'NONE' };
+  // Tolerate both bare YYYY-MM-DD and ISO timestamp shapes from PGW.
+  const datePart = date.includes('T') ? date.slice(0, 10) : date;
+  return { type, date: datePart };
 }
 
 /**
