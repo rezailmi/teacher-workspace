@@ -13,6 +13,12 @@ export interface PostFilters {
   status: PostStatusFilter[];
   ownership: PostOwnershipFilter[];
   response: PostResponseFilter[];
+  /**
+   * Multi-select filter on author display name (matches `PGPost.createdBy`).
+   * Mirrors PGW's "Created By" filter on the Shared-with-you tab — useful when
+   * a teacher co-manages posts from many staff and wants to narrow to one.
+   */
+  createdBy: string[];
   /** Inclusive start, ISO date (YYYY-MM-DD). Matches against the row's relevant date. */
   dateFrom?: string;
   /** Inclusive end, ISO date (YYYY-MM-DD). */
@@ -23,6 +29,7 @@ export const DEFAULT_POST_FILTERS: PostFilters = {
   status: [],
   ownership: [],
   response: [],
+  createdBy: [],
 };
 
 export function countActivePostFilters(f: PostFilters): number {
@@ -30,6 +37,7 @@ export function countActivePostFilters(f: PostFilters): number {
   if (f.status.length) n += 1;
   if (f.ownership.length) n += 1;
   if (f.response.length) n += 1;
+  if (f.createdBy.length) n += 1;
   if (f.dateFrom || f.dateTo) n += 1;
   return n;
 }
@@ -60,12 +68,20 @@ interface PostFilterPopoverProps {
    * view-only-only) should pass `null` to hide the section entirely.
    */
   responseOptions?: { value: PostResponseFilter; label: string }[] | null;
+  /**
+   * Author names to offer in the "Created By" filter — typically the unique
+   * `createdBy` values across the currently-loaded shared rows. Empty list
+   * hides the section entirely (mirrors PGW: filter only appears when the
+   * Shared tab has data with multiple authors).
+   */
+  createdByOptions?: string[];
 }
 
 function PostFilterPopover({
   value,
   onChange,
   responseOptions = RESPONSE_OPTIONS_FULL,
+  createdByOptions = [],
 }: PostFilterPopoverProps) {
   const active = countActivePostFilters(value);
 
@@ -138,6 +154,19 @@ function PostFilterPopover({
                 label={opt.label}
                 selected={value.response.includes(opt.value)}
                 onClick={() => onChange({ ...value, response: toggle(value.response, opt.value) })}
+              />
+            ))}
+          </FilterRow>
+        )}
+
+        {createdByOptions.length > 0 && (
+          <FilterRow label="Created by">
+            {createdByOptions.map((name) => (
+              <Chip
+                key={name}
+                label={name}
+                selected={value.createdBy.includes(name)}
+                onClick={() => onChange({ ...value, createdBy: toggle(value.createdBy, name) })}
               />
             ))}
           </FilterRow>

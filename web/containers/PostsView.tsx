@@ -166,6 +166,10 @@ export function matchesPostFilters(row: PostRowData, filters: PostFilterQuery): 
     return false;
   }
 
+  if (filters.createdBy.length > 0 && !filters.createdBy.includes(row.createdBy ?? '')) {
+    return false;
+  }
+
   if (filters.dateFrom || filters.dateTo) {
     if (row._dateTs === 0) return false;
     if (filters.dateFrom && row._dateTs < Date.parse(`${filters.dateFrom}T00:00:00`)) return false;
@@ -201,8 +205,20 @@ const PostsView: React.FC = () => {
     filters.status.length > 0 ||
     filters.ownership.length > 0 ||
     filters.response.length > 0 ||
+    filters.createdBy.length > 0 ||
     filters.dateFrom != null ||
     filters.dateTo != null;
+
+  // Author options for the "Created by" filter — only the names that appear
+  // on shared rows (mine rows are always created by the current user). Sorted
+  // alphabetically for stable rendering.
+  const createdByOptions = useMemo(() => {
+    const names = new Set<string>();
+    for (const p of posts) {
+      if (p.ownership === 'shared' && p.createdBy) names.add(p.createdBy);
+    }
+    return Array.from(names).sort((a, b) => a.localeCompare(b));
+  }, [posts]);
 
   const showResponseColumn = tab === 'with-responses';
 
@@ -422,6 +438,7 @@ const PostsView: React.FC = () => {
                       { value: 'yes-no', label: 'Yes / No' },
                     ]
               }
+              createdByOptions={createdByOptions}
             />
           </div>
         </div>
@@ -610,7 +627,12 @@ const PostRowInner: React.FC<PostRowProps> = ({
           {isShared ? (
             <>
               <Users className="h-3.5 w-3.5 shrink-0" />
-              <span>Shared</span>
+              {/* PGW shows the original author on shared rows ("CREATED BY: <name>")
+                  so the teacher knows whose post they're co-managing. Falls back to
+                  bare "Shared" when the wire didn't carry a name. */}
+              <span className="truncate" title={row.createdBy}>
+                {row.createdBy ? row.createdBy : 'Shared'}
+              </span>
             </>
           ) : (
             <span>Mine</span>

@@ -162,6 +162,27 @@ describe('matchesPostFilters', () => {
     // Rows with no date are excluded when any bound is set
     expect(matchesPostFilters(row(mine), { ...baseFilter, dateFrom: '2026-04-01' })).toBe(false);
   });
+
+  it('filters by createdBy when the filter is set', () => {
+    const fromAlice = announcement({
+      id: 'ann_3',
+      ownership: 'shared',
+      createdBy: 'Alice Tan',
+    });
+    const fromBob = announcement({ id: 'ann_4', ownership: 'shared', createdBy: 'Bob Lim' });
+    expect(matchesPostFilters(row(fromAlice), { ...baseFilter, createdBy: ['Alice Tan'] })).toBe(
+      true,
+    );
+    expect(matchesPostFilters(row(fromBob), { ...baseFilter, createdBy: ['Alice Tan'] })).toBe(
+      false,
+    );
+    // Multi-select: any match passes
+    expect(
+      matchesPostFilters(row(fromBob), { ...baseFilter, createdBy: ['Alice Tan', 'Bob Lim'] }),
+    ).toBe(true);
+    // Empty filter is a no-op (does not narrow)
+    expect(matchesPostFilters(row(fromBob), baseFilter)).toBe(true);
+  });
 });
 
 describe('duplicateDraftHref', () => {
