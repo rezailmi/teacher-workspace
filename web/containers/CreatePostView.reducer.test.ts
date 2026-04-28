@@ -1,10 +1,21 @@
 import { describe, expect, it } from 'vitest';
 
+import type { PGApiSchoolStaff } from '~/api/types';
+
 import {
   __formReducer as formReducer,
   __INITIAL_STATE as INITIAL_STATE,
+  __ownerIdsToSelectedStaff as ownerIdsToSelectedStaff,
+  __staffHelperText as staffHelperText,
   type UploadingFile,
 } from './CreatePostView';
+
+const alice: PGApiSchoolStaff = {
+  staffId: 1,
+  name: 'Alice Tan',
+  className: 'P1A',
+  email: 'alice@school.sg',
+};
 
 function makeFileUpload(partial: Partial<UploadingFile> = {}): UploadingFile {
   return {
@@ -130,5 +141,44 @@ describe('formReducer — uploads', () => {
     const next = formReducer(state, { type: 'SET_COVER_PHOTO', localId: 'p2' });
     expect(next.photos[0].isCover).toBe(false);
     expect(next.photos[1].isCover).toBe(true);
+  });
+});
+
+describe('staffHelperText', () => {
+  it('returns announcement text for announcement kind', () => {
+    expect(staffHelperText('announcement')).toBe(
+      'These staff will be able to view read status, and delete the announcement.',
+    );
+  });
+
+  it('returns form text for form kind', () => {
+    expect(staffHelperText('form')).toBe(
+      'These staff will be able to view and edit responses, and delete the form.',
+    );
+  });
+});
+
+describe('ownerIdsToSelectedStaff', () => {
+  it('maps known staff IDs to chips using the roster', () => {
+    const result = ownerIdsToSelectedStaff([1], [alice], undefined);
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatchObject({ id: '1', label: 'Alice Tan' });
+  });
+
+  it('shows unknown-staff placeholder chip for IDs absent from the roster', () => {
+    const result = ownerIdsToSelectedStaff([1, 999], [alice], undefined);
+    expect(result).toHaveLength(2);
+    expect(result[1]).toMatchObject({ id: '999', label: 'Unknown staff' });
+  });
+
+  it('falls back to name-match when ownerIds is empty and fallbackName matches a roster entry', () => {
+    const result = ownerIdsToSelectedStaff([], [alice], 'Alice Tan');
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatchObject({ id: '1', label: 'Alice Tan' });
+  });
+
+  it('returns empty array when ownerIds is empty and fallbackName has no roster match', () => {
+    const result = ownerIdsToSelectedStaff([], [alice], 'Bob Lim');
+    expect(result).toHaveLength(0);
   });
 });

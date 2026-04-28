@@ -541,15 +541,12 @@ function ownerIdsToSelectedStaff(
 ): SelectedEntity[] {
   if (ownerIds && ownerIds.length > 0) {
     const byId = new Map(staff.map((s) => [s.staffId, s]));
-    return ownerIds
-      .map((id) => byId.get(id))
-      .filter((s): s is PGApiSchoolStaff => s !== undefined)
-      .map((s) => ({
-        id: s.staffId.toString(),
-        label: s.name,
-        type: 'individual',
-        count: 1,
-      }));
+    return ownerIds.map((id) => {
+      const s = byId.get(id);
+      return s
+        ? { id: s.staffId.toString(), label: s.name, type: 'individual' as const, count: 1 }
+        : { id: id.toString(), label: 'Unknown staff', type: 'individual' as const, count: 1 };
+    });
   }
   // Fallback: detail response only carried `staffName`. Match by name so
   // legacy/summary-only payloads still hydrate the staff selector.
@@ -558,6 +555,16 @@ function ownerIdsToSelectedStaff(
     ? [{ id: match.staffId.toString(), label: match.name, type: 'individual', count: 1 }]
     : [];
 }
+
+export const __ownerIdsToSelectedStaff = ownerIdsToSelectedStaff;
+
+function staffHelperText(kind: 'announcement' | 'form'): string {
+  return kind === 'announcement'
+    ? 'These staff will be able to view read status, and delete the announcement.'
+    : 'These staff will be able to view and edit responses, and delete the form.';
+}
+
+export const __staffHelperText = staffHelperText;
 
 /**
  * Convert a `PGConsentFormPost.event` (ISO timestamps from PG) back to the
@@ -1023,9 +1030,7 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
               {/* Staff in charge */}
               <div className="space-y-1.5">
                 <Label>Staff in charge</Label>
-                <p className="text-sm text-muted-foreground">
-                  These staff will be able to view read status, and delete the post.
-                </p>
+                <p className="text-sm text-muted-foreground">{staffHelperText(state.kind)}</p>
                 <StaffSelector
                   value={state.selectedStaff}
                   onChange={(sel) => dispatch({ type: 'SET_STAFF', payload: sel })}
