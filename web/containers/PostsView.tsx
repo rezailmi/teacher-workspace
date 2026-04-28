@@ -1,9 +1,21 @@
-import { AlertTriangle, Copy, MoreHorizontal, Plus, Search, Trash2, Users } from 'lucide-react';
+import {
+  AlertTriangle,
+  CalendarClock,
+  Copy,
+  MoreHorizontal,
+  Plus,
+  Search,
+  Trash2,
+  Users,
+  XCircle,
+} from 'lucide-react';
 import React, { useCallback, useMemo, useState } from 'react';
 import { Link, useLoaderData, useNavigate, useRevalidator } from 'react-router';
 import { toast } from 'sonner';
 
 import {
+  cancelAnnouncementSchedule,
+  cancelConsentFormSchedule,
   deleteAnnouncement,
   deleteConsentForm,
   deleteConsentFormDraft,
@@ -15,6 +27,8 @@ import {
   getConfigs,
   loadConsentPostsList,
   loadPostsList,
+  rescheduleAnnouncementDraft,
+  rescheduleConsentFormDraft,
 } from '~/api/client';
 import { PGError } from '~/api/errors';
 import type { PGApiConfig } from '~/api/types';
@@ -28,6 +42,7 @@ import {
   type PostStatusFilter,
 } from '~/components/posts/PostFilterPopover';
 import { ReadRate, RespondedRate } from '~/components/posts/ReadRate';
+import { SchedulePickerDialog } from '~/components/posts/SchedulePickerDialog';
 import {
   Badge,
   Button,
@@ -233,6 +248,83 @@ const PostsView: React.FC = () => {
   const [pendingDelete, setPendingDelete] = useState<PostRowData | null>(null);
   const [deleting, setDeleting] = useState(false);
 
+  // Reschedule + cancel-schedule actions live on the row's kebab menu (mirrors
+  // PGW). PGW has no public detail endpoint for scheduled posts, so the kebab
+  // is the only surface where teachers can act on them.
+  const [pendingReschedule, setPendingReschedule] = useState<PostRowData | null>(null);
+  const [rescheduling, setRescheduling] = useState(false);
+
+  const handleReschedule = useCallback((row: PostRowData) => {
+    setPendingReschedule(row);
+  }, []);
+
+  const handleCancelSchedule = useCallback(
+    async (row: PostRowData) => {
+      const numericId = isAnnouncementDraftId(row.id)
+        ? Number(row.id.slice('annDraft_'.length))
+        : isConsentFormDraftId(row.id)
+          ? Number(row.id.slice('cfDraft_'.length))
+          : NaN;
+      if (Number.isNaN(numericId)) {
+        notify.error('Could not resolve the scheduled post id.');
+        return;
+      }
+      // DESIGN TODO (@reza): replace this native `window.confirm` with a
+      // shadcn AlertDialog matching the existing `DeletePostDialog` pattern —
+      // PGW's reference flow uses a styled modal titled "Cancel sending this
+      // post?" with primary "Cancel send" / secondary "No, not now" actions.
+      // Screenshot of the current native dialog: `docs/screenshots/cancel-schedule-native-confirm.png`.
+      const confirmed = window.confirm(
+        `Cancel sending "${row.title}"? Once cancelled, the post will be moved to Drafts where you can edit or delete it.`,
+      );
+      if (!confirmed) return;
+      try {
+        if (row.kind === 'form') {
+          await cancelConsentFormSchedule(numericId);
+        } else {
+          await cancelAnnouncementSchedule(numericId);
+        }
+        notify.success('Scheduled send cancelled.');
+        revalidator.revalidate();
+      } catch (err) {
+        if (!(err instanceof PGError)) notify.error('Failed to cancel the scheduled send.');
+      }
+    },
+    [revalidator],
+  );
+
+  const confirmReschedule = useCallback(
+    async (scheduledSendAt: string) => {
+      const row = pendingReschedule;
+      if (!row) return;
+      const numericId = isAnnouncementDraftId(row.id)
+        ? Number(row.id.slice('annDraft_'.length))
+        : isConsentFormDraftId(row.id)
+          ? Number(row.id.slice('cfDraft_'.length))
+          : NaN;
+      if (Number.isNaN(numericId)) {
+        notify.error('Could not resolve the scheduled post id.');
+        return;
+      }
+      setRescheduling(true);
+      try {
+        if (row.kind === 'form') {
+          await rescheduleConsentFormDraft(numericId, { scheduledSendAt });
+        } else {
+          await rescheduleAnnouncementDraft(numericId, { scheduledSendAt });
+        }
+        notify.success('Post rescheduled.');
+        setPendingReschedule(null);
+        revalidator.revalidate();
+      } catch (err) {
+        if (!(err instanceof PGError)) notify.error('Failed to reschedule. Please try again.');
+      } finally {
+        setRescheduling(false);
+      }
+    },
+    [pendingReschedule, revalidator],
+  );
+
   const handleDelete = useCallback((row: PostRowData) => {
     setPendingDelete(row);
   }, []);
@@ -403,6 +495,8 @@ const PostsView: React.FC = () => {
                     duplicateEnabled={duplicateEnabled}
                     onDuplicate={handleDuplicate}
                     onDelete={handleDelete}
+                    onReschedule={handleReschedule}
+                    onCancelSchedule={handleCancelSchedule}
                   />
                 ))}
               </TableBody>
@@ -423,6 +517,17 @@ const PostsView: React.FC = () => {
           void confirmDelete();
         }}
       />
+
+      <SchedulePickerDialog
+        open={pendingReschedule !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingReschedule(null);
+        }}
+        onConfirm={(scheduledSendAt) => {
+          void confirmReschedule(scheduledSendAt);
+        }}
+        busy={rescheduling}
+      />
     </div>
   );
 };
@@ -435,9 +540,20 @@ interface PostRowProps {
   duplicateEnabled: boolean;
   onDuplicate: (row: PostRowData) => void;
   onDelete: (row: PostRowData) => void;
+  /** Opens the reschedule date/time picker for `status === 'scheduled'` rows. */
+  onReschedule: (row: PostRowData) => void;
+  /** Confirms + flips a scheduled row back to DRAFT. */
+  onCancelSchedule: (row: PostRowData) => void;
 }
 
-const PostRowInner: React.FC<PostRowProps> = ({ row, duplicateEnabled, onDuplicate, onDelete }) => {
+const PostRowInner: React.FC<PostRowProps> = ({
+  row,
+  duplicateEnabled,
+  onDuplicate,
+  onDelete,
+  onReschedule,
+  onCancelSchedule,
+}) => {
   const navigate = useNavigate();
   const isShared = row.ownership === 'shared';
   const showDuplicate = duplicateEnabled;
@@ -524,6 +640,29 @@ const PostRowInner: React.FC<PostRowProps> = ({ row, duplicateEnabled, onDuplica
             <MoreHorizontal className="h-4 w-4" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            {row.status === 'scheduled' && !isShared && (
+              <>
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onReschedule(row);
+                  }}
+                >
+                  <CalendarClock className="mr-2 h-4 w-4" />
+                  Reschedule
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void onCancelSchedule(row);
+                  }}
+                >
+                  <XCircle className="mr-2 h-4 w-4" />
+                  Cancel send
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+              </>
+            )}
             {showDuplicate && (
               <DropdownMenuItem
                 onClick={(e) => {
@@ -564,6 +703,8 @@ const PostRowInner: React.FC<PostRowProps> = ({ row, duplicateEnabled, onDuplica
  */
 const PostRow = React.memo(PostRowInner, (prev, next) => {
   if (prev.onDuplicate !== next.onDuplicate || prev.onDelete !== next.onDelete) return false;
+  if (prev.onReschedule !== next.onReschedule) return false;
+  if (prev.onCancelSchedule !== next.onCancelSchedule) return false;
   if (prev.duplicateEnabled !== next.duplicateEnabled) return false;
   const a = prev.row;
   const b = next.row;
