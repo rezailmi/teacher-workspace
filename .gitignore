@@ -34,3 +34,7 @@ out
 
 # Compound Engineering machine-local config
 .compound-engineering/*.local.yaml
+
+# Claude Code per-developer artifacts
+.claude/launch.json
+.claude/plans/
