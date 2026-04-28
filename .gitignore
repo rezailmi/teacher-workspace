@@ -31,3 +31,6 @@ out
 # Scratch TS narrowing experiments at repo root.
 /test-narrowing*.ts
 .gstack/
+
+# Compound Engineering machine-local config
+.compound-engineering/*.local.yaml
