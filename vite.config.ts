@@ -2,21 +2,12 @@ import path from 'node:path';
 
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
-import { madeRefine } from 'made-refine/vite';
 import { defineConfig } from 'vite';
 
 // https://vite.dev/config
 export default defineConfig({
   root: 'web',
-  plugins: [
-    react({
-      babel: {
-        plugins: ['made-refine/babel'],
-      },
-    }),
-    tailwindcss(),
-    madeRefine(),
-  ],
+  plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
       '~': path.resolve(import.meta.dirname, 'web'),
