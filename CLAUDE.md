@@ -84,4 +84,5 @@ Use `want/got` style:
 - Be specific - name the things being changed rather than using vague descriptions
 - Don't list implementation details (e.g. individual functions, internal mechanisms) - keep it high level
 - Make logical, incremental commits rather than one large commit
-- Always create a feature branch before starting work
+- Always create a feature branch before starting work — **never commit directly to `main` or `feat/posts-frontend`**
+- Branch off `feat/posts-frontend` (not `main`) and open a PR back to `feat/posts-frontend` for all parity work
