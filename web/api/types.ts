@@ -194,24 +194,34 @@ export interface PGApiConsentFormDraft {
 
 // ─── Announcement write payloads ────────────────────────────────────────────
 
+/**
+ * PGW recipient/staff group shape. Sent on the wire as `studentGroups` and
+ * `staffGroups`. Type values: `'school' | 'level' | 'class' | 'group' | 'cca'
+ * | 'student'` for student groups; freeform string for staff (`'individual'`
+ * for the per-staff picker we use today).
+ */
+export interface PGApiGroupTarget {
+  type: string;
+  label: string;
+  value: number;
+}
+
 export interface PGApiCreateAnnouncementPayload {
   title: string;
   richTextContent: string;
   enquiryEmailAddress?: string;
-  recipients: {
-    classIds: number[];
-    customGroupIds: number[];
-    ccaIds: number[];
-    levelIds: number[];
-  };
-  staffOwnerIds?: number[];
+  /** Recipient groups with labels. Mapped to PGW wire `studentGroups`. */
+  studentGroups: PGApiGroupTarget[];
+  /** Staff-in-charge with labels. Mapped to PGW wire `staffGroups`. */
+  staffGroups?: PGApiGroupTarget[];
   /**
    * Write-side shortcut keys. PG accepts a plain string array of enum keys
    * (`"TRAVEL_DECLARATION" | "EDIT_CONTACT_DETAILS"`, see
    * `PG-API-CONTRACT.md:192/218`), distinct from the richer
-   * `PGApiShortcutLink[]` that detail responses carry.
+   * `PGApiShortcutLink[]` that detail responses carry. Mapped to wire `shortcuts`.
    */
   shortcutLink?: string[];
+  /** Mapped to PGW wire `urls`. */
   websiteLinks?: PGApiWebsiteLink[];
   attachments?: PGApiAttachment[];
   images?: PGApiImage[];
@@ -327,13 +337,10 @@ export interface PGApiCreateConsentFormPayload {
   eventStartDate?: { date: string; time: string } | null;
   eventEndDate?: { date: string; time: string } | null;
   venue?: string | null;
-  recipients: {
-    classIds: number[];
-    customGroupIds: number[];
-    ccaIds: number[];
-    levelIds: number[];
-  };
-  staffOwnerIds?: number[];
+  /** Recipient groups with labels. Mapped to PGW wire `studentGroups`. */
+  studentGroups: PGApiGroupTarget[];
+  /** Staff-in-charge with labels. Mapped to PGW wire `staffGroups`. */
+  staffGroups?: PGApiGroupTarget[];
   customQuestions?: PGApiCustomQuestion[];
   /** See note on `PGApiCreateAnnouncementPayload.shortcutLink`. */
   shortcutLink?: string[];

@@ -20,7 +20,7 @@ const basePayload: PGApiCreateAnnouncementPayload = {
   title: 'Test',
   richTextContent: '{"type":"doc","content":[]}',
   enquiryEmailAddress: 'test@moe.edu.sg',
-  recipients: { classIds: [], customGroupIds: [], ccaIds: [], levelIds: [] },
+  studentGroups: [],
 };
 
 describe('toPGCreatePayload', () => {
@@ -28,7 +28,7 @@ describe('toPGCreatePayload', () => {
     const out = toPGCreatePayload(basePayload);
     expect(out.title).toBe('Test');
     expect(out.enquiryEmailAddress).toBe('test@moe.edu.sg');
-    expect(out.targets).toEqual([]);
+    expect(out.studentGroups).toEqual([]);
   });
 
   it('throws when enquiryEmailAddress is missing and allowPartial is not set', () => {
@@ -44,18 +44,34 @@ describe('toPGCreatePayload', () => {
     expect(toPGCreatePayload(payload, { allowPartial: true }).enquiryEmailAddress).toBe('');
   });
 
-  it('maps recipient ids by type into the flat target array', () => {
+  it('passes studentGroups through to the wire (PGW expects {type, label, value})', () => {
     const payload: PGApiCreateAnnouncementPayload = {
       ...basePayload,
-      recipients: { classIds: [1, 2], customGroupIds: [], ccaIds: [3], levelIds: [4] },
+      studentGroups: [
+        { type: 'class', label: 'P1A', value: 1 },
+        { type: 'class', label: 'P1B', value: 2 },
+        { type: 'cca', label: 'Choir', value: 3 },
+        { type: 'level', label: 'Primary 1', value: 4 },
+      ],
     };
     const out = toPGCreatePayload(payload);
-    expect(out.targets).toEqual([
-      { targetType: 'class', targetId: 1 },
-      { targetType: 'class', targetId: 2 },
-      { targetType: 'cca', targetId: 3 },
-      { targetType: 'level', targetId: 4 },
+    expect(out.studentGroups).toEqual([
+      { type: 'class', label: 'P1A', value: 1 },
+      { type: 'class', label: 'P1B', value: 2 },
+      { type: 'cca', label: 'Choir', value: 3 },
+      { type: 'level', label: 'Primary 1', value: 4 },
     ]);
+  });
+
+  it('renames websiteLinks → urls and shortcutLink → shortcuts on the wire', () => {
+    const payload: PGApiCreateAnnouncementPayload = {
+      ...basePayload,
+      websiteLinks: [{ url: 'https://x.sg', title: 'X' }],
+      shortcutLink: ['TRAVEL_DECLARATION'],
+    };
+    const out = toPGCreatePayload(payload);
+    expect(out.urls).toEqual([{ webLink: 'https://x.sg', linkDescription: 'X' }]);
+    expect(out.shortcuts).toEqual(['TRAVEL_DECLARATION']);
   });
 });
 
@@ -207,13 +223,13 @@ describe('mapConsentFormSummaryToPost — status branching', () => {
     expect(out.status).toBe('draft');
   });
 
-  it('brands scheduled rows as cf_<id>', () => {
+  it('brands scheduled rows as cfDraft_<id> (PGW: scheduled forms live in the draft table)', () => {
     const scheduled: PGApiConsentFormSummary = {
       ...baseConsentFormSummary,
       status: 'SCHEDULED',
     };
     const out = mapConsentFormSummaryToPost(scheduled, 'mine');
-    expect(out.id).toBe('cf_42');
+    expect(out.id).toBe('cfDraft_42');
     expect(out.status).toBe('scheduled');
   });
 });

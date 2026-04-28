@@ -6,16 +6,20 @@ import {
   createDraft,
   rescheduleAnnouncementDraft,
   rescheduleConsentFormDraft,
+  scheduleExistingAnnouncementDraft,
+  scheduleExistingConsentFormDraft,
+  scheduleNewAnnouncementDraft,
+  scheduleNewConsentFormDraft,
   updateDraft,
 } from './client';
 import { PGCsrfError, PGRedirectError, PGTimeoutError } from './errors';
-import type { PGApiCreateDraftPayload } from './types';
+import type { PGApiCreateConsentFormDraftPayload, PGApiCreateDraftPayload } from './types';
 
 const base: PGApiCreateDraftPayload = {
   title: 'Draft',
   richTextContent: '{"type":"doc","content":[]}',
   enquiryEmailAddress: 'draft@moe.edu.sg',
-  recipients: { classIds: [], customGroupIds: [], ccaIds: [], levelIds: [] },
+  studentGroups: [],
 };
 
 function mockFetch(body: unknown, status = 200) {
@@ -73,13 +77,13 @@ describe('rescheduleAnnouncementDraft (U3)', () => {
     vi.stubGlobal('fetch', mockFetch(undefined, 204));
   });
 
-  it('PUTs to /announcements/drafts/schedule/:id with the new scheduledSendAt', async () => {
+  it('PUTs to /announcements/drafts/:id/rescheduleSchedule with body { scheduledDateTime }', async () => {
     await rescheduleAnnouncementDraft(123, { scheduledSendAt: '2026-05-01T09:15:00+08:00' });
     const call = (globalThis.fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0];
-    expect(call[0]).toMatch(/\/announcements\/drafts\/schedule\/123$/);
+    expect(call[0]).toMatch(/\/announcements\/drafts\/123\/rescheduleSchedule$/);
     expect(call[1].method).toBe('PUT');
     expect(JSON.parse(call[1].body as string)).toEqual({
-      scheduledSendAt: '2026-05-01T09:15:00+08:00',
+      scheduledDateTime: '2026-05-01T09:15:00+08:00',
     });
   });
 });
@@ -89,11 +93,14 @@ describe('rescheduleConsentFormDraft (U3)', () => {
     vi.stubGlobal('fetch', mockFetch(undefined, 204));
   });
 
-  it('PUTs to /consentForms/drafts/schedule/:id with the new scheduledSendAt', async () => {
+  it('PUTs to /consentForms/drafts/:id/rescheduleSchedule with body { scheduledDateTime }', async () => {
     await rescheduleConsentFormDraft(401, { scheduledSendAt: '2026-05-02T10:00:00+08:00' });
     const call = (globalThis.fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0];
-    expect(call[0]).toMatch(/\/consentForms\/drafts\/schedule\/401$/);
+    expect(call[0]).toMatch(/\/consentForms\/drafts\/401\/rescheduleSchedule$/);
     expect(call[1].method).toBe('PUT');
+    expect(JSON.parse(call[1].body as string)).toEqual({
+      scheduledDateTime: '2026-05-02T10:00:00+08:00',
+    });
   });
 });
 
@@ -302,5 +309,100 @@ describe('updateDraft', () => {
     const call = (globalThis.fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0];
     expect(call[0]).toMatch(/\/announcements\/drafts\/123$/);
     expect(call[1].method).toBe('PUT');
+  });
+});
+
+const formBase: PGApiCreateConsentFormDraftPayload = {
+  title: 'Form',
+  richTextContent: '{"type":"doc","content":[]}',
+  enquiryEmailAddress: 'form@moe.edu.sg',
+  responseType: 'YES_NO',
+  consentByDate: '2026-05-10',
+  addReminderType: 'NONE',
+  studentGroups: [],
+};
+
+describe('scheduleNewAnnouncementDraft', () => {
+  beforeEach(() => {
+    vi.stubGlobal(
+      'fetch',
+      mockFetch({ body: { announcementDraftId: 1042, updatedAt: 't' }, resultCode: 1 }),
+    );
+  });
+
+  it('POSTs to /announcements/drafts/schedule with body field { scheduledDateTime }', async () => {
+    await scheduleNewAnnouncementDraft({ ...base, scheduledSendAt: '2026-05-01T09:15:00+08:00' });
+    const call = (globalThis.fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(call[0]).toMatch(/\/announcements\/drafts\/schedule$/);
+    expect(call[1].method).toBe('POST');
+    const body = JSON.parse(call[1].body as string);
+    expect(body.scheduledDateTime).toBe('2026-05-01T09:15:00+08:00');
+    expect(body.scheduledSendAt).toBeUndefined();
+  });
+});
+
+describe('scheduleExistingAnnouncementDraft', () => {
+  beforeEach(() => {
+    vi.stubGlobal(
+      'fetch',
+      mockFetch({ body: { announcementDraftId: 99, updatedAt: 't' }, resultCode: 1 }),
+    );
+  });
+
+  it('PUTs to /announcements/drafts/schedule/:id with body field { scheduledDateTime }', async () => {
+    await scheduleExistingAnnouncementDraft(99, {
+      ...base,
+      scheduledSendAt: '2026-05-02T10:00:00+08:00',
+    });
+    const call = (globalThis.fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(call[0]).toMatch(/\/announcements\/drafts\/schedule\/99$/);
+    expect(call[1].method).toBe('PUT');
+    const body = JSON.parse(call[1].body as string);
+    expect(body.scheduledDateTime).toBe('2026-05-02T10:00:00+08:00');
+    expect(body.scheduledSendAt).toBeUndefined();
+  });
+});
+
+describe('scheduleNewConsentFormDraft', () => {
+  beforeEach(() => {
+    vi.stubGlobal(
+      'fetch',
+      mockFetch({ body: { consentFormDraftId: 401, updatedAt: 't' }, resultCode: 1 }),
+    );
+  });
+
+  it('POSTs to /consentForms/drafts/schedule with body field { scheduledDateTime }', async () => {
+    await scheduleNewConsentFormDraft({
+      ...formBase,
+      scheduledSendAt: '2026-05-03T11:00:00+08:00',
+    });
+    const call = (globalThis.fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(call[0]).toMatch(/\/consentForms\/drafts\/schedule$/);
+    expect(call[1].method).toBe('POST');
+    const body = JSON.parse(call[1].body as string);
+    expect(body.scheduledDateTime).toBe('2026-05-03T11:00:00+08:00');
+    expect(body.scheduledSendAt).toBeUndefined();
+  });
+});
+
+describe('scheduleExistingConsentFormDraft', () => {
+  beforeEach(() => {
+    vi.stubGlobal(
+      'fetch',
+      mockFetch({ body: { consentFormDraftId: 402, updatedAt: 't' }, resultCode: 1 }),
+    );
+  });
+
+  it('PUTs to /consentForms/drafts/schedule/:id with body field { scheduledDateTime }', async () => {
+    await scheduleExistingConsentFormDraft(402, {
+      ...formBase,
+      scheduledSendAt: '2026-05-04T12:00:00+08:00',
+    });
+    const call = (globalThis.fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(call[0]).toMatch(/\/consentForms\/drafts\/schedule\/402$/);
+    expect(call[1].method).toBe('PUT');
+    const body = JSON.parse(call[1].body as string);
+    expect(body.scheduledDateTime).toBe('2026-05-04T12:00:00+08:00');
+    expect(body.scheduledSendAt).toBeUndefined();
   });
 });
