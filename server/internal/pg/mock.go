@@ -81,7 +81,7 @@ func registerMockAnnouncements(mux *http.ServeMux) {
 	// 2-segment POSTs
 	mux.HandleFunc("POST /api/web/2/staff/announcements", jsonStub(http.StatusCreated, `{"postId":1041}`))
 	mux.HandleFunc("POST /api/web/2/staff/announcements/drafts", jsonStub(http.StatusCreated, `{"announcementDraftId":202}`))
-	mux.HandleFunc("POST /api/web/2/staff/announcements/duplicate", jsonStub(http.StatusCreated, `{"postId":1042}`))
+	mux.HandleFunc("POST /api/web/2/staff/announcements/duplicate", jsonStub(http.StatusCreated, `{"announcementDraftId":1042,"updatedAt":"2026-04-28T00:00:00.000Z"}`))
 
 	// 3-segment POST dispatcher: drafts/schedule | drafts/duplicate | {id}/addStaffInCharge
 	mux.HandleFunc("POST /api/web/2/staff/announcements/{first}/{second}", func(w http.ResponseWriter, r *http.Request) {
@@ -90,7 +90,7 @@ func registerMockAnnouncements(mux *http.ServeMux) {
 		case first == "drafts" && second == "schedule":
 			jsonStub(http.StatusOK, `{}`)(w, r)
 		case first == "drafts" && second == "duplicate":
-			jsonStub(http.StatusCreated, `{"announcementDraftId":203}`)(w, r)
+			jsonStub(http.StatusCreated, `{"announcementDraftId":203,"updatedAt":"2026-04-28T00:00:00.000Z"}`)(w, r)
 		case second == "addStaffInCharge":
 			jsonStub(http.StatusOK, `{}`)(w, r)
 		default:
@@ -151,7 +151,7 @@ func registerMockConsentForms(mux *http.ServeMux) {
 	// 2-segment POSTs
 	mux.HandleFunc("POST /api/web/2/staff/consentForms", jsonStub(http.StatusCreated, `{"consentFormId":301}`))
 	mux.HandleFunc("POST /api/web/2/staff/consentForms/drafts", jsonStub(http.StatusCreated, `{"consentFormDraftId":401}`))
-	mux.HandleFunc("POST /api/web/2/staff/consentForms/duplicate", jsonStub(http.StatusCreated, `{"consentFormDraftId":402}`))
+	mux.HandleFunc("POST /api/web/2/staff/consentForms/duplicate", jsonStub(http.StatusCreated, `{"consentFormDraftId":402,"updatedAt":"2026-04-28T00:00:00.000Z"}`))
 
 	// 3-segment POST dispatcher: drafts/schedule | drafts/duplicate | {id}/addStaffInCharge
 	mux.HandleFunc("POST /api/web/2/staff/consentForms/{first}/{second}", func(w http.ResponseWriter, r *http.Request) {
@@ -160,7 +160,7 @@ func registerMockConsentForms(mux *http.ServeMux) {
 		case first == "drafts" && second == "schedule":
 			jsonStub(http.StatusOK, `{}`)(w, r)
 		case first == "drafts" && second == "duplicate":
-			jsonStub(http.StatusCreated, `{"consentFormDraftId":403}`)(w, r)
+			jsonStub(http.StatusCreated, `{"consentFormDraftId":403,"updatedAt":"2026-04-28T00:00:00.000Z"}`)(w, r)
 		case second == "addStaffInCharge":
 			jsonStub(http.StatusOK, `{}`)(w, r)
 		default:

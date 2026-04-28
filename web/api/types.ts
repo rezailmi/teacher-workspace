@@ -226,8 +226,20 @@ export interface PGApiScheduleDraftPayload {
   scheduledSendAt: string;
 }
 
-export interface PGApiDuplicatePayload {
-  postId: number;
+/**
+ * PGW returns the same envelope shape for all four duplicate endpoints
+ * (`/announcements/duplicate`, `/announcements/drafts/duplicate`,
+ * `/consentForms/duplicate`, `/consentForms/drafts/duplicate`): the new draft's
+ * id and an `updatedAt` timestamp. Field name varies by post kind.
+ */
+export interface PGApiDuplicateAnnouncementResponse {
+  announcementDraftId: number;
+  updatedAt: string;
+}
+
+export interface PGApiDuplicateConsentFormResponse {
+  consentFormDraftId: number;
+  updatedAt: string;
 }
 
 // ─── Consent Forms ──────────────────────────────────────────────────────────

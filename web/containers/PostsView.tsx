@@ -1,6 +1,7 @@
 import { AlertTriangle, Copy, MoreHorizontal, Plus, Search, Trash2, Users } from 'lucide-react';
 import React, { useCallback, useMemo, useState } from 'react';
 import { Link, useLoaderData, useNavigate, useRevalidator } from 'react-router';
+import { toast } from 'sonner';
 
 import {
   deleteAnnouncement,
@@ -8,7 +9,9 @@ import {
   deleteConsentFormDraft,
   deleteDraft,
   duplicateAnnouncement,
+  duplicateAnnouncementDraft,
   duplicateConsentForm,
+  duplicateConsentFormDraft,
   getConfigs,
   loadConsentPostsList,
   loadPostsList,
@@ -53,6 +56,14 @@ import {
 import type { AnnouncementId, PGPost } from '~/data/mock-pg-announcements';
 import { formatDate, getRelevantDate, isLowReadRate } from '~/helpers/dateTime';
 import { notify } from '~/lib/notify';
+
+function duplicateDraftHref(kind: 'announcement' | 'form', draftId: number): string {
+  return kind === 'announcement'
+    ? `/posts/annDraft_${draftId}/edit?kind=announcement`
+    : `/posts/cfDraft_${draftId}/edit?kind=form`;
+}
+
+export const __duplicateDraftHref = duplicateDraftHref;
 
 type PostTab = 'view-only' | 'with-responses';
 
@@ -154,6 +165,7 @@ export function matchesPostFilters(row: PostRowData, filters: PostFilterQuery): 
 const PostsView: React.FC = () => {
   const { rows: posts, configs } = useLoaderData<PostsLoaderData>();
   const revalidator = useRevalidator();
+  const navigate = useNavigate();
   const [tab, setTab] = useState<PostTab>('view-only');
   const [filters, setFilters] = useState<PostFilters>(DEFAULT_POST_FILTERS);
   const [searchQuery, setSearchQuery] = useState('');
@@ -185,23 +197,28 @@ const PostsView: React.FC = () => {
       // `annDraft_`, or bare digits for posted announcements). Strip the prefix
       // per brand so the numeric id we send upstream is never NaN.
       const numericTail = (id: string, prefix: string) => Number(id.slice(prefix.length));
-      const promise =
+      // PGW exposes four duplicate endpoints — posted vs draft × ann vs form —
+      // each with a distinct request body field name and response field name.
+      // Dispatch in two parallel branches so TypeScript narrows the response
+      // shape cleanly per kind.
+      const promise: Promise<number> =
         row.kind === 'announcement'
-          ? duplicateAnnouncement({
-              postId: isAnnouncementDraftId(row.id)
-                ? numericTail(row.id, 'annDraft_')
-                : Number(row.id),
-            })
-          : duplicateConsentForm({
-              consentFormId: isConsentFormDraftId(row.id)
-                ? numericTail(row.id, 'cfDraft_')
-                : numericTail(row.id, 'cf_'),
-            });
+          ? (isAnnouncementDraftId(row.id)
+              ? duplicateAnnouncementDraft(numericTail(row.id, 'annDraft_'))
+              : duplicateAnnouncement(Number(row.id))
+            ).then((r) => r.announcementDraftId)
+          : (isConsentFormDraftId(row.id)
+              ? duplicateConsentFormDraft(numericTail(row.id, 'cfDraft_'))
+              : duplicateConsentForm(numericTail(row.id, 'cf_'))
+            ).then((r) => r.consentFormDraftId);
 
       promise
-        .then(() => {
+        .then((draftId) => {
           revalidator.revalidate();
-          notify.success('Post duplicated.');
+          const href = duplicateDraftHref(row.kind, draftId);
+          toast.success(`'${row.title}' has been duplicated.`, {
+            action: { label: 'View draft', onClick: () => navigate(href) },
+          });
         })
         .catch(() => {
           // Surface every failure, including PGError — the global handler
@@ -210,7 +227,7 @@ const PostsView: React.FC = () => {
           notify.error('Failed to duplicate post.');
         });
     },
-    [revalidator],
+    [revalidator, navigate],
   );
 
   const [pendingDelete, setPendingDelete] = useState<PostRowData | null>(null);

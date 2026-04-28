@@ -43,7 +43,8 @@ import type {
   PGApiCreateConsentFormPayload,
   PGApiCreateDraftPayload,
   PGApiCustomGroupsList,
-  PGApiDuplicatePayload,
+  PGApiDuplicateAnnouncementResponse,
+  PGApiDuplicateConsentFormResponse,
   PGApiGroupsAssigned,
   PGApiScheduleDraftPayload,
   PGApiSchoolClass,
@@ -480,9 +481,18 @@ export function updateDraft(
   return mutateApi('PUT', `/announcements/drafts/${draftId}`, body, options);
 }
 
-/** Duplicate an existing announcement. */
-export function duplicateAnnouncement(payload: PGApiDuplicatePayload) {
-  return mutateApi<{ postId: number }>('POST', '/announcements/duplicate', payload);
+/** Duplicate a posted announcement. PGW returns the new draft id. */
+export function duplicateAnnouncement(announcementId: number) {
+  return mutateApi<PGApiDuplicateAnnouncementResponse>('POST', '/announcements/duplicate', {
+    announcementId,
+  });
+}
+
+/** Duplicate an existing announcement draft. PGW returns the new draft id. */
+export function duplicateAnnouncementDraft(announcementDraftId: number) {
+  return mutateApi<PGApiDuplicateAnnouncementResponse>('POST', '/announcements/drafts/duplicate', {
+    announcementDraftId,
+  });
 }
 
 /** Delete a posted announcement. */
@@ -601,8 +611,18 @@ export function cancelConsentFormSchedule(draftId: number, options: { signal?: A
 }
 
 /** Duplicate an existing consent form. Returns the new draft id. */
-export function duplicateConsentForm(payload: { consentFormId: number }) {
-  return mutateApi<{ consentFormDraftId: number }>('POST', '/consentForms/duplicate', payload);
+/** Duplicate a posted consent form. PGW returns the new draft id. */
+export function duplicateConsentForm(consentFormId: number) {
+  return mutateApi<PGApiDuplicateConsentFormResponse>('POST', '/consentForms/duplicate', {
+    consentFormId,
+  });
+}
+
+/** Duplicate an existing consent-form draft. PGW returns the new draft id. */
+export function duplicateConsentFormDraft(consentFormDraftId: number) {
+  return mutateApi<PGApiDuplicateConsentFormResponse>('POST', '/consentForms/drafts/duplicate', {
+    consentFormDraftId,
+  });
 }
 
 export function deleteConsentForm(formId: ConsentFormId) {
