@@ -1,6 +1,8 @@
 import {
   AlertTriangle,
   CalendarClock,
+  ChevronLeft,
+  ChevronRight,
   Copy,
   MoreHorizontal,
   Plus,
@@ -9,7 +11,7 @@ import {
   Users,
   XCircle,
 } from 'lucide-react';
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useLoaderData, useNavigate, useRevalidator } from 'react-router';
 import { toast } from 'sonner';
 
@@ -52,6 +54,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
   Input,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
   Table,
   TableBody,
   TableCell,
@@ -79,6 +86,35 @@ function duplicateDraftHref(kind: 'announcement' | 'form', draftId: number): str
 }
 
 export const __duplicateDraftHref = duplicateDraftHref;
+
+/**
+ * Pure paginator. Returns the slice for the requested page plus the labels
+ * the footer shows ("Showing X–Y of Z", page count). Clamps `pageIndex` so
+ * an out-of-range index from stale state can't render a blank page — when
+ * filters narrow the list the user lands on the last page automatically.
+ */
+function paginate<T>(
+  rows: T[],
+  pageIndex: number,
+  pageSize: number,
+): { page: T[]; pageStart: number; pageEnd: number; pageCount: number } {
+  const total = rows.length;
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  const safeIndex = Math.min(Math.max(0, pageIndex), pageCount - 1);
+  const start = safeIndex * pageSize;
+  const end = Math.min(start + pageSize, total);
+  return {
+    page: rows.slice(start, end),
+    pageStart: total === 0 ? 0 : start + 1,
+    pageEnd: end,
+    pageCount,
+  };
+}
+
+export const __paginate = paginate;
+
+const PAGE_SIZE_OPTIONS = [10, 25, 50] as const;
+const DEFAULT_PAGE_SIZE = 25;
 
 type PostTab = 'view-only' | 'with-responses';
 
@@ -188,6 +224,8 @@ const PostsView: React.FC = () => {
   const [tab, setTab] = useState<PostTab>('view-only');
   const [filters, setFilters] = useState<PostFilters>(DEFAULT_POST_FILTERS);
   const [searchQuery, setSearchQuery] = useState('');
+  const [pageIndex, setPageIndex] = useState(0);
+  const [pageSize, setPageSize] = useState<number>(DEFAULT_PAGE_SIZE);
   // `duplicate_announcement_form_post` gates the Duplicate row action in
   // production. In dev we surface it unconditionally so internal reviewers can
   // exercise the flow without flipping the flag.
@@ -200,6 +238,18 @@ const PostsView: React.FC = () => {
       .slice()
       .sort(comparePosts);
   }, [posts, searchQuery, tab, filters]);
+
+  // Snap back to the first page whenever the filter scope changes — otherwise
+  // the user can be sitting on page 5, narrow the result set, and see
+  // `paginate` clamp them silently to the last (now-different) page.
+  useEffect(() => {
+    setPageIndex(0);
+  }, [searchQuery, tab, filters]);
+
+  const paged = useMemo(
+    () => paginate(filtered, pageIndex, pageSize),
+    [filtered, pageIndex, pageSize],
+  );
 
   const filtersActive =
     filters.status.length > 0 ||
@@ -505,7 +555,7 @@ const PostsView: React.FC = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.map((row) => (
+                {paged.page.map((row) => (
                   <PostRow
                     key={row.id}
                     row={row}
@@ -518,6 +568,21 @@ const PostsView: React.FC = () => {
                 ))}
               </TableBody>
             </Table>
+          )}
+          {filtered.length > 0 && (
+            <PaginationFooter
+              total={filtered.length}
+              pageStart={paged.pageStart}
+              pageEnd={paged.pageEnd}
+              pageIndex={pageIndex}
+              pageCount={paged.pageCount}
+              pageSize={pageSize}
+              onPageChange={setPageIndex}
+              onPageSizeChange={(size) => {
+                setPageSize(size);
+                setPageIndex(0);
+              }}
+            />
           )}
         </div>
       </div>
@@ -767,5 +832,82 @@ const PostRowResponseCell: React.FC<{ row: PostRowData }> = ({ row }) => {
   const respondedCount = row.stats.totalCount - row.stats.pendingCount;
   return <RespondedRate respondedCount={respondedCount} totalCount={row.stats.totalCount} />;
 };
+
+interface PaginationFooterProps {
+  total: number;
+  pageStart: number;
+  pageEnd: number;
+  pageIndex: number;
+  pageCount: number;
+  pageSize: number;
+  onPageChange: (index: number) => void;
+  onPageSizeChange: (size: number) => void;
+}
+
+function PaginationFooter({
+  total,
+  pageStart,
+  pageEnd,
+  pageIndex,
+  pageCount,
+  pageSize,
+  onPageChange,
+  onPageSizeChange,
+}: PaginationFooterProps) {
+  const atFirst = pageIndex <= 0;
+  const atLast = pageIndex >= pageCount - 1;
+  return (
+    <div className="flex items-center justify-between border-t border-border px-6 py-3 text-sm text-muted-foreground">
+      <div>
+        Showing <span className="font-medium text-foreground">{pageStart}</span>–
+        <span className="font-medium text-foreground">{pageEnd}</span> of{' '}
+        <span className="font-medium text-foreground">{total}</span>
+      </div>
+      <div className="flex items-center gap-4">
+        <label className="flex items-center gap-2">
+          <span>Rows per page</span>
+          <Select value={String(pageSize)} onValueChange={(v) => onPageSizeChange(Number(v))}>
+            <SelectTrigger className="h-8 w-[70px]" aria-label="Rows per page">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {PAGE_SIZE_OPTIONS.map((n) => (
+                <SelectItem key={n} value={String(n)}>
+                  {n}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </label>
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            disabled={atFirst}
+            aria-label="Previous page"
+            onClick={() => onPageChange(pageIndex - 1)}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <span className="px-2 text-xs">
+            Page <span className="font-medium text-foreground">{pageIndex + 1}</span> of{' '}
+            <span className="font-medium text-foreground">{pageCount}</span>
+          </span>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            disabled={atLast}
+            aria-label="Next page"
+            onClick={() => onPageChange(pageIndex + 1)}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export { PostsView as Component };

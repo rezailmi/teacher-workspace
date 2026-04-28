@@ -9,7 +9,11 @@ import type {
   PGPost,
 } from '~/data/mock-pg-announcements';
 
-import { __duplicateDraftHref as duplicateDraftHref, matchesPostFilters } from './PostsView';
+import {
+  __duplicateDraftHref as duplicateDraftHref,
+  __paginate as paginate,
+  matchesPostFilters,
+} from './PostsView';
 
 const baseFilter = { ...DEFAULT_POST_FILTERS, tab: 'view-only' as const, query: '' };
 
@@ -182,6 +186,59 @@ describe('matchesPostFilters', () => {
     ).toBe(true);
     // Empty filter is a no-op (does not narrow)
     expect(matchesPostFilters(row(fromBob), baseFilter)).toBe(true);
+  });
+});
+
+describe('paginate', () => {
+  const rows = [1, 2, 3, 4, 5, 6, 7];
+
+  it('returns the requested slice and 1-indexed start/end labels', () => {
+    expect(paginate(rows, 0, 3)).toEqual({
+      page: [1, 2, 3],
+      pageStart: 1,
+      pageEnd: 3,
+      pageCount: 3,
+    });
+    expect(paginate(rows, 1, 3)).toEqual({
+      page: [4, 5, 6],
+      pageStart: 4,
+      pageEnd: 6,
+      pageCount: 3,
+    });
+    expect(paginate(rows, 2, 3)).toEqual({
+      page: [7],
+      pageStart: 7,
+      pageEnd: 7,
+      pageCount: 3,
+    });
+  });
+
+  it('clamps an over-large page index to the last page', () => {
+    // Caller is on page 5 but filters narrowed the list to 2 pages — return
+    // the last page rather than an empty slice so the table never renders blank.
+    expect(paginate(rows, 99, 3)).toMatchObject({ page: [7], pageStart: 7, pageEnd: 7 });
+  });
+
+  it('clamps a negative page index to the first page', () => {
+    expect(paginate(rows, -1, 3)).toMatchObject({ page: [1, 2, 3], pageStart: 1 });
+  });
+
+  it('returns pageStart=0 and an empty page when the source list is empty', () => {
+    expect(paginate([], 0, 10)).toEqual({
+      page: [],
+      pageStart: 0,
+      pageEnd: 0,
+      pageCount: 1,
+    });
+  });
+
+  it('treats pageSize larger than total as a single page', () => {
+    expect(paginate([1, 2], 0, 25)).toEqual({
+      page: [1, 2],
+      pageStart: 1,
+      pageEnd: 2,
+      pageCount: 1,
+    });
   });
 });
 
