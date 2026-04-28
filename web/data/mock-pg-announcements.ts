@@ -1,4 +1,5 @@
 import type { PGApiConsentFormHistoryEntry } from '~/api/types';
+import type { BadgeVariant } from '~/components/ui/badge';
 
 export type PGStatus = 'posted' | 'scheduled' | 'draft' | 'posting';
 export type ResponseType = 'view-only' | 'acknowledge' | 'yes-no';
@@ -277,20 +278,35 @@ export type PGPost = PGAnnouncementPost | PGConsentFormPost;
  * `docs/references/pg-team-asks.md`).
  */
 export const SCHEDULED_FAILURE_REASON: Record<string, string> = {
-  UPSTREAM_TIMEOUT: 'Upstream timeout',
-  RECIPIENT_INVALID: 'Recipients no longer valid',
-  ATTACHMENT_REJECTED: 'Attachment rejected by scan',
+  UPSTREAM_TIMEOUT: "The messaging service didn't respond in time.",
+  RECIPIENT_INVALID: 'Some recipients are no longer valid.',
+  ATTACHMENT_REJECTED: 'An attachment was blocked by virus scan.',
 };
 
 /**
- * Resolve a `scheduledSendFailureCode` into a display label. Returns `null`
- * when there is no failure (the common case). Unknown codes fall back to
- * `'Delivery failed'` — the chip still renders so the teacher notices the
- * condition.
+ * Resolve a `scheduledSendFailureCode` into a plain-English sentence shown in
+ * the detail-page banner. Returns `null` when there is no failure (the common
+ * case). Unknown codes fall back to a generic apology so the teacher still
+ * sees that something went wrong.
  */
 export function describeScheduledSendFailure(code: string | null | undefined): string | null {
   if (!code) return null;
-  return SCHEDULED_FAILURE_REASON[code] ?? 'Delivery failed';
+  return SCHEDULED_FAILURE_REASON[code] ?? 'Something went wrong on our side.';
+}
+
+/**
+ * Pick the badge to render for a post in the list and on the detail header.
+ * A scheduled send that has failed surfaces as a single destructive
+ * "Send failed" pill — the misleading "Scheduled" pill is suppressed so the
+ * teacher sees one consistent state.
+ */
+export function getPostStatusBadge(post: PGPost): { label: string; variant: BadgeVariant } {
+  if (post.status === 'scheduled' && post.scheduledSendFailureCode) {
+    return { label: 'Send failed', variant: 'destructive' };
+  }
+  return post.kind === 'form'
+    ? PG_CONSENT_FORM_STATUS_BADGE[post.status]
+    : PG_STATUS_BADGE[post.status];
 }
 
 /** @deprecated Use `PGAnnouncementPost`. */

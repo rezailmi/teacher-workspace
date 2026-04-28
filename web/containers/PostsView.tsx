@@ -45,11 +45,9 @@ import {
   TabsTrigger,
 } from '~/components/ui';
 import {
-  describeScheduledSendFailure,
+  getPostStatusBadge,
   isAnnouncementDraftId,
   isConsentFormDraftId,
-  PG_CONSENT_FORM_STATUS_BADGE,
-  PG_STATUS_BADGE,
   postHref,
 } from '~/data/mock-pg-announcements';
 import type { AnnouncementId, PGPost } from '~/data/mock-pg-announcements';
@@ -427,8 +425,7 @@ const PostRowInner: React.FC<PostRowProps> = ({ row, duplicateEnabled, onDuplica
   const isShared = row.ownership === 'shared';
   const showDuplicate = duplicateEnabled;
 
-  const statusBadge =
-    row.kind === 'form' ? PG_CONSENT_FORM_STATUS_BADGE[row.status] : PG_STATUS_BADGE[row.status];
+  const statusBadge = getPostStatusBadge(row);
 
   const showLowRead =
     row.kind === 'announcement' &&
@@ -464,14 +461,7 @@ const PostRowInner: React.FC<PostRowProps> = ({ row, duplicateEnabled, onDuplica
 
       {/* Status */}
       <TableCell>
-        <div className="flex flex-wrap items-center gap-1.5">
-          <Badge variant={statusBadge.variant}>{statusBadge.label}</Badge>
-          {row.status === 'scheduled' && row.scheduledSendFailureCode ? (
-            <Badge variant="destructive" aria-label="Scheduled send failed">
-              {describeScheduledSendFailure(row.scheduledSendFailureCode)}
-            </Badge>
-          ) : null}
-        </div>
+        <Badge variant={statusBadge.variant}>{statusBadge.label}</Badge>
       </TableCell>
 
       {/* Owner */}

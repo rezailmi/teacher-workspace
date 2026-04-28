@@ -93,12 +93,18 @@ describe('describeScheduledSendFailure', () => {
   });
 
   it('looks up known codes in the catalogue', () => {
-    expect(describeScheduledSendFailure('UPSTREAM_TIMEOUT')).toBe('Upstream timeout');
-    expect(describeScheduledSendFailure('RECIPIENT_INVALID')).toBe('Recipients no longer valid');
+    expect(describeScheduledSendFailure('UPSTREAM_TIMEOUT')).toBe(
+      "The messaging service didn't respond in time.",
+    );
+    expect(describeScheduledSendFailure('RECIPIENT_INVALID')).toBe(
+      'Some recipients are no longer valid.',
+    );
   });
 
-  it('falls back to a generic label for unknown codes', () => {
-    expect(describeScheduledSendFailure('SOMETHING_PG_ADDED_LATER')).toBe('Delivery failed');
+  it('falls back to a generic apology for unknown codes', () => {
+    expect(describeScheduledSendFailure('SOMETHING_PG_ADDED_LATER')).toBe(
+      'Something went wrong on our side.',
+    );
   });
 });
 

@@ -30,11 +30,10 @@ import { SchedulePickerDialog } from '~/components/posts/SchedulePickerDialog';
 import { Badge, Button } from '~/components/ui';
 import {
   describeScheduledSendFailure,
+  getPostStatusBadge,
   isAnnouncementDraftId,
   isConsentFormDraftId,
   isConsentFormId,
-  PG_CONSENT_FORM_STATUS_BADGE,
-  PG_STATUS_BADGE,
   postHref,
   validatePostRoute,
   type PGAnnouncementPost,
@@ -116,17 +115,6 @@ export function ErrorBoundary() {
 
 // ─── Subviews ──────────────────────────────────────────────────────────────
 
-function statusBadge(post: PGPost) {
-  switch (post.kind) {
-    case 'announcement':
-      return PG_STATUS_BADGE[post.status];
-    case 'form':
-      return PG_CONSENT_FORM_STATUS_BADGE[post.status];
-    default:
-      return assertNever(post);
-  }
-}
-
 /**
  * Strip any branded prefix from a post id and return the bare numeric id
  * PGW's draft endpoints expect (U3). Returns `null` when the id doesn't
@@ -146,7 +134,7 @@ function extractDraftNumericId(id: string): number | null {
 }
 
 function DetailHeader({ post }: { post: PGPost }) {
-  const badge = statusBadge(post);
+  const badge = getPostStatusBadge(post);
   const iso = post.postedAt ?? post.createdAt;
   const postedDate = formatDateTime(iso) ?? formatDate(iso);
   const editHref = postHref(post, { edit: true });
@@ -367,8 +355,8 @@ const PostDetailView: React.FC = () => {
           role="alert"
           className="rounded-lg border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm text-destructive"
         >
-          <span className="font-medium">Scheduled send failed.</span> {failureReason}. Reschedule or
-          cancel this post to try again.
+          <span className="font-medium">This post wasn&rsquo;t sent.</span> {failureReason} Pick a
+          new time to try again, or cancel to return it to drafts.
         </div>
       )}
       {renderDetail(post)}
