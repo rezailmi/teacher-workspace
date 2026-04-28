@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "flow": {
+      "command": "npx",
+      "args": ["-y", "@flow/mcp@latest"]
+    }
+  }
+}
