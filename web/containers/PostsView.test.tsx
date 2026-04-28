@@ -9,7 +9,7 @@ import type {
   PGPost,
 } from '~/data/mock-pg-announcements';
 
-import { matchesPostFilters } from './PostsView';
+import { __duplicateDraftHref as duplicateDraftHref, matchesPostFilters } from './PostsView';
 
 const baseFilter = { ...DEFAULT_POST_FILTERS, tab: 'view-only' as const, query: '' };
 
@@ -161,5 +161,17 @@ describe('matchesPostFilters', () => {
     expect(matchesPostFilters(dated, { ...baseFilter, dateTo: '2026-04-14' })).toBe(false);
     // Rows with no date are excluded when any bound is set
     expect(matchesPostFilters(row(mine), { ...baseFilter, dateFrom: '2026-04-01' })).toBe(false);
+  });
+});
+
+describe('duplicateDraftHref', () => {
+  it('builds the announcement-draft edit URL for the announcement kind', () => {
+    expect(duplicateDraftHref('announcement', 42)).toBe(
+      '/posts/annDraft_42/edit?kind=announcement',
+    );
+  });
+
+  it('builds the consent-form-draft edit URL for the form kind', () => {
+    expect(duplicateDraftHref('form', 99)).toBe('/posts/cfDraft_99/edit?kind=form');
   });
 });
