@@ -449,10 +449,17 @@ const PostRowInner: React.FC<PostRowProps> = ({ row, duplicateEnabled, onDuplica
     row.status === 'posted' &&
     isLowReadRate(row.postedAt, row.stats.readCount, row.stats.totalCount);
 
+  // PGW disables row clicks for scheduled posts — there's no public detail
+  // endpoint for them (`retrieveAnnouncementDraftFullDetailsForStaff` filters
+  // status=DRAFT only). Teachers act on scheduled rows via the kebab menu
+  // (Reschedule / Cancel schedule).
+  const clickable = row.status !== 'scheduled' && row.status !== 'posting';
   return (
     <TableRow
-      className="cursor-pointer"
-      onClick={() => navigate(postHref(row, { edit: row.status === 'draft' }))}
+      className={clickable ? 'cursor-pointer' : 'cursor-default'}
+      onClick={
+        clickable ? () => navigate(postHref(row, { edit: row.status === 'draft' })) : undefined
+      }
     >
       {/* Title + description stacked */}
       <TableCell className="overflow-hidden pl-6 align-top whitespace-normal">

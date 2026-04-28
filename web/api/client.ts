@@ -46,7 +46,6 @@ import type {
   PGApiDuplicateAnnouncementResponse,
   PGApiDuplicateConsentFormResponse,
   PGApiGroupsAssigned,
-  PGApiScheduleDraftPayload,
   PGApiSchoolClass,
   PGApiSchoolStaffList,
   PGApiSchoolStudent,
@@ -439,22 +438,58 @@ export function createDraft(
   return mutateApi('POST', '/announcements/drafts', body, options);
 }
 
-/** Schedule a draft for future sending. */
-export function scheduleDraft(payload: PGApiScheduleDraftPayload) {
-  return mutateApi<void>('POST', '/announcements/drafts/schedule', payload);
+/**
+ * Schedule a NEW announcement (single round-trip — creates the draft and
+ * sets status=SCHEDULED). Same body shape as `createDraft` plus a required
+ * `scheduledDateTime`. PGW's plain `/drafts` endpoint never flips a draft
+ * to SCHEDULED, so anything intended for future send must go through here.
+ */
+export function scheduleNewAnnouncementDraft(
+  payload: PGApiCreateDraftPayload & { scheduledSendAt: string },
+  options: { signal?: AbortSignal } = {},
+): Promise<{ announcementDraftId: number; updatedAt: string }> {
+  const body = {
+    ...toPGCreatePayload(payload),
+    scheduledDateTime: payload.scheduledSendAt,
+  };
+  return mutateApi('POST', '/announcements/drafts/schedule', body, options);
+}
+
+/**
+ * Schedule an EXISTING announcement draft. PGW: PUT `/drafts/schedule/:id`
+ * with the full draft payload + `scheduledDateTime`. Distinct from `updateDraft`
+ * — only this endpoint flips status from DRAFT → SCHEDULED.
+ */
+export function scheduleExistingAnnouncementDraft(
+  draftId: number,
+  payload: PGApiCreateDraftPayload & { scheduledSendAt: string },
+  options: { signal?: AbortSignal } = {},
+): Promise<{ announcementDraftId: number; updatedAt: string }> {
+  const body = {
+    ...toPGCreatePayload(payload),
+    scheduledDateTime: payload.scheduledSendAt,
+  };
+  return mutateApi('PUT', `/announcements/drafts/schedule/${draftId}`, body, options);
 }
 
 /**
  * Reschedule an already-scheduled announcement draft (U3). Distinct from
  * `updateDraft` — PGW exposes a dedicated endpoint so reschedule-in-window
- * races don't collide with generic field updates.
+ * races don't collide with generic field updates. Body field name (`scheduledDateTime`)
+ * differs from the create-draft scheduling field (`scheduledSendAt`); both
+ * carry an ISO 8601 timestamp in SGT.
  */
 export function rescheduleAnnouncementDraft(
   draftId: number,
   payload: { scheduledSendAt: string },
   options: { signal?: AbortSignal } = {},
 ) {
-  return mutateApi<void>('PUT', `/announcements/drafts/schedule/${draftId}`, payload, options);
+  return mutateApi<void>(
+    'PUT',
+    `/announcements/drafts/${draftId}/rescheduleSchedule`,
+    { scheduledDateTime: payload.scheduledSendAt },
+    options,
+  );
 }
 
 /**
@@ -593,6 +628,39 @@ export function updateConsentFormDueDate(formId: number, payload: { consentByDat
 }
 
 /**
+ * Schedule a NEW consent form (single round-trip — creates the draft and sets
+ * status=SCHEDULED). Same body shape as `createConsentFormDraft` plus a
+ * required `scheduledDateTime`. Mirrors `scheduleNewAnnouncementDraft`.
+ */
+export function scheduleNewConsentFormDraft(
+  payload: PGApiCreateConsentFormDraftPayload & { scheduledSendAt: string },
+  options: { signal?: AbortSignal } = {},
+): Promise<{ consentFormDraftId: number; updatedAt: string }> {
+  const body = {
+    ...toPGConsentFormDraftPayload(payload),
+    scheduledDateTime: payload.scheduledSendAt,
+  };
+  return mutateApi('POST', '/consentForms/drafts/schedule', body, options);
+}
+
+/**
+ * Schedule an EXISTING consent-form draft. PGW: PUT `/drafts/schedule/:id`
+ * with the full draft payload + `scheduledDateTime`. Distinct from
+ * `updateConsentFormDraft` — only this endpoint flips status to SCHEDULED.
+ */
+export function scheduleExistingConsentFormDraft(
+  draftId: number,
+  payload: PGApiCreateConsentFormDraftPayload & { scheduledSendAt: string },
+  options: { signal?: AbortSignal } = {},
+): Promise<{ consentFormDraftId: number; updatedAt: string }> {
+  const body = {
+    ...toPGConsentFormDraftPayload(payload),
+    scheduledDateTime: payload.scheduledSendAt,
+  };
+  return mutateApi('PUT', `/consentForms/drafts/schedule/${draftId}`, body, options);
+}
+
+/**
  * Reschedule an already-scheduled consent-form draft (U3). Mirrors
  * `rescheduleAnnouncementDraft`; PGW keeps these as two endpoint families,
  * so containers pick the right helper by the post's `kind`.
@@ -602,7 +670,12 @@ export function rescheduleConsentFormDraft(
   payload: { scheduledSendAt: string },
   options: { signal?: AbortSignal } = {},
 ) {
-  return mutateApi<void>('PUT', `/consentForms/drafts/schedule/${draftId}`, payload, options);
+  return mutateApi<void>(
+    'PUT',
+    `/consentForms/drafts/${draftId}/rescheduleSchedule`,
+    { scheduledDateTime: payload.scheduledSendAt },
+    options,
+  );
 }
 
 /** Cancel a scheduled consent-form draft (U9). Mirrors `cancelAnnouncementSchedule`. */

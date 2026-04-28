@@ -19,6 +19,10 @@ import {
   loadConsentFormDraftDetail,
   loadConsentPostDetail,
   loadPostDetail,
+  scheduleExistingAnnouncementDraft,
+  scheduleExistingConsentFormDraft,
+  scheduleNewAnnouncementDraft,
+  scheduleNewConsentFormDraft,
   updateConsentFormDraft,
   updateDraft,
 } from '~/api/client';
@@ -864,26 +868,23 @@ function CreatePostViewInner({ editId }: { editId?: string }) {
     setShowScheduleDialog(false);
     setSaveState('submitting');
     try {
+      // PGW only flips status to SCHEDULED via the dedicated `/drafts/schedule`
+      // endpoints — `createDraft`/`updateDraft` always leave the row as DRAFT
+      // regardless of payload. Dispatch by kind × new-vs-existing so the right
+      // PGW endpoint and HTTP method (POST for new, PUT for existing) is used.
       if (state.kind === 'form') {
-        // Consent-form draft create/update. The `cf_<digits>` brand carries
-        // through from the loader; strip the prefix for the mutation URL.
         const draftPayload = { ...buildConsentFormPayload(state), scheduledSendAt };
         if (isEditing && editId?.startsWith('cf_')) {
-          await updateConsentFormDraft(Number(editId.slice(3)), draftPayload);
+          await scheduleExistingConsentFormDraft(Number(editId.slice(3)), draftPayload);
         } else {
-          await createConsentFormDraft(draftPayload);
+          await scheduleNewConsentFormDraft(draftPayload);
         }
       } else {
         const draftPayload = { ...buildAnnouncementPayload(state), scheduledSendAt };
         if (draftIdRef.current?.kind === 'announcement') {
-          // Editing an existing draft: keep the same draft, just push the new
-          // `scheduledSendAt` with the other field updates.
-          await updateDraft(draftIdRef.current.id, draftPayload);
+          await scheduleExistingAnnouncementDraft(draftIdRef.current.id, draftPayload);
         } else {
-          // New post → schedule in a single round-trip. `scheduleDraft` (which
-          // targets a pre-saved draft) is deferred; we don't need it for this
-          // flow.
-          await createDraft(draftPayload);
+          await scheduleNewAnnouncementDraft(draftPayload);
         }
       }
       setSaveState('submitted');

@@ -34,6 +34,7 @@ import type {
   PGApiCreateAnnouncementPayload,
   PGApiCreateConsentFormDraftPayload,
   PGApiCreateConsentFormPayload,
+  PGApiGroupTarget,
   PGApiReminderType,
 } from './types';
 
@@ -62,8 +63,12 @@ export function mapAnnouncementSummary(
     ? Math.round(api.readMetrics.readPerStudent * api.readMetrics.totalStudents)
     : 0;
 
+  // SCHEDULED posts live in `pg_announcement_draft` (status=SCHEDULED) — same
+  // table as plain drafts. Brand both with `annDraft_` so the detail loader
+  // routes to `/announcements/drafts/:id` (not `/announcements/:id`, which
+  // 404s for unposted rows).
   const id =
-    status === 'draft'
+    status === 'draft' || status === 'scheduled'
       ? (`annDraft_${api.postId}` as AnnouncementDraftId)
       : (String(api.postId) as AnnouncementId);
 
@@ -357,8 +362,10 @@ export function mapConsentFormSummaryToPost(
     ? Math.round(api.respondedMetrics.respondedPerStudent * totalCount)
     : 0;
 
+  // SCHEDULED forms live in the consent-form draft table — brand them as
+  // `cfDraft_` so the detail loader hits `/consentForms/drafts/:id`.
   const id =
-    status === 'draft'
+    status === 'draft' || status === 'scheduled'
       ? (`cfDraft_${api.postId}` as ConsentFormDraftId)
       : (`cf_${api.postId}` as ConsentFormId);
 
@@ -554,31 +561,27 @@ function toPGStatus(raw: PGApiAnnouncementStatus): PGStatus {
 // wire DTO gains a new required field and the mapper doesn't populate it, the
 // build fails. Unknown fields on the input side don't reach the wire.
 
-interface PGTarget {
-  targetType: PGTargetType;
-  targetId: number;
-}
-
+/**
+ * PGW's exact wire-side write payload. Field names match what
+ * `announcement-draft.service.ts#announcementDraftCreateUpdateSchema` and
+ * the corresponding consent-form schema accept. PGW's schedule controllers
+ * validate without `allowUnknown: true`, so unknown keys are rejected
+ * outright — every field name here has to mirror PGW exactly.
+ */
 interface PGWritePayload {
   title: string;
   content: string;
   enquiryEmailAddress: string;
-  targets: PGTarget[];
-  staffInCharge?: number[];
-  webLinkList?: { webLink: string; linkDescription: string }[];
-  /**
-   * PG's wire-side contract (`PG-API-CONTRACT.md:192`) accepts a plain string
-   * array of shortcut keys (`"TRAVEL_DECLARATION" | "EDIT_CONTACT_DETAILS"`).
-   * The inbound read type `PGApiShortcutLink[]` is a richer shape used on
-   * detail responses; for writes we only send the enum key.
-   */
-  shortcutLink?: string[];
+  studentGroups: PGApiGroupTarget[];
+  staffGroups?: PGApiGroupTarget[];
+  urls?: { webLink: string; linkDescription: string }[];
+  shortcuts?: string[];
 }
 
 /** Shape for `POST /consentForms` (publish). PGW uses ISO strings for event
- *  dates and `inAppShortcutLink` here — different from the draft shape. See
+ *  dates here — different from the draft shape. See
  *  `pgw-web/src/server/apiv2/staff/controllers/consent-form/create.staff.consent-form.controller.ts`. */
-interface PGConsentFormPublishPayload extends Omit<PGWritePayload, 'shortcutLink'> {
+interface PGConsentFormPublishPayload extends PGWritePayload {
   responseType: 'ACKNOWLEDGEMENT' | 'YES_NO';
   consentByDate: string;
   addReminderType: PGApiReminderType;
@@ -586,13 +589,10 @@ interface PGConsentFormPublishPayload extends Omit<PGWritePayload, 'shortcutLink
   startDateTime?: string | null;
   endDateTime?: string | null;
   venue?: string | null;
-  inAppShortcutLink?: string[];
-  customQuestions?: { questionText: string; questionType: 'TEXT' | 'MCQ'; options?: string[] }[];
 }
 
 /** Shape for `POST /consentForms/drafts` and PUT update. PGW uses
- *  `{ date, time }` objects for event dates and `shortcutLink` is ignored via
- *  `allowUnknown: true`. See
+ *  `{ date, time }` objects for event dates. See
  *  `pgw-web/src/server/modules/consent-form/consent-form-draft.service.ts#L326`. */
 interface PGConsentFormDraftWritePayload extends PGWritePayload {
   responseType: 'ACKNOWLEDGEMENT' | 'YES_NO';
@@ -602,17 +602,6 @@ interface PGConsentFormDraftWritePayload extends PGWritePayload {
   eventStartDate?: { date: string; time: string } | null;
   eventEndDate?: { date: string; time: string } | null;
   venue?: string | null;
-  customQuestions?: { questionText: string; questionType: 'TEXT' | 'MCQ'; options?: string[] }[];
-  scheduledSendAt?: string | null;
-}
-
-function buildTargets(r: PGApiCreateAnnouncementPayload['recipients']): PGTarget[] {
-  return [
-    ...r.classIds.map((targetId) => ({ targetType: 'class' as const, targetId })),
-    ...r.customGroupIds.map((targetId) => ({ targetType: 'group' as const, targetId })),
-    ...r.ccaIds.map((targetId) => ({ targetType: 'cca' as const, targetId })),
-    ...r.levelIds.map((targetId) => ({ targetType: 'level' as const, targetId })),
-  ];
 }
 
 export function toPGCreatePayload(
@@ -626,24 +615,16 @@ export function toPGCreatePayload(
     title: p.title,
     content: p.richTextContent,
     enquiryEmailAddress: p.enquiryEmailAddress ?? '',
-    targets: buildTargets(p.recipients),
-    staffInCharge: p.staffOwnerIds,
-    webLinkList: p.websiteLinks?.map((l) => ({ webLink: l.url, linkDescription: l.title })),
-    shortcutLink: p.shortcutLink,
+    studentGroups: p.studentGroups,
+    staffGroups: p.staffGroups,
+    urls: p.websiteLinks?.map((l) => ({ webLink: l.url, linkDescription: l.title })),
+    shortcuts: p.shortcutLink,
   } satisfies PGWritePayload;
 }
 
 function dateTimeToIso(dt: { date: string; time: string } | null | undefined): string | null {
   if (!dt) return null;
   return `${dt.date}T${dt.time}:00+08:00`;
-}
-
-function mapCustomQuestions(qs: PGApiCreateConsentFormPayload['customQuestions']) {
-  return qs?.map((q) => ({
-    questionText: q.text,
-    questionType: q.type === 'MCQ' ? ('MCQ' as const) : ('TEXT' as const),
-    ...(q.options && { options: q.options }),
-  }));
 }
 
 export function toPGConsentFormCreatePayload(
@@ -656,10 +637,10 @@ export function toPGConsentFormCreatePayload(
     title: p.title,
     content: p.richTextContent,
     enquiryEmailAddress: p.enquiryEmailAddress,
-    targets: buildTargets(p.recipients),
-    staffInCharge: p.staffOwnerIds,
-    webLinkList: p.websiteLinks?.map((l) => ({ webLink: l.url, linkDescription: l.title })),
-    inAppShortcutLink: p.shortcutLink,
+    studentGroups: p.studentGroups,
+    staffGroups: p.staffGroups,
+    urls: p.websiteLinks?.map((l) => ({ webLink: l.url, linkDescription: l.title })),
+    shortcuts: p.shortcutLink,
     responseType: p.responseType,
     consentByDate: p.consentByDate,
     addReminderType: p.addReminderType,
@@ -667,7 +648,6 @@ export function toPGConsentFormCreatePayload(
     startDateTime: dateTimeToIso(p.eventStartDate),
     endDateTime: dateTimeToIso(p.eventEndDate),
     venue: p.venue,
-    customQuestions: mapCustomQuestions(p.customQuestions),
   } satisfies PGConsentFormPublishPayload;
 }
 
@@ -678,10 +658,10 @@ export function toPGConsentFormDraftPayload(
     title: p.title,
     content: p.richTextContent,
     enquiryEmailAddress: p.enquiryEmailAddress ?? '',
-    targets: buildTargets(p.recipients),
-    staffInCharge: p.staffOwnerIds,
-    webLinkList: p.websiteLinks?.map((l) => ({ webLink: l.url, linkDescription: l.title })),
-    shortcutLink: p.shortcutLink,
+    studentGroups: p.studentGroups,
+    staffGroups: p.staffGroups,
+    urls: p.websiteLinks?.map((l) => ({ webLink: l.url, linkDescription: l.title })),
+    shortcuts: p.shortcutLink,
     responseType: p.responseType,
     consentByDate: p.consentByDate,
     addReminderType: p.addReminderType,
@@ -689,8 +669,6 @@ export function toPGConsentFormDraftPayload(
     eventStartDate: p.eventStartDate,
     eventEndDate: p.eventEndDate,
     venue: p.venue,
-    customQuestions: mapCustomQuestions(p.customQuestions),
-    scheduledSendAt: p.scheduledSendAt,
   } satisfies PGConsentFormDraftWritePayload;
 }
 
@@ -751,14 +729,15 @@ interface BuildPostPayloadInput {
   enquiryEmail: string;
   selectedRecipients: {
     id: string;
+    label: string;
     /** Widened to `string` (via the full `SelectedEntity.groupType` domain)
      * so this input type is assignable from the container's reducer state.
-     * `groupRecipients` routes `class` / `custom` / `cca` / `level`; all
-     * other group types (e.g. `staff-group`, `school`) are dropped — the FE
-     * payload doesn't yet accept them. */
+     * `selectedToStudentGroups` maps known FE group types into PGW's
+     * `studentGroups[].type` enum (`class | level | school | cca | group`),
+     * defaulting to `group` for anything unrecognised. */
     groupType?: string;
   }[];
-  selectedStaff: { id: string }[];
+  selectedStaff: { id: string; label: string }[];
   responseType: ResponseType;
   questions: FormQuestion[];
   dueDate: string;
@@ -824,34 +803,45 @@ function pruneWebsiteLinks(
   return filtered.map((l) => ({ url: l.url.trim(), title: l.title.trim() }));
 }
 
-function groupRecipients(
-  recipients: BuildPostPayloadInput['selectedRecipients'],
-): PGApiCreateAnnouncementPayload['recipients'] {
-  const out = {
-    classIds: [] as number[],
-    customGroupIds: [] as number[],
-    ccaIds: [] as number[],
-    levelIds: [] as number[],
-  };
-  for (const r of recipients) {
-    const id = Number(r.id);
-    if (Number.isNaN(id)) continue;
-    switch (r.groupType) {
-      case 'class':
-        out.classIds.push(id);
-        break;
-      case 'custom':
-        out.customGroupIds.push(id);
-        break;
-      case 'cca':
-        out.ccaIds.push(id);
-        break;
-      case 'level':
-        out.levelIds.push(id);
-        break;
-    }
-  }
-  return out;
+/**
+ * Map our internal `GroupType` (carried on `SelectedEntity.groupType`) to the
+ * value PGW expects in the `studentGroups[].type` field. PGW's
+ * `ETargetType` enum: `school | level | class | group | cca | student`.
+ * Unknown FE group types fall back to `'group'` to keep PGW's strict-schema
+ * validator happy.
+ */
+const GROUP_TYPE_TO_PGW: Record<string, string> = {
+  class: 'class',
+  level: 'level',
+  school: 'school',
+  cca: 'cca',
+  custom: 'group',
+  teaching: 'group',
+  department: 'group',
+  'staff-group': 'group',
+};
+
+function selectedToStudentGroups(
+  selected: BuildPostPayloadInput['selectedRecipients'],
+): PGApiGroupTarget[] {
+  return selected
+    .map((s) => ({
+      type: GROUP_TYPE_TO_PGW[s.groupType ?? 'custom'] ?? 'group',
+      label: s.label,
+      value: Number(s.id),
+    }))
+    .filter((g) => !Number.isNaN(g.value));
+}
+
+function selectedToStaffGroups(
+  selected: BuildPostPayloadInput['selectedStaff'],
+): PGApiGroupTarget[] {
+  // Today the staff selector only surfaces individuals (per PGTW-7 scope —
+  // Level/School staff data isn't exposed by the school endpoints). When
+  // those tabs come online, fold them in here with the right `type`.
+  return selected
+    .map((s) => ({ type: 'individual', label: s.label, value: Number(s.id) }))
+    .filter((g) => !Number.isNaN(g.value));
 }
 
 // FE response types → PG wire enum. Acknowledge maps to the singular
@@ -874,8 +864,8 @@ export function buildAnnouncementPayload(
     title: state.title,
     richTextContent: JSON.stringify(doc),
     enquiryEmailAddress: state.enquiryEmail,
-    recipients: groupRecipients(state.selectedRecipients),
-    staffOwnerIds: state.selectedStaff.map((s) => Number(s.id)),
+    studentGroups: selectedToStudentGroups(state.selectedRecipients),
+    staffGroups: selectedToStaffGroups(state.selectedStaff),
     websiteLinks: pruneWebsiteLinks(state.websiteLinks),
     shortcutLink: state.shortcuts.length > 0 ? state.shortcuts : undefined,
     ...(attachments.length > 0 && { attachments }),
@@ -939,8 +929,8 @@ export function buildConsentFormPayload(
     eventStartDate,
     eventEndDate,
     venue,
-    recipients: groupRecipients(state.selectedRecipients),
-    staffOwnerIds: state.selectedStaff.map((s) => Number(s.id)),
+    studentGroups: selectedToStudentGroups(state.selectedRecipients),
+    staffGroups: selectedToStaffGroups(state.selectedStaff),
     customQuestions,
     websiteLinks: pruneWebsiteLinks(state.websiteLinks),
     shortcutLink: state.shortcuts.length > 0 ? state.shortcuts : undefined,

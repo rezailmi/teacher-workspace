@@ -88,6 +88,12 @@ services:
       DB_LOCAL_WRITER_CONNECTION_CONFIG: '{"username":"pg-local","password":"${MYSQL_PASSWORD}","host":"mysql-master","connectionEndpoint":"mysql-master","port":"3306"}'
       DB_LOCAL_READER_CONNECTION_CONFIG: '{"username":"pg-local-read","password":"${MYSQL_PASSWORD_READ}","host":"mysql-replica","connectionEndpoint":"mysql-replica","port":"3306"}'
       REDIS_URL: redis://redis:6379
+      # PGW's schedule-window check (`isDateWithinDayTimeWindow`) compares the
+      # incoming `scheduledDateTime` against `07:00`–`21:55` in the *server's*
+      # local TZ. Production runs in Asia/Singapore so SGT clock faces line up
+      # with the window; without this the local UTC container rejects most SGT
+      # picks (08:00 SGT → 00:00 UTC, outside 07:00–21:55).
+      TZ: Asia/Singapore
     depends_on:
       mysql-master:
         condition: service_healthy
